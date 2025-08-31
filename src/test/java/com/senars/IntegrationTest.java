@@ -10,6 +10,7 @@ import com.senars.systems.immemory.InMemoryMemoryNexus;
 import dev.langchain4j.model.chat.ChatModel;
 import dev.langchain4j.model.ollama.OllamaChatModel;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
@@ -24,6 +25,7 @@ import static org.junit.jupiter.api.Assertions.*;
  * Integration test for the SeNARS system that wires up real components
  * and interacts with a live LLM.
  */
+@Disabled("Requires a running Ollama instance")
 public class IntegrationTest {
 
     private Langchain4jCognitiveProcessor cognitiveProcessor;

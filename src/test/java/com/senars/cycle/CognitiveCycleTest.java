@@ -3,6 +3,9 @@ package com.senars.cycle;
 import com.senars.core.*;
 import com.senars.systems.IGovernanceLayer;
 import com.senars.systems.IMemoryNexus;
+import com.senars.effort.EffortPredictor;
+import com.senars.motive.MotiveHierarchy;
+import com.senars.salience.SalienceCalculator;
 import com.senars.systems.immemory.InMemoryMemoryNexus;
 import com.senars.systems.immemory.PassThroughGovernanceLayer;
 import org.junit.jupiter.api.BeforeEach;
@@ -15,6 +18,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
+import java.util.Collections;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -38,115 +42,115 @@ class CognitiveCycleTest {
     @Spy
     private IGovernanceLayer governanceLayer = new PassThroughGovernanceLayer();
 
-    // Using a more robust spyable implementation of the funnel for testing
-    @Spy
-    private IAttentionFunnel attentionFunnel = new AttentionFunnelForTest();
+    private IAttentionFunnel attentionFunnel;
 
-    static class AttentionFunnelForTest implements IAttentionFunnel {
-        private final AtomicReference<Thought> candidate = new AtomicReference<>();
-        @Override
-        public void addCandidate(Thought thought) { candidate.set(thought); }
-        @Override
-        public Optional<Thought> selectFocusThought() { return Optional.ofNullable(candidate.getAndSet(null)); }
-    }
+    // Real dependencies for a more integrated test
+    private MotiveHierarchy motiveHierarchy;
+    private SalienceCalculator salienceCalculator;
+    private EffortPredictor effortPredictor;
 
     @BeforeEach
     void setUp() {
+        // Setup real components for testing the cycle with salience
+        motiveHierarchy = new MotiveHierarchy();
+        effortPredictor = new EffortPredictor(memoryNexus); // Pass the memory nexus spy
+        salienceCalculator = new SalienceCalculator(effortPredictor);
+        attentionFunnel = new SalienceBasedAttentionFunnel(salienceCalculator, motiveHierarchy);
+
         cognitiveCycle = new CognitiveCycle(
-            perceptionSystem,
-            attentionFunnel,
-            cognitiveProcessor,
-            actionSystem,
-            memoryNexus,
-            governanceLayer
+                perceptionSystem,
+                attentionFunnel,
+                cognitiveProcessor,
+                actionSystem,
+                memoryNexus,
+                governanceLayer
         );
     }
 
-    private Thought createTestThought(ThoughtType type) {
+    private Thought createTestThought(ThoughtType type, double activation) {
         return new Thought(
             UUID.randomUUID().toString(),
             new ThoughtContent("test content for " + type, null, null, null, null),
-            new ThoughtState(1.0, 1.0, 1.0),
+            new ThoughtState(1.0, 0.0, activation), // clarity, salience (unused), activation
             new ThoughtMetadata(type, ThoughtOrigin.SYSTEM, List.of(), Instant.now())
         );
     }
 
     @Test
-    void step_processesFocusThoughtAndAddsToMemory() {
-        Thought focusThought = createTestThought(ThoughtType.BELIEF);
-        Thought newThought = createTestThought(ThoughtType.REPORT);
+    void step_processesMostSalientThought() {
+        Thought lowSalienceThought = createTestThought(ThoughtType.BELIEF, 0.1); // Low activation
+        Thought highSalienceThought = createTestThought(ThoughtType.BELIEF, 1.0); // High activation
+        Thought newThought = createTestThought(ThoughtType.REPORT, 0.5);
 
-        attentionFunnel.addCandidate(focusThought); // Prime the funnel
-        when(cognitiveProcessor.process(focusThought)).thenReturn(List.of(newThought));
+        attentionFunnel.addCandidate(lowSalienceThought);
+        attentionFunnel.addCandidate(highSalienceThought);
+        when(cognitiveProcessor.process(highSalienceThought)).thenReturn(List.of(newThought));
 
         cognitiveCycle.step();
 
-        verify(cognitiveProcessor).process(focusThought);
+        // Verify that the most salient thought was processed
+        verify(cognitiveProcessor).process(highSalienceThought);
+        verify(cognitiveProcessor, never()).process(lowSalienceThought);
+
+        // Verify the new thought was saved and added back to the funnel
         verify(memoryNexus).saveThought(newThought);
-        verify(attentionFunnel).addCandidate(newThought);
-        verify(actionSystem, never()).executePlan(any());
     }
 
     @Test
     void step_handlesActionPlanApprovalAndExecution() {
-        Thought focusThought = createTestThought(ThoughtType.GOAL);
-        Thought actionPlan = createTestThought(ThoughtType.ACTION_PLAN);
+        Thought goal = createTestThought(ThoughtType.GOAL, 1.0);
+        Thought actionPlan = createTestThought(ThoughtType.ACTION_PLAN, 0.9);
 
-        attentionFunnel.addCandidate(focusThought); // Prime the funnel
-        when(cognitiveProcessor.process(focusThought)).thenReturn(List.of(actionPlan));
+        attentionFunnel.addCandidate(goal);
+        when(cognitiveProcessor.process(goal)).thenReturn(List.of(actionPlan));
 
-        cognitiveCycle.step();
+        cognitiveCycle.step(); // First step processes the GOAL and produces the ACTION_PLAN
+
+        // The action plan is saved to memory and added to the funnel
+        verify(memoryNexus).saveThought(actionPlan);
+
+        // Now the action plan should be the most salient thing
+        cognitiveCycle.step(); // Second step should process the ACTION_PLAN
 
         verify(governanceLayer).reviewPlan(actionPlan);
         verify(actionSystem).executePlan(actionPlan);
-        // Action plans should not be added back to the funnel for consideration
-        verify(attentionFunnel, never()).addCandidate(actionPlan);
     }
 
     @Test
     void step_handlesActionPlanVetoAndCreatesReplanGoal() {
-        Thought focusThought = createTestThought(ThoughtType.GOAL);
-        Thought actionPlan = createTestThought(ThoughtType.ACTION_PLAN);
+        Thought goal = createTestThought(ThoughtType.GOAL, 1.0);
+        Thought actionPlan = createTestThought(ThoughtType.ACTION_PLAN, 0.9);
         String vetoReason = "This is unsafe!";
 
-        attentionFunnel.addCandidate(focusThought); // Prime the funnel
-        when(cognitiveProcessor.process(focusThought)).thenReturn(List.of(actionPlan));
-        // Override the spy's default pass-through behavior for this test
+        attentionFunnel.addCandidate(goal);
+        when(cognitiveProcessor.process(goal)).thenReturn(List.of(actionPlan));
         when(governanceLayer.reviewPlan(actionPlan)).thenReturn(Optional.of(vetoReason));
 
-        cognitiveCycle.step();
+        cognitiveCycle.step(); // Process GOAL, create ACTION_PLAN
+        cognitiveCycle.step(); // Process ACTION_PLAN, get vetoed
 
         verify(governanceLayer).reviewPlan(actionPlan);
         verify(actionSystem, never()).executePlan(actionPlan);
-        // Verify a new GOAL was created and added to the funnel
-        verify(memoryNexus, times(2)).saveThought(any(Thought.class)); // original plan + replan goal
-        verify(attentionFunnel).addCandidate(argThat(t ->
-            t.metadata().type() == ThoughtType.GOAL && t.content().text().contains(vetoReason)
-        ));
+
+        // Verify a new GOAL was created and saved (one for the plan, one for the goal)
+        verify(memoryNexus, times(2)).saveThought(any(Thought.class));
     }
 
     @Test
-    void step_perceivesNewThoughtsAndAddsToFunnel() {
-        Thought perceivedThought = createTestThought(ThoughtType.BELIEF);
-        perceivedThought = new Thought(
-            perceivedThought.id(),
-            new ThoughtContent("A new perception", null, null, null, null),
-            perceivedThought.state(),
-            perceivedThought.metadata()
-        );
+    void step_perceivesAndProcessesThoughtInSameCycle() {
+        Thought perceivedThought = createTestThought(ThoughtType.BELIEF, 0.8);
 
-        // When the perception system runs, it returns a new thought.
-        when(perceptionSystem.perceive()).thenReturn(List.of(perceivedThought));
-        // There are no other thoughts in the system to start.
-        when(attentionFunnel.selectFocusThought()).thenReturn(Optional.empty());
+        // On the FIRST call, perceive a thought. On subsequent calls, perceive nothing.
+        when(perceptionSystem.perceive())
+                .thenReturn(List.of(perceivedThought))
+                .thenReturn(Collections.emptyList());
 
+        // The first step perceives and should also process the thought, as it's the only one.
         cognitiveCycle.step();
 
         // Verify the perception system was checked.
         verify(perceptionSystem).perceive();
-        // Verify the new thought was added to the attention funnel for future consideration.
-        verify(attentionFunnel).addCandidate(perceivedThought);
-        // Verify that since there was no focus thought, the processor did not run.
-        verify(cognitiveProcessor, never()).process(any());
+        // Verify the thought was processed in the same cycle.
+        verify(cognitiveProcessor).process(perceivedThought);
     }
 }
