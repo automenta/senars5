@@ -1,6 +1,7 @@
 package com.senars.salience;
 
 import com.senars.core.Thought;
+import com.senars.effort.EffortPredictor;
 import com.senars.motive.MotiveHierarchy;
 import java.util.List;
 import java.util.Optional;
@@ -10,9 +11,11 @@ import java.util.Optional;
  */
 public class SalienceCalculator {
 
-    // TODO: The PredictedEffort should be dynamic, based on a learned model as per the spec.
-    // For now, we use a constant value of 1.0, assuming effort is uniform.
-    private static final double DEFAULT_PREDICTED_EFFORT = 1.0;
+    private final EffortPredictor effortPredictor;
+
+    public SalienceCalculator(EffortPredictor effortPredictor) {
+        this.effortPredictor = effortPredictor;
+    }
 
     /**
      * Calculates the salience of a Thought based on the formula:
@@ -27,9 +30,7 @@ public class SalienceCalculator {
         double clarity = thought.state().clarity();
 
         double motiveBonus = calculateMotiveBonus(thought, motiveHierarchy);
-
-        // Ensure predicted effort is not zero to avoid division by zero.
-        double predictedEffort = Math.max(DEFAULT_PREDICTED_EFFORT, 0.0001);
+        double predictedEffort = effortPredictor.predict(thought);
 
         return (activation + motiveBonus) * clarity / predictedEffort;
     }

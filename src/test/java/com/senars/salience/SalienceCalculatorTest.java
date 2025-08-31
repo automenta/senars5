@@ -1,24 +1,33 @@
 package com.senars.salience;
 
 import com.senars.core.*;
+import com.senars.effort.EffortPredictor;
 import com.senars.motive.MotiveHierarchy;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
+
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.when;
 
 class SalienceCalculatorTest {
 
     private static final double DELTA = 1e-9;
     private SalienceCalculator calculator;
     private MotiveHierarchy motiveHierarchy;
+    private EffortPredictor mockEffortPredictor;
 
     @BeforeEach
     void setUp() {
-        calculator = new SalienceCalculator();
+        mockEffortPredictor = Mockito.mock(EffortPredictor.class);
+        calculator = new SalienceCalculator(mockEffortPredictor);
         motiveHierarchy = new MotiveHierarchy();
+        // Default behavior for tests that don't care about effort
+        when(mockEffortPredictor.predict(any(Thought.class))).thenReturn(1.0);
     }
 
     private Thought createTestThought(String text, List<Double> embedding, double activation, double clarity) {
@@ -106,5 +115,15 @@ class SalienceCalculatorTest {
         // Motive bonus should be 1.0 (from the intention, which is the max)
         // Expected: (0.1 + 1.0) * 1.0 / 1.0 = 1.1
         assertEquals(1.1, salience, DELTA);
+    }
+
+    @Test
+    void testCalculate_withVariableEffort() {
+        Thought thought = createTestThought("test", null, 0.5, 0.8);
+        when(mockEffortPredictor.predict(thought)).thenReturn(2.0);
+
+        double salience = calculator.calculate(thought, motiveHierarchy);
+        // Expected: (activation + motiveBonus) * clarity / effort = (0.5 + 0) * 0.8 / 2.0 = 0.2
+        assertEquals(0.2, salience, DELTA);
     }
 }

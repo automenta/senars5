@@ -1,6 +1,8 @@
 package com.senars.systems.immemory;
 
-import com.senars.core.Thought;
+import com.senars.core.*;
+import com.senars.effort.EffortPredictor;
+import com.senars.effort.LinearTextEffortModel;
 import com.senars.salience.VectorMath;
 import com.senars.systems.IMemoryNexus;
 
@@ -16,6 +18,39 @@ import java.util.stream.Collectors;
 public class InMemoryMemoryNexus implements IMemoryNexus {
 
     private final Map<String, Thought> thoughtStore = new ConcurrentHashMap<>();
+
+    public InMemoryMemoryNexus() {
+        seedDefaultSchemas();
+    }
+
+    private void seedDefaultSchemas() {
+        // Create the default effort prediction model schema
+        ThoughtContent content = new ThoughtContent(
+                "Default effort prediction model based on text length.",
+                EffortPredictor.EFFORT_MODEL_SCHEMA_NAME,
+                null,
+                null,
+                new LinearTextEffortModel(0.01, 1.0) // Procedural content is the model itself
+        );
+
+        ThoughtMetadata metadata = new ThoughtMetadata(
+                ThoughtType.SCHEMA,
+                ThoughtOrigin.SYSTEM,
+                Collections.emptyList(),
+                java.time.Instant.now()
+        );
+
+        ThoughtState state = new ThoughtState(1.0, 1.0, 1.0); // Max clarity, salience, activation
+
+        Thought schemaThought = new Thought(
+                UUID.randomUUID().toString(),
+                content,
+                state,
+                metadata
+        );
+
+        saveThought(schemaThought);
+    }
 
     @Override
     public void saveThought(Thought thought) {
@@ -75,5 +110,13 @@ public class InMemoryMemoryNexus implements IMemoryNexus {
      */
     public List<Thought> getAllThoughts() {
         return new ArrayList<>(thoughtStore.values());
+    }
+
+    @Override
+    public Optional<Thought> findSchemaBySymbolicName(String name) {
+        return thoughtStore.values().stream()
+                .filter(t -> t.metadata().type() == com.senars.core.ThoughtType.SCHEMA)
+                .filter(t -> t.content().symbolic() != null && t.content().symbolic().equals(name))
+                .findFirst();
     }
 }

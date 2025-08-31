@@ -42,4 +42,12 @@ public interface IMemoryNexus {
      * @return An ordered list of Thoughts representing the trace, from origin to the target.
      */
     List<Thought> getTrace(String thoughtId);
+
+    /**
+     * Finds a SCHEMA thought by its unique symbolic name.
+     *
+     * @param name The symbolic name to search for (e.g., "senars:effort_prediction_model_v1").
+     * @return An Optional containing the SCHEMA Thought if found, otherwise empty.
+     */
+    Optional<Thought> findSchemaBySymbolicName(String name);
 }
