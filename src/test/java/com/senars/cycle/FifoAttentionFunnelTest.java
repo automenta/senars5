@@ -23,7 +23,7 @@ class FifoAttentionFunnelTest {
     private Thought createTestThought(String id) {
         return new Thought(
             id,
-            new ThoughtContent("test", null, null, null, null),
+            new ThoughtContent("test", null, null, null, null, null),
             new ThoughtState(1.0, 1.0, 1.0),
             new ThoughtMetadata(ThoughtType.BELIEF, ThoughtOrigin.SYSTEM, Collections.emptyList(), Instant.now())
         );

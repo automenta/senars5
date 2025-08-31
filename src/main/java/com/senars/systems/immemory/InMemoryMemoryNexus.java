@@ -30,7 +30,8 @@ public class InMemoryMemoryNexus implements IMemoryNexus {
                 EffortPredictor.EFFORT_MODEL_SCHEMA_NAME,
                 null,
                 null,
-                new LinearTextEffortModel(0.01, 1.0) // Procedural content is the model itself
+                new LinearTextEffortModel(0.01, 1.0), // Procedural content is the model itself
+                null
         );
 
         ThoughtMetadata metadata = new ThoughtMetadata(

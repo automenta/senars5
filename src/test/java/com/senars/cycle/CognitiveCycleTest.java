@@ -7,7 +7,7 @@ import com.senars.effort.EffortPredictor;
 import com.senars.motive.MotiveHierarchy;
 import com.senars.salience.SalienceCalculator;
 import com.senars.systems.immemory.InMemoryMemoryNexus;
-import com.senars.systems.immemory.PassThroughGovernanceLayer;
+import com.senars.systems.immemory.InMemoryGovernanceLayer;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -40,7 +40,7 @@ class CognitiveCycleTest {
     @Spy
     private IMemoryNexus memoryNexus = new InMemoryMemoryNexus();
     @Spy
-    private IGovernanceLayer governanceLayer = new PassThroughGovernanceLayer();
+    private IGovernanceLayer governanceLayer = new InMemoryGovernanceLayer(Collections.emptyList());
 
     private IAttentionFunnel attentionFunnel;
 
@@ -70,7 +70,7 @@ class CognitiveCycleTest {
     private Thought createTestThought(ThoughtType type, double activation) {
         return new Thought(
             UUID.randomUUID().toString(),
-            new ThoughtContent("test content for " + type, null, null, null, null),
+            new ThoughtContent("test content for " + type, null, null, null, null, null),
             new ThoughtState(1.0, 0.0, activation), // clarity, salience (unused), activation
             new ThoughtMetadata(type, ThoughtOrigin.SYSTEM, List.of(), Instant.now())
         );

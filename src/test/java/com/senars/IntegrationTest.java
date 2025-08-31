@@ -64,7 +64,7 @@ public class IntegrationTest {
         // Arrange
         Thought focusThought = new Thought(
                 UUID.randomUUID().toString(),
-                new ThoughtContent("In one sentence, what is the purpose of a cognitive architecture?", null, null, null, null),
+                new ThoughtContent("In one sentence, what is the purpose of a cognitive architecture?", null, null, null, null, null),
                 new ThoughtState(1.0, 1.0, 1.0),
                 new ThoughtMetadata(ThoughtType.GOAL, ThoughtOrigin.USER, Collections.emptyList(), Instant.now())
         );

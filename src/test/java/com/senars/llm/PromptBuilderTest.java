@@ -30,7 +30,7 @@ class PromptBuilderTest {
         // Arrange
         Thought focusThought = new Thought(
                 UUID.randomUUID().toString(),
-                new ThoughtContent("This is a test thought.", null, null, null, null),
+                new ThoughtContent("This is a test thought.", null, null, null, null, null),
                 new ThoughtState(1.0, 1.0, 1.0),
                 new ThoughtMetadata(ThoughtType.BELIEF, ThoughtOrigin.USER, Collections.emptyList(), Instant.now())
         );
@@ -48,14 +48,14 @@ class PromptBuilderTest {
         // Arrange
         Thought schema = new Thought(
                 UUID.randomUUID().toString(),
-                new ThoughtContent("Analyze the following. Main subject: {{focus}}. Supporting data: {{context}}.", null, null, null, null),
+                new ThoughtContent("Analyze the following. Main subject: {{focus}}. Supporting data: {{context}}.", null, null, null, null, null),
                 new ThoughtState(1.0, 1.0, 1.0),
                 new ThoughtMetadata(ThoughtType.SCHEMA, ThoughtOrigin.SYSTEM, Collections.emptyList(), Instant.now())
         );
 
         Thought focusThought = new Thought(
                 UUID.randomUUID().toString(),
-                new ThoughtContent("The topic is AI.", null, null, null, null),
+                new ThoughtContent("The topic is AI.", null, null, null, null, null),
                 new ThoughtState(1.0, 1.0, 1.0),
                 new ThoughtMetadata(ThoughtType.GOAL, ThoughtOrigin.USER, Collections.emptyList(), Instant.now())
         );
@@ -63,13 +63,13 @@ class PromptBuilderTest {
         List<Thought> context = List.of(
                 new Thought(
                         UUID.randomUUID().toString(),
-                        new ThoughtContent("AI is advancing quickly.", null, null, null, null),
+                        new ThoughtContent("AI is advancing quickly.", null, null, null, null, null),
                         new ThoughtState(1.0, 1.0, 1.0),
                         new ThoughtMetadata(ThoughtType.BELIEF, ThoughtOrigin.PERCEPTION, Collections.emptyList(), Instant.now())
                 ),
                 new Thought(
                         UUID.randomUUID().toString(),
-                        new ThoughtContent("There are many new models.", null, null, null, null),
+                        new ThoughtContent("There are many new models.", null, null, null, null, null),
                         new ThoughtState(1.0, 1.0, 1.0),
                         new ThoughtMetadata(ThoughtType.BELIEF, ThoughtOrigin.PERCEPTION, Collections.emptyList(), Instant.now())
                 )

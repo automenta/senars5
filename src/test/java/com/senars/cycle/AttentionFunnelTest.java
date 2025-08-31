@@ -37,7 +37,7 @@ class AttentionFunnelTest {
     private Thought createTestThought(String id) {
         return new Thought(
             id,
-            new ThoughtContent("test content for " + id, null, null, null, null),
+            new ThoughtContent("test content for " + id, null, null, null, null, null),
             new ThoughtState(1.0, 1.0, 1.0),
             new ThoughtMetadata(ThoughtType.BELIEF, ThoughtOrigin.SYSTEM, List.of(), Instant.now())
         );

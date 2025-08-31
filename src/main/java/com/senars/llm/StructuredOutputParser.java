@@ -46,7 +46,7 @@ public class StructuredOutputParser {
 
             Thought thought = new Thought(
                     UUID.randomUUID().toString(),
-                    new ThoughtContent(content, null, null, null, null),
+                    new ThoughtContent(content, null, null, null, null, null),
                     new ThoughtState(clarity, salience, 1.0), // Default activation
                     new ThoughtMetadata(
                             type,
@@ -66,7 +66,7 @@ public class StructuredOutputParser {
     private Thought createReportThought(String content) {
         return new Thought(
                 UUID.randomUUID().toString(),
-                new ThoughtContent(content, null, null, null, null),
+                new ThoughtContent(content, null, null, null, null, null),
                 new ThoughtState(0.9, 50.0, 1.0), // High clarity, medium salience, high activation
                 new ThoughtMetadata(
                         ThoughtType.REPORT,
