@@ -8,7 +8,6 @@ import org.mockito.Mockito;
 
 import java.time.Instant;
 import java.util.Collections;
-import java.util.Date;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -95,7 +94,7 @@ class EffortPredictorTest {
                 UUID.randomUUID().toString(),
                 new ThoughtContent("Schema", EffortPredictor.EFFORT_MODEL_SCHEMA_NAME, null, null, proceduralContent),
                 new ThoughtState(1.0, 1.0, 1.0),
-                new ThoughtMetadata(ThoughtType.SCHEMA, ThoughtOrigin.SYSTEM, Collections.emptyList(), new Date())
+                new ThoughtMetadata(ThoughtType.SCHEMA, ThoughtOrigin.SYSTEM, Collections.emptyList(), Instant.now())
         );
     }
 }

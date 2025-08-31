@@ -1,1 +1,8 @@
+com/senars/salience/SalienceCalculatorTest.class
+com/senars/llm/StructuredOutputParserTest.class
+com/senars/salience/VectorMathTest.class
+com/senars/effort/EffortPredictorTest.class
 com/senars/llm/Langchain4jCognitiveProcessorTest.class
+com/senars/cycle/CognitiveCycleTest.class
+com/senars/cycle/CognitiveCycleTest$AttentionFunnelForTest.class
+com/senars/llm/PromptBuilderTest.class
