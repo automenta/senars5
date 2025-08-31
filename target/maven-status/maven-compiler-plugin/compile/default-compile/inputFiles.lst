@@ -1,14 +1,16 @@
-/app/src/main/java/com/senars/salience/SalienceCalculator.java
 /app/src/main/java/com/senars/systems/immemory/PassThroughGovernanceLayer.java
 /app/src/main/java/com/senars/systems/immemory/LoggingGroundingSystem.java
 /app/src/main/java/com/senars/core/ThoughtOrigin.java
+/app/src/main/java/com/senars/salience/SalienceCalculator.java
+/app/src/main/java/com/senars/llm/Langchain4jCognitiveProcessor.java
 /app/src/main/java/com/senars/salience/VectorMath.java
 /app/src/main/java/com/senars/cycle/IActionSystem.java
+/app/src/main/java/com/senars/llm/PromptBuilder.java
 /app/src/main/java/com/senars/systems/IGroundingSystem.java
 /app/src/main/java/com/senars/core/ThoughtContent.java
 /app/src/main/java/com/senars/core/ThoughtState.java
-/app/src/main/java/com/senars/motive/MotiveHierarchy.java
 /app/src/main/java/com/senars/core/ThoughtMetadata.java
+/app/src/main/java/com/senars/motive/MotiveHierarchy.java
 /app/src/main/java/com/senars/systems/IGovernanceLayer.java
 /app/src/main/java/com/senars/cycle/CognitiveCycle.java
 /app/src/main/java/com/senars/motive/Drive.java
@@ -17,5 +19,6 @@
 /app/src/main/java/com/senars/core/Thought.java
 /app/src/main/java/com/senars/systems/immemory/InMemoryMemoryNexus.java
 /app/src/main/java/com/senars/cycle/ICognitiveProcessor.java
+/app/src/main/java/com/senars/llm/StructuredOutputParser.java
 /app/src/main/java/com/senars/cycle/IAttentionFunnel.java
 /app/src/main/java/com/senars/core/ThoughtType.java

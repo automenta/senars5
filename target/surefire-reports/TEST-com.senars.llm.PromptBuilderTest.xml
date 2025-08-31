@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuite xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://maven.apache.org/surefire/maven-surefire-plugin/xsd/surefire-test-report-3.0.xsd" version="3.0" name="com.senars.salience.VectorMathTest" time="0.019" tests="7" errors="0" skipped="0" failures="0">
+<testsuite xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://maven.apache.org/surefire/maven-surefire-plugin/xsd/surefire-test-report-3.0.xsd" version="3.0" name="com.senars.llm.PromptBuilderTest" time="0.063" tests="2" errors="0" skipped="0" failures="0">
   <properties>
     <property name="java.specification.version" value="21"/>
     <property name="sun.jnu.encoding" value="UTF-8"/>
@@ -53,11 +53,9 @@
     <property name="sun.io.unicode.encoding" value="UnicodeLittle"/>
     <property name="java.class.version" value="65.0"/>
   </properties>
-  <testcase name="testCosineSimilarity_identicalVectors" classname="com.senars.salience.VectorMathTest" time="0.001"/>
-  <testcase name="testCosineSimilarity_emptyVectors" classname="com.senars.salience.VectorMathTest" time="0.0"/>
-  <testcase name="testCosineSimilarity_differentLengthVectors" classname="com.senars.salience.VectorMathTest" time="0.001"/>
-  <testcase name="testCosineSimilarity_zeroVector" classname="com.senars.salience.VectorMathTest" time="0.004"/>
-  <testcase name="testCosineSimilarity_generalCase" classname="com.senars.salience.VectorMathTest" time="0.001"/>
-  <testcase name="testCosineSimilarity_orthogonalVectors" classname="com.senars.salience.VectorMathTest" time="0.0"/>
-  <testcase name="testCosineSimilarity_oppositeVectors" classname="com.senars.salience.VectorMathTest" time="0.001"/>
+  <testcase name="testBuildWithSchemaAndContext" classname="com.senars.llm.PromptBuilderTest" time="0.046"/>
+  <testcase name="testBuildWithPlaceholderImplementation" classname="com.senars.llm.PromptBuilderTest" time="0.014">
+    <system-err><![CDATA[[main] WARN com.senars.llm.PromptBuilder - Schema is null or has no text content. Falling back to simple prompt generation.
+]]></system-err>
+  </testcase>
 </testsuite>

@@ -68,4 +68,12 @@ public class InMemoryMemoryNexus implements IMemoryNexus {
         Collections.reverse(trace); // To get the trace in chronological order.
         return trace;
     }
+
+    /**
+     * A simple method to retrieve all thoughts for demonstration purposes.
+     * @return A list of all thoughts in the memory nexus.
+     */
+    public List<Thought> getAllThoughts() {
+        return new ArrayList<>(thoughtStore.values());
+    }
 }
