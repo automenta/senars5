@@ -3,8 +3,11 @@ package com.senars.cycle;
 import com.senars.core.*;
 import com.senars.systems.IGovernanceLayer;
 import com.senars.systems.IMemoryNexus;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.time.Instant;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -15,6 +18,8 @@ import java.util.UUID;
  * It runs the main perception-attention-processing loop.
  */
 public class CognitiveCycle {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(CognitiveCycle.class);
 
     private final IPerceptionSystem perceptionSystem;
     private final IAttentionFunnel attentionFunnel;
@@ -40,49 +45,59 @@ public class CognitiveCycle {
     }
 
     /**
-     * Executes a single step of the cognitive cycle.
+     * Executes a single step of the cognitive cycle with robust error handling.
      */
     public void step() {
-        // 1. Perception Stage
-        List<Thought> perceivedThoughts = perceptionSystem.perceive();
-        if (!perceivedThoughts.isEmpty()) {
-            System.out.println("[CognitiveCycle] Perceived " + perceivedThoughts.size() + " new thoughts.");
-            for (Thought thought : perceivedThoughts) {
-                attentionFunnel.addCandidate(thought);
+        try {
+            // 1. Perception Stage
+            List<Thought> perceivedThoughts = perceptionSystem.perceive();
+            if (!perceivedThoughts.isEmpty()) {
+                LOGGER.info("Perceived {} new thoughts.", perceivedThoughts.size());
+                for (Thought thought : perceivedThoughts) {
+                    attentionFunnel.addCandidate(thought);
+                }
             }
-        }
 
-        // 2. Prioritization Stage
-        Optional<Thought> focusThoughtOpt = attentionFunnel.selectFocusThought();
+            // 2. Prioritization Stage
+            Optional<Thought> focusThoughtOpt = attentionFunnel.selectFocusThought();
 
-        // If there's nothing to focus on (even after perception), the cycle is idle.
-        if (focusThoughtOpt.isEmpty()) {
-            System.out.println("[CognitiveCycle] No focus thought. System is idle.");
-            return;
-        }
+            if (focusThoughtOpt.isEmpty()) {
+                LOGGER.debug("No focus thought. System is idle.");
+                return;
+            }
 
-        Thought focusThought = focusThoughtOpt.get();
-        System.out.println("[CognitiveCycle] Focusing on thought: " + focusThought.id());
+            Thought focusThought = focusThoughtOpt.get();
+            LOGGER.info("Focusing on thought: {}", focusThought.id());
 
-        List<Thought> newThoughts = cognitiveProcessor.process(focusThought);
+            // 3. Processing Stage
+            List<Thought> newThoughts = cognitiveProcessor.process(focusThought);
 
-        for (Thought newThought : newThoughts) {
-            handleNewThought(newThought);
+            for (Thought newThought : newThoughts) {
+                handleNewThought(newThought);
+            }
+        } catch (Exception e) {
+            LOGGER.error("An unexpected error occurred during the cognitive cycle.", e);
+            // In a more advanced implementation, this could trigger a system-level
+            // goal to diagnose the failure. For now, we log and continue.
         }
     }
 
     private void handleNewThought(Thought thought) {
-        System.out.println("[CognitiveCycle] New thought generated: " + thought.metadata().type() + " - " + thought.id());
+        LOGGER.info("New thought generated: {} - {}", thought.metadata().type(), thought.id());
         memoryNexus.saveThought(thought);
 
         if (thought.metadata().type() == ThoughtType.ACTION_PLAN) {
-            Optional<String> vetoReason = governanceLayer.reviewPlan(thought);
-            if (vetoReason.isPresent()) {
-                System.out.println("[CognitiveCycle] ACTION_PLAN vetoed: " + vetoReason.get());
-                createReplanGoal(thought, vetoReason.get());
-            } else {
-                System.out.println("[CognitiveCycle] ACTION_PLAN approved. Executing...");
-                actionSystem.executePlan(thought);
+            try {
+                Optional<String> vetoReason = governanceLayer.reviewPlan(thought);
+                if (vetoReason.isPresent()) {
+                    LOGGER.warn("ACTION_PLAN vetoed: {}", vetoReason.get());
+                    createReplanGoal(thought, vetoReason.get());
+                } else {
+                    LOGGER.info("ACTION_PLAN approved. Executing...");
+                    actionSystem.executePlan(thought);
+                }
+            } catch (Exception e) {
+                LOGGER.error("Error during action plan review or execution for thought: {}", thought.id(), e);
             }
         } else {
             attentionFunnel.addCandidate(thought);
@@ -105,7 +120,7 @@ public class CognitiveCycle {
                 Instant.now()
             )
         );
-        System.out.println("[CognitiveCycle] Created replan goal: " + replanGoal.id());
+        LOGGER.info("Created replan goal: {}", replanGoal.id());
         memoryNexus.saveThought(replanGoal);
         attentionFunnel.addCandidate(replanGoal);
     }
