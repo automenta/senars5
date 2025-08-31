@@ -1,6 +1,8 @@
 /app/src/test/java/com/senars/cycle/CognitiveCycleTest.java
+/app/src/test/java/com/senars/effort/EffortPredictorTest.java
 /app/src/test/java/com/senars/salience/VectorMathTest.java
 /app/src/test/java/com/senars/llm/Langchain4jCognitiveProcessorTest.java
 /app/src/test/java/com/senars/llm/StructuredOutputParserTest.java
+/app/src/test/java/com/senars/cycle/AttentionFunnelTest.java
 /app/src/test/java/com/senars/salience/SalienceCalculatorTest.java
 /app/src/test/java/com/senars/llm/PromptBuilderTest.java

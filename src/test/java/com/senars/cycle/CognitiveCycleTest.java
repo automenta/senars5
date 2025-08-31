@@ -124,4 +124,29 @@ class CognitiveCycleTest {
             t.metadata().type() == ThoughtType.GOAL && t.content().text().contains(vetoReason)
         ));
     }
+
+    @Test
+    void step_perceivesNewThoughtsAndAddsToFunnel() {
+        Thought perceivedThought = createTestThought(ThoughtType.BELIEF);
+        perceivedThought = new Thought(
+            perceivedThought.id(),
+            new ThoughtContent("A new perception", null, null, null, null),
+            perceivedThought.state(),
+            perceivedThought.metadata()
+        );
+
+        // When the perception system runs, it returns a new thought.
+        when(perceptionSystem.perceive()).thenReturn(List.of(perceivedThought));
+        // There are no other thoughts in the system to start.
+        when(attentionFunnel.selectFocusThought()).thenReturn(Optional.empty());
+
+        cognitiveCycle.step();
+
+        // Verify the perception system was checked.
+        verify(perceptionSystem).perceive();
+        // Verify the new thought was added to the attention funnel for future consideration.
+        verify(attentionFunnel).addCandidate(perceivedThought);
+        // Verify that since there was no focus thought, the processor did not run.
+        verify(cognitiveProcessor, never()).process(any());
+    }
 }

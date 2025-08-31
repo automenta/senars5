@@ -1,6 +1,6 @@
 /app/src/main/java/com/senars/core/ThoughtOrigin.java
-/app/src/main/java/com/senars/systems/immemory/LoggingGroundingSystem.java
 /app/src/main/java/com/senars/salience/SalienceCalculator.java
+/app/src/main/java/com/senars/systems/immemory/LoggingGroundingSystem.java
 /app/src/main/java/com/senars/salience/VectorMath.java
 /app/src/main/java/com/senars/cycle/IActionSystem.java
 /app/src/main/java/com/senars/llm/PromptBuilder.java
@@ -18,8 +18,9 @@
 /app/src/main/java/com/senars/systems/IGroundingSystem.java
 /app/src/main/java/com/senars/core/ThoughtState.java
 /app/src/main/java/com/senars/effort/EffortPredictor.java
-/app/src/main/java/com/senars/motive/MotiveHierarchy.java
 /app/src/main/java/com/senars/core/ThoughtMetadata.java
+/app/src/main/java/com/senars/motive/MotiveHierarchy.java
+/app/src/main/java/com/senars/cycle/AttentionFunnel.java
 /app/src/main/java/com/senars/core/Thought.java
 /app/src/main/java/com/senars/effort/IEffortPredictionModel.java
 /app/src/main/java/com/senars/systems/immemory/InMemoryMemoryNexus.java

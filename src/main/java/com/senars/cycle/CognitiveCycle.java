@@ -43,8 +43,19 @@ public class CognitiveCycle {
      * Executes a single step of the cognitive cycle.
      */
     public void step() {
+        // 1. Perception Stage
+        List<Thought> perceivedThoughts = perceptionSystem.perceive();
+        if (!perceivedThoughts.isEmpty()) {
+            System.out.println("[CognitiveCycle] Perceived " + perceivedThoughts.size() + " new thoughts.");
+            for (Thought thought : perceivedThoughts) {
+                attentionFunnel.addCandidate(thought);
+            }
+        }
+
+        // 2. Prioritization Stage
         Optional<Thought> focusThoughtOpt = attentionFunnel.selectFocusThought();
 
+        // If there's nothing to focus on (even after perception), the cycle is idle.
         if (focusThoughtOpt.isEmpty()) {
             System.out.println("[CognitiveCycle] No focus thought. System is idle.");
             return;

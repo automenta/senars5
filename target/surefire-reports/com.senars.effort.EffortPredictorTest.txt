@@ -1,4 +1,4 @@
 -------------------------------------------------------------------------------
 Test set: com.senars.effort.EffortPredictorTest
 -------------------------------------------------------------------------------
-Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 1.834 s -- in com.senars.effort.EffortPredictorTest
+Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 1.145 s -- in com.senars.effort.EffortPredictorTest

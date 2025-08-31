@@ -12,7 +12,7 @@
     <property name="java.vm.specification.version" value="21"/>
     <property name="sun.java.launcher" value="SUN_STANDARD"/>
     <property name="sun.boot.library.path" value="/usr/lib/jvm/java-21-openjdk-amd64/lib"/>
-    <property name="sun.java.command" value="/app/target/surefire/surefirebooter-20250831211720364_3.jar /app/target/surefire 2025-08-31T21-17-19_988-jvmRun1 surefire-20250831211720364_1tmp surefire_0-20250831211720364_2tmp"/>
+    <property name="sun.java.command" value="/app/target/surefire/surefirebooter-20250831212845773_3.jar /app/target/surefire 2025-08-31T21-28-45_687-jvmRun1 surefire-20250831212845773_1tmp surefire_0-20250831212845773_2tmp"/>
     <property name="jdk.debug" value="release"/>
     <property name="surefire.test.class.path" value="/app/target/test-classes:/app/target/classes:/home/jules/.m2/repository/dev/langchain4j/langchain4j/1.4.0/langchain4j-1.4.0.jar:/home/jules/.m2/repository/dev/langchain4j/langchain4j-core/1.4.0/langchain4j-core-1.4.0.jar:/home/jules/.m2/repository/org/jspecify/jspecify/1.0.0/jspecify-1.0.0.jar:/home/jules/.m2/repository/com/fasterxml/jackson/core/jackson-annotations/2.19.2/jackson-annotations-2.19.2.jar:/home/jules/.m2/repository/com/fasterxml/jackson/core/jackson-core/2.19.2/jackson-core-2.19.2.jar:/home/jules/.m2/repository/org/apache/opennlp/opennlp-tools/2.5.4/opennlp-tools-2.5.4.jar:/home/jules/.m2/repository/dev/langchain4j/langchain4j-ollama/1.4.0/langchain4j-ollama-1.4.0.jar:/home/jules/.m2/repository/dev/langchain4j/langchain4j-http-client/1.4.0/langchain4j-http-client-1.4.0.jar:/home/jules/.m2/repository/dev/langchain4j/langchain4j-http-client-jdk/1.4.0/langchain4j-http-client-jdk-1.4.0.jar:/home/jules/.m2/repository/com/fasterxml/jackson/core/jackson-databind/2.15.2/jackson-databind-2.15.2.jar:/home/jules/.m2/repository/org/slf4j/slf4j-api/2.0.17/slf4j-api-2.0.17.jar:/home/jules/.m2/repository/org/slf4j/slf4j-simple/2.0.17/slf4j-simple-2.0.17.jar:/home/jules/.m2/repository/org/junit/jupiter/junit-jupiter-api/5.10.0/junit-jupiter-api-5.10.0.jar:/home/jules/.m2/repository/org/opentest4j/opentest4j/1.3.0/opentest4j-1.3.0.jar:/home/jules/.m2/repository/org/junit/platform/junit-platform-commons/1.10.0/junit-platform-commons-1.10.0.jar:/home/jules/.m2/repository/org/apiguardian/apiguardian-api/1.1.2/apiguardian-api-1.1.2.jar:/home/jules/.m2/repository/org/junit/jupiter/junit-jupiter-engine/5.10.0/junit-jupiter-engine-5.10.0.jar:/home/jules/.m2/repository/org/junit/platform/junit-platform-engine/1.10.0/junit-platform-engine-1.10.0.jar:/home/jules/.m2/repository/org/mockito/mockito-core/5.5.0/mockito-core-5.5.0.jar:/home/jules/.m2/repository/net/bytebuddy/byte-buddy/1.14.6/byte-buddy-1.14.6.jar:/home/jules/.m2/repository/net/bytebuddy/byte-buddy-agent/1.14.6/byte-buddy-agent-1.14.6.jar:/home/jules/.m2/repository/org/objenesis/objenesis/3.3/objenesis-3.3.jar:/home/jules/.m2/repository/org/mockito/mockito-junit-jupiter/5.5.0/mockito-junit-jupiter-5.5.0.jar:"/>
     <property name="sun.cpu.endian" value="little"/>
@@ -27,7 +27,7 @@
     <property name="line.separator" value="&#10;"/>
     <property name="java.vm.specification.vendor" value="Oracle Corporation"/>
     <property name="java.specification.name" value="Java Platform API Specification"/>
-    <property name="surefire.real.class.path" value="/app/target/surefire/surefirebooter-20250831211720364_3.jar"/>
+    <property name="surefire.real.class.path" value="/app/target/surefire/surefirebooter-20250831212845773_3.jar"/>
     <property name="sun.management.compiler" value="HotSpot 64-Bit Tiered Compilers"/>
     <property name="java.runtime.version" value="21.0.8+9-Ubuntu-0ubuntu124.04.1"/>
     <property name="user.name" value="jules"/>
@@ -54,9 +54,9 @@
     <property name="java.class.version" value="65.0"/>
   </properties>
   <testcase name="testCosineSimilarity_identicalVectors" classname="com.senars.salience.VectorMathTest" time="0.001"/>
-  <testcase name="testCosineSimilarity_emptyVectors" classname="com.senars.salience.VectorMathTest" time="0.002"/>
+  <testcase name="testCosineSimilarity_emptyVectors" classname="com.senars.salience.VectorMathTest" time="0.001"/>
   <testcase name="testCosineSimilarity_differentLengthVectors" classname="com.senars.salience.VectorMathTest" time="0.001"/>
-  <testcase name="testCosineSimilarity_zeroVector" classname="com.senars.salience.VectorMathTest" time="0.001"/>
+  <testcase name="testCosineSimilarity_zeroVector" classname="com.senars.salience.VectorMathTest" time="0.004"/>
   <testcase name="testCosineSimilarity_generalCase" classname="com.senars.salience.VectorMathTest" time="0.001"/>
   <testcase name="testCosineSimilarity_orthogonalVectors" classname="com.senars.salience.VectorMathTest" time="0.001"/>
   <testcase name="testCosineSimilarity_oppositeVectors" classname="com.senars.salience.VectorMathTest" time="0.001"/>
