@@ -1,6 +1,8 @@
 package com.senars.llm;
 
 import com.senars.core.Thought;
+import com.senars.core.ThoughtContent;
+import com.senars.core.ThoughtMeta;
 import com.senars.cycle.Cognition;
 import com.senars.systems.Memory;
 import dev.langchain4j.data.message.AiMessage;
@@ -10,15 +12,19 @@ import dev.langchain4j.model.output.Response;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -35,7 +41,14 @@ class Langchain4jCognitiveProcessorTest {
     @Mock
     private Thought mockFocusThought;
     @Mock
+    private ThoughtContent mockThoughtContent;
+    @Mock
     private Thought mockResultThought;
+    @Mock
+    private Thought mockTraceThought;
+    @Mock
+    private Thought mockSimilarThought;
+
 
     private Cognition cognitiveProcessor;
 
@@ -52,13 +65,33 @@ class Langchain4jCognitiveProcessorTest {
     @Test
     void processShouldOrchestrateCallsToCollaborators() {
         // Arrange
+        String focusThoughtId = "focus-thought-id";
+        List<Double> focusThoughtEmbedding = List.of(1.0, 0.0, 0.0);
         String expectedPrompt = "This is a test prompt.";
         String expectedResponseText = "This is the LLM response.";
         List<Thought> expectedThoughts = List.of(mockResultThought);
         Response<AiMessage> mockResponse = Response.from(AiMessage.from(expectedResponseText));
 
-        when(mockFocusThought.id()).thenReturn("test-id");
-        when(mockPromptBuilder.build(null, mockFocusThought, Collections.emptyList())).thenReturn(expectedPrompt);
+        // Setup context lists, including the focus thought itself to test the removal logic
+        List<Thought> traceContext = new ArrayList<>();
+        traceContext.add(mockTraceThought);
+        traceContext.add(mockFocusThought); // Add focus thought to context
+
+        List<Thought> similarContext = new ArrayList<>();
+        similarContext.add(mockSimilarThought);
+
+        // Stubbing the focus thought
+        when(mockFocusThought.id()).thenReturn(focusThoughtId);
+        when(mockFocusThought.content()).thenReturn(mockThoughtContent);
+        when(mockThoughtContent.embedding()).thenReturn(focusThoughtEmbedding);
+
+        // Stubbing the memory nexus
+        when(mockMemoryNexus.getTrace(focusThoughtId)).thenReturn(traceContext);
+        when(mockMemoryNexus.retrieveSimilar(focusThoughtEmbedding, 5)).thenReturn(similarContext);
+
+        // Stubbing the prompt builder and output parser
+        ArgumentCaptor<List<Thought>> contextCaptor = ArgumentCaptor.forClass(List.class);
+        when(mockPromptBuilder.build(isNull(), eq(mockFocusThought), contextCaptor.capture())).thenReturn(expectedPrompt);
         when(mockChatModel.generate(ArgumentMatchers.<UserMessage>any())).thenReturn(mockResponse);
         when(mockOutputParser.parse(expectedResponseText)).thenReturn(expectedThoughts);
 
@@ -69,10 +102,17 @@ class Langchain4jCognitiveProcessorTest {
         assertNotNull(result);
         assertEquals(expectedThoughts, result);
 
+        // Verify that context was assembled correctly (including removing the focus thought)
+        List<Thought> capturedContext = contextCaptor.getValue();
+        assertNotNull(capturedContext);
+        assertEquals(new HashSet<>(List.of(mockTraceThought, mockSimilarThought)), new HashSet<>(capturedContext));
+
+
         // Verify that the collaborators were called in the correct order with the correct parameters
-        verify(mockPromptBuilder, times(1)).build(null, mockFocusThought, Collections.emptyList());
-        verify(mockChatModel, times(1)).generate(ArgumentMatchers.<UserMessage>any());
-        verify(mockOutputParser, times(1)).parse(expectedResponseText);
-        verifyNoInteractions(mockMemoryNexus); // MemoryNexus is not used yet
+        verify(mockMemoryNexus).getTrace(focusThoughtId);
+        verify(mockMemoryNexus).retrieveSimilar(focusThoughtEmbedding, 5);
+        verify(mockPromptBuilder).build(isNull(), eq(mockFocusThought), anyList());
+        verify(mockChatModel).generate(ArgumentMatchers.<UserMessage>any());
+        verify(mockOutputParser).parse(expectedResponseText);
     }
 }
