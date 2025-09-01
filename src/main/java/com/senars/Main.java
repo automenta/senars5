@@ -1,24 +1,21 @@
 package com.senars;
 
 import com.senars.config.AppConfig;
-import com.senars.core.*;
+import com.senars.core.Genesis;
+import com.senars.core.Sessions;
+import com.senars.core.Thought;
 import com.senars.cycle.*;
 import com.senars.effort.EffortPredictor;
-import com.senars.llm.Langchain4jCognitiveProcessor;
+import com.senars.llm.Langchain4JCognition;
 import com.senars.llm.PromptBuilder;
 import com.senars.llm.StructuredOutputParser;
 import com.senars.motive.MotiveHierarchy;
 import com.senars.salience.SalienceCalculator;
-import com.senars.systems.IGovernanceLayer;
-import com.senars.systems.IGroundingSystem;
-import com.senars.systems.IMemoryNexus;
-import com.senars.systems.PersistentMemoryNexus;
+import com.senars.systems.Governor;
+import com.senars.systems.Grounding;
+import com.senars.systems.PersistentMemory;
 import com.senars.systems.Rule;
-import com.senars.systems.immemory.ConsoleActionSystem;
-import com.senars.systems.immemory.ConsolePerceptionSystem;
-import com.senars.systems.immemory.InMemoryGovernanceLayer;
-import com.senars.systems.immemory.InMemoryGroundingSystem;
-import com.senars.systems.immemory.ShutdownException;
+import com.senars.systems.immemory.*;
 import com.senars.systems.rules.KeywordBlocklistRule;
 import dev.langchain4j.model.embedding.AllMiniLmL6V2EmbeddingModel;
 import dev.langchain4j.model.embedding.EmbeddingModel;
@@ -47,38 +44,38 @@ public class Main {
         EmbeddingModel embeddingModel = new AllMiniLmL6V2EmbeddingModel();
 
         // 2. Foundational Systems
-        PersistentMemoryNexus memoryNexus = new PersistentMemoryNexus(
+        PersistentMemory memory = new PersistentMemory(
                 config.getGraphDbFilePath(),
                 config.getVectorStoreFilePath(),
                 embeddingModel
         );
         List<Rule> rules = List.of(
-            new KeywordBlocklistRule(List.of("delete all files", "shutdown", "rm -rf"))
+                new KeywordBlocklistRule(List.of("delete all files", "shutdown", "rm -rf"))
         );
-        IGovernanceLayer governanceLayer = new InMemoryGovernanceLayer(rules);
-        IGroundingSystem groundingSystem = new InMemoryGroundingSystem(memoryNexus);
+        Governor governance = new InMemoryGovernor(rules);
+        Grounding grounding = new InMemoryGrounding(memory);
 
         // 3. Genesis & Bootstrapping
         LOGGER.info("Executing Genesis Protocol...");
         List<Thought> genesisDrives = Genesis.createGenesisDrives(embeddingModel);
         List<Thought> genesisBeliefs = Genesis.loadKnowledgeFromFile("genesis_knowledge.json", embeddingModel);
 
-        genesisDrives.forEach(memoryNexus::saveThought);
-        genesisBeliefs.forEach(memoryNexus::saveThought);
+        genesisDrives.forEach(memory::saveThought);
+        genesisBeliefs.forEach(memory::saveThought);
         LOGGER.info("Loaded {} Genesis Drives and {} Genesis Beliefs into Memory Nexus.", genesisDrives.size(), genesisBeliefs.size());
 
 
         // 4. Cognitive Cycle Components
-        IPerceptionSystem perceptionSystem = new ConsolePerceptionSystem(embeddingModel);
-        IActionSystem actionSystem = new ConsoleActionSystem();
+        Perception perception = new ConsolePerception(embeddingModel);
+        Action action = new ConsoleAction();
 
         // 5. Attention and Salience
-        MotiveHierarchy motiveHierarchy = new MotiveHierarchy(genesisDrives);
+        MotiveHierarchy motives = new MotiveHierarchy(genesisDrives);
 
         // Establish Prime Ambition
         Thought primeAmbition = Genesis.createPrimeAmbition(embeddingModel);
-        motiveHierarchy.addAmbition(primeAmbition);
-        memoryNexus.saveThought(primeAmbition);
+        motives.addAmbition(primeAmbition);
+        memory.saveThought(primeAmbition);
 
         LOGGER.info("--- GENESIS PROTOCOL COMPLETE ---");
         genesisDrives.forEach(drive -> LOGGER.info("Loaded Drive: {}", drive.content().text()));
@@ -86,9 +83,9 @@ public class Main {
         LOGGER.info("Established Prime Ambition: {}", primeAmbition.content().text());
         LOGGER.info("---------------------------------");
 
-        EffortPredictor effortPredictor = new EffortPredictor(memoryNexus);
+        EffortPredictor effortPredictor = new EffortPredictor(memory);
         SalienceCalculator salienceCalculator = new SalienceCalculator(effortPredictor);
-        IAttentionFunnel attentionFunnel = new SalienceBasedAttentionFunnel(salienceCalculator, motiveHierarchy);
+        Attention attention = new SalienceBasedAttention(salienceCalculator, motives);
 
         // 5. LLM-based Cognitive Processor
         OllamaChatModel chatModel = OllamaChatModel.builder()
@@ -100,24 +97,24 @@ public class Main {
         PromptBuilder promptBuilder = new PromptBuilder();
         StructuredOutputParser outputParser = new StructuredOutputParser();
 
-        ICognitiveProcessor cognitiveProcessor = new Langchain4jCognitiveProcessor(
+        Cognition cognitiveProcessor = new Langchain4JCognition(
                 chatModel,
-                memoryNexus,
+                memory,
                 promptBuilder,
                 outputParser
         );
 
         // 6. The Cognitive Cycle itself
-        SessionManager sessionManager = new SessionManager();
+        Sessions sessions = new Sessions();
         CognitiveCycle cognitiveCycle = new CognitiveCycle(
-                perceptionSystem,
-                attentionFunnel,
+                perception,
+                attention,
                 cognitiveProcessor,
-                actionSystem,
-                memoryNexus,
-                governanceLayer,
-                sessionManager,
-                groundingSystem
+                action,
+                memory,
+                governance,
+                sessions,
+                grounding
         );
 
         LOGGER.info("SeNARS Cognitive System Initialized. Starting cognitive cycle.");
@@ -137,7 +134,7 @@ public class Main {
             }
         } finally {
             LOGGER.info("Persisting memory state...");
-            memoryNexus.persist();
+            memory.persist();
             LOGGER.info("SeNARS Cognitive System finished after {} steps.", stepCount);
         }
     }

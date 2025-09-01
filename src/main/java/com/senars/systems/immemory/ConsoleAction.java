@@ -2,7 +2,7 @@ package com.senars.systems.immemory;
 
 import com.senars.core.Thought;
 import com.senars.core.ThoughtType;
-import com.senars.cycle.IActionSystem;
+import com.senars.cycle.Action;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -10,9 +10,9 @@ import org.slf4j.LoggerFactory;
  * An implementation of the IActionSystem that interacts with the user via the system console.
  * It prints the action plan to the console and prompts the user for feedback.
  */
-public class ConsoleActionSystem implements IActionSystem {
+public class ConsoleAction implements Action {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(ConsoleActionSystem.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(ConsoleAction.class);
 
     @Override
     public void executePlan(Thought actionPlan) {

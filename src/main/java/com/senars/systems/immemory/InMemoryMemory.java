@@ -4,7 +4,7 @@ import com.senars.core.*;
 import com.senars.effort.EffortPredictor;
 import com.senars.effort.LinearTextEffortModel;
 import com.senars.salience.VectorMath;
-import com.senars.systems.IMemoryNexus;
+import com.senars.systems.Memory;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -15,11 +15,11 @@ import java.util.stream.Collectors;
  * Suitable for testing and development without requiring external databases.
  * Note: The semantic search is a naive O(n) implementation.
  */
-public class InMemoryMemoryNexus implements IMemoryNexus {
+public class InMemoryMemory implements Memory {
 
-    private final Map<String, Thought> thoughtStore = new ConcurrentHashMap<>();
+    private final Map<String, Thought> thoughts = new ConcurrentHashMap<>();
 
-    public InMemoryMemoryNexus() {
+    public InMemoryMemory() {
         seedDefaultSchemas();
     }
 
@@ -34,7 +34,7 @@ public class InMemoryMemoryNexus implements IMemoryNexus {
                 null
         );
 
-        ThoughtMetadata metadata = new ThoughtMetadata(
+        ThoughtMeta metadata = new ThoughtMeta(
                 ThoughtType.SCHEMA,
                 ThoughtOrigin.SYSTEM,
                 Collections.emptyList(),
@@ -55,12 +55,12 @@ public class InMemoryMemoryNexus implements IMemoryNexus {
 
     @Override
     public void saveThought(Thought thought) {
-        thoughtStore.put(thought.id(), thought);
+        thoughts.put(thought.id(), thought);
     }
 
     @Override
     public Optional<Thought> getThoughtById(String id) {
-        return Optional.ofNullable(thoughtStore.get(id));
+        return Optional.ofNullable(thoughts.get(id));
     }
 
     @Override
@@ -70,16 +70,16 @@ public class InMemoryMemoryNexus implements IMemoryNexus {
         }
 
         // Naive O(n) semantic search.
-        return thoughtStore.values().stream()
-            .filter(thought -> thought.content().embedding() != null && !thought.content().embedding().isEmpty())
-            .map(thought -> {
-                double similarity = VectorMath.cosineSimilarity(embedding, thought.content().embedding());
-                return new AbstractMap.SimpleEntry<>(thought, similarity);
-            })
-            .sorted(Map.Entry.<Thought, Double>comparingByValue().reversed())
-            .limit(topK)
-            .map(Map.Entry::getKey)
-            .collect(Collectors.toList());
+        return thoughts.values().stream()
+                .filter(thought -> thought.content().embedding() != null && !thought.content().embedding().isEmpty())
+                .map(thought -> {
+                    double similarity = VectorMath.cosineSimilarity(embedding, thought.content().embedding());
+                    return new AbstractMap.SimpleEntry<>(thought, similarity);
+                })
+                .sorted(Map.Entry.<Thought, Double>comparingByValue().reversed())
+                .limit(topK)
+                .map(Map.Entry::getKey)
+                .collect(Collectors.toList());
     }
 
     @Override
@@ -110,12 +110,12 @@ public class InMemoryMemoryNexus implements IMemoryNexus {
      * @return A list of all thoughts in the memory nexus.
      */
     public List<Thought> getAllThoughts() {
-        return new ArrayList<>(thoughtStore.values());
+        return new ArrayList<>(thoughts.values());
     }
 
     @Override
     public Optional<Thought> findSchemaBySymbolicName(String name) {
-        return thoughtStore.values().stream()
+        return thoughts.values().stream()
                 .filter(t -> t.metadata().type() == com.senars.core.ThoughtType.SCHEMA)
                 .filter(t -> t.content().symbolic() != null && t.content().symbolic().equals(name))
                 .findFirst();

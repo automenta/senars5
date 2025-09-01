@@ -3,6 +3,7 @@ package com.senars.salience;
 import com.senars.core.Thought;
 import com.senars.effort.EffortPredictor;
 import com.senars.motive.MotiveHierarchy;
+
 import java.util.List;
 import java.util.Optional;
 

@@ -5,7 +5,6 @@ import dev.langchain4j.data.segment.TextSegment;
 import dev.langchain4j.model.embedding.EmbeddingModel;
 import dev.langchain4j.store.embedding.EmbeddingMatch;
 import dev.langchain4j.store.embedding.EmbeddingStore;
-import dev.langchain4j.data.document.Metadata;
 import dev.langchain4j.store.embedding.inmemory.InMemoryEmbeddingStore;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -82,7 +81,7 @@ public class FileBasedEmbeddingStore {
             ((InMemoryEmbeddingStore<TextSegment>) store).serializeToFile(storePath);
             LOGGER.info("Successfully persisted embedding store to: {}", storePath);
         } catch (IOException e) {
-            LOGGER.error("Failed to persist embedding store to file: " + storePath, e);
+            LOGGER.error("Failed to persist embedding store to file: {}", storePath, e);
         }
     }
 }

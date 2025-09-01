@@ -1,7 +1,7 @@
 package com.senars.systems.immemory;
 
 import com.senars.core.*;
-import com.senars.systems.IMemoryNexus;
+import com.senars.systems.Memory;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -12,7 +12,6 @@ import java.time.Instant;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
 
 import static org.mockito.Mockito.*;
 
@@ -20,31 +19,31 @@ import static org.mockito.Mockito.*;
 class InMemoryGroundingSystemTest {
 
     @Mock
-    private IMemoryNexus memoryNexus;
+    private Memory memoryNexus;
 
-    private InMemoryGroundingSystem groundingSystem;
+    private InMemoryGrounding groundingSystem;
 
     @BeforeEach
     void setUp() {
-        groundingSystem = new InMemoryGroundingSystem(memoryNexus);
+        groundingSystem = new InMemoryGrounding(memoryNexus);
     }
 
     private Thought createTestThought(String id, double clarity) {
         return new Thought(
-            id,
-            new ThoughtContent("text", "symbolic", null, null, null, null),
-            new ThoughtState(clarity, 1.0, 1.0),
-            new ThoughtMetadata(ThoughtType.BELIEF, ThoughtOrigin.LLM_INFERENCE, Collections.emptyList(), Instant.now())
+                id,
+                new ThoughtContent("text", "symbolic", null, null, null, null),
+                new ThoughtState(clarity, 1.0, 1.0),
+                new ThoughtMeta(ThoughtType.BELIEF, ThoughtOrigin.LLM_INFERENCE, Collections.emptyList(), Instant.now())
         );
     }
 
     private Thought createFeedbackReport(List<String> trace, double success) {
         Feedback feedback = new Feedback(success, "test feedback");
         return new Thought(
-            "feedback-report",
-            new ThoughtContent("report", null, null, null, null, feedback),
-            new ThoughtState(1.0, 1.0, 1.0),
-            new ThoughtMetadata(ThoughtType.REPORT, ThoughtOrigin.SYSTEM, trace, Instant.now())
+                "feedback-report",
+                new ThoughtContent("report", null, null, null, null, feedback),
+                new ThoughtState(1.0, 1.0, 1.0),
+                new ThoughtMeta(ThoughtType.REPORT, ThoughtOrigin.SYSTEM, trace, Instant.now())
         );
     }
 
@@ -110,10 +109,10 @@ class InMemoryGroundingSystemTest {
     void processFeedback_withNullFeedback_doesNothing() {
         // Arrange
         Thought feedbackReport = new Thought(
-            "report",
-            new ThoughtContent(null, null, null, null, null, null), // Null feedback
-            new ThoughtState(1.0, 1.0, 1.0),
-            new ThoughtMetadata(ThoughtType.REPORT, ThoughtOrigin.SYSTEM, List.of("id1"), Instant.now())
+                "report",
+                new ThoughtContent(null, null, null, null, null, null), // Null feedback
+                new ThoughtState(1.0, 1.0, 1.0),
+                new ThoughtMeta(ThoughtType.REPORT, ThoughtOrigin.SYSTEM, List.of("id1"), Instant.now())
         );
 
         // Act

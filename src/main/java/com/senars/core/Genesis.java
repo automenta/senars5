@@ -13,7 +13,6 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.stream.Collectors;
 
 /**
  * The Genesis class is responsible for creating the initial, immutable set of Thoughts
@@ -40,34 +39,37 @@ public class Genesis {
                 return Collections.emptyList();
             }
 
-            List<Thought> thoughts = OBJECT_MAPPER.readValue(inputStream, new TypeReference<List<Thought>>() {});
+            List<Thought> thoughts = OBJECT_MAPPER.readValue(inputStream, new TypeReference<>() {
+            });
 
             // Generate and set embeddings for each thought
             return thoughts.stream()
                     .map(thought -> {
-                        if (thought.content().text() != null && !thought.content().text().isEmpty()) {
+                        var content = thought.content();
+                        var text = content.text();
+                        if (text != null && !text.isEmpty()) {
                             List<Double> embedding = new ArrayList<>();
-                            for (float f : embeddingModel.embed(thought.content().text()).content().vector()) {
+                            for (float f : embeddingModel.embed(text).content().vector()) {
                                 embedding.add((double) f);
                             }
                             // Create a new Thought with the updated embedding
                             return new Thought(
-                                thought.id(),
-                                new ThoughtContent(
-                                    thought.content().text(),
-                                    thought.content().symbolic(),
-                                    embedding,
-                                    thought.content().perceptual(),
-                                    thought.content().procedural(),
-                                    thought.content().feedback()
-                                ),
-                                thought.state(),
-                                thought.metadata()
+                                    thought.id(),
+                                    new ThoughtContent(
+                                            text,
+                                            content.symbolic(),
+                                            embedding,
+                                            content.perceptual(),
+                                            content.procedural(),
+                                            content.feedback()
+                                    ),
+                                    thought.state(),
+                                    thought.metadata()
                             );
                         }
                         return thought;
                     })
-                    .collect(Collectors.toList());
+                    .toList();
 
         } catch (Exception e) {
             LOGGER.error("Failed to load or process genesis knowledge from {}", resourcePath, e);
@@ -95,26 +97,26 @@ public class Genesis {
 
 
             Thought driveThought = new Thought(
-                "drive-" + driveEnum.name().toLowerCase(),
-                new ThoughtContent(
-                    text,
-                    null, // symbolic
-                    embedding,
-                    null, // perceptual
-                    null, // procedural
-                    null  // feedback
-                ),
-                new ThoughtState(
-                    1.0, // clarity: Drives are foundational truths
-                    0.0, // salience: To be calculated by the funnel
-                    1.0  // activation: Drives are always active
-                ),
-                new ThoughtMetadata(
-                    ThoughtType.BELIEF, // Drives are foundational beliefs about what is important
-                    ThoughtOrigin.SYSTEM,
-                    List.of(), // No trace for genesis thoughts
-                    Instant.now()
-                )
+                    "drive-" + driveEnum.name().toLowerCase(),
+                    new ThoughtContent(
+                            text,
+                            null, // symbolic
+                            embedding,
+                            null, // perceptual
+                            null, // procedural
+                            null  // feedback
+                    ),
+                    new ThoughtState(
+                            1.0, // clarity: Drives are foundational truths
+                            0.0, // salience: To be calculated by the funnel
+                            1.0  // activation: Drives are always active
+                    ),
+                    new ThoughtMeta(
+                            ThoughtType.BELIEF, // Drives are foundational beliefs about what is important
+                            ThoughtOrigin.SYSTEM,
+                            List.of(), // No trace for genesis thoughts
+                            Instant.now()
+                    )
             );
             drives.add(driveThought);
         }
@@ -135,36 +137,38 @@ public class Genesis {
         }
 
         return new Thought(
-            "ambition-genesis-1",
-            new ThoughtContent(
-                text,
-                null,
-                embedding,
-                null,
-                null,
-                null
-            ),
-            new ThoughtState(
-                1.0, // clarity
-                0.0, // salience
-                1.0  // activation
-            ),
-            new ThoughtMetadata(
-                ThoughtType.GOAL,
-                ThoughtOrigin.SYSTEM,
-                List.of(),
-                Instant.now()
-            )
+                "ambition-genesis-1",
+                new ThoughtContent(
+                        text,
+                        null,
+                        embedding,
+                        null,
+                        null,
+                        null
+                ),
+                new ThoughtState(
+                        1.0, // clarity
+                        0.0, // salience
+                        1.0  // activation
+                ),
+                new ThoughtMeta(
+                        ThoughtType.GOAL,
+                        ThoughtOrigin.SYSTEM,
+                        List.of(),
+                        Instant.now()
+                )
         );
     }
 
     private static String getDriveText(Drive drive) {
         return switch (drive) {
             case MAINTAIN_COHERENCE -> "The drive to find and resolve contradictions within the Memory Nexus.";
-            case REDUCE_UNCERTAINTY -> "The drive to seek information that increases the Clarity of low-clarity Thoughts.";
-            case ACQUIRE_KNOWLEDGE -> "The drive to explore novel information and synthesize new BELIEF or SCHEMA Thoughts.";
+            case REDUCE_UNCERTAINTY ->
+                    "The drive to seek information that increases the Clarity of low-clarity Thoughts.";
+            case ACQUIRE_KNOWLEDGE ->
+                    "The drive to explore novel information and synthesize new BELIEF or SCHEMA Thoughts.";
             case MAINTAIN_COGNITIVE_INTEGRITY ->
-                "The meta-drive for self-improvement, making Thoughts about the system's own performance, health, and SCHEMA efficacy inherently salient.";
+                    "The meta-drive for self-improvement, making Thoughts about the system's own performance, health, and SCHEMA efficacy inherently salient.";
         };
     }
 }

@@ -1,13 +1,14 @@
 package com.senars.systems;
 
 import com.senars.core.Thought;
+
 import java.util.Optional;
 
 /**
  * Interface for the Governance Layer, the immutable safety backstop for the system.
  * It is responsible for vetoing unsafe or unethical actions.
  */
-public interface IGovernanceLayer {
+public interface Governor {
 
     /**
      * Reviews an ACTION_PLAN Thought to determine if it complies with the system's

@@ -24,5 +24,5 @@ public enum Drive {
      * The meta-drive for self-improvement, making Thoughts about the system's own
      * performance, health, and SCHEMA efficacy inherently salient.
      */
-    MAINTAIN_COGNITIVE_INTEGRITY;
+    MAINTAIN_COGNITIVE_INTEGRITY
 }

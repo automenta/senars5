@@ -1,14 +1,12 @@
 package com.senars.cycle;
 
 import com.senars.core.Thought;
-import com.senars.core.Thought;
 import com.senars.motive.MotiveHierarchy;
 import com.senars.salience.SalienceCalculator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.Comparator;
-import java.util.List;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -17,13 +15,14 @@ import java.util.concurrent.CopyOnWriteArrayList;
  * An implementation of the Attention Funnel that selects the focus thought
  * based on the highest calculated salience score.
  */
-public class SalienceBasedAttentionFunnel implements IAttentionFunnel {
+public class SalienceBasedAttention implements Attention {
 
+    private static final Logger LOGGER = LoggerFactory.getLogger(SalienceBasedAttention.class);
     private final List<Thought> candidates = new CopyOnWriteArrayList<>();
     private final SalienceCalculator salienceCalculator;
     private final MotiveHierarchy motiveHierarchy;
 
-    public SalienceBasedAttentionFunnel(SalienceCalculator salienceCalculator, MotiveHierarchy motiveHierarchy) {
+    public SalienceBasedAttention(SalienceCalculator salienceCalculator, MotiveHierarchy motiveHierarchy) {
         this.salienceCalculator = salienceCalculator;
         this.motiveHierarchy = motiveHierarchy;
     }
@@ -35,8 +34,7 @@ public class SalienceBasedAttentionFunnel implements IAttentionFunnel {
         }
     }
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(SalienceBasedAttentionFunnel.class);
-// ...
+    // ...
     @Override
     public Optional<Thought> selectFocusThought() {
         if (candidates.isEmpty()) {

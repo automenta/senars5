@@ -1,7 +1,7 @@
 package com.senars.systems.immemory;
 
 import com.senars.core.*;
-import com.senars.cycle.IPerceptionSystem;
+import com.senars.cycle.Perception;
 import dev.langchain4j.data.embedding.Embedding;
 import dev.langchain4j.model.embedding.EmbeddingModel;
 import org.slf4j.Logger;
@@ -17,13 +17,13 @@ import java.util.stream.Collectors;
  * An implementation of the IPerceptionSystem that reads user input from the console.
  * It parses the input to create different types of Thoughts and generates embeddings for them.
  */
-public class ConsolePerceptionSystem implements IPerceptionSystem {
+public class ConsolePerception implements Perception {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(ConsolePerceptionSystem.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(ConsolePerception.class);
     private final Scanner scanner;
     private final EmbeddingModel embeddingModel;
 
-    public ConsolePerceptionSystem(EmbeddingModel embeddingModel) {
+    public ConsolePerception(EmbeddingModel embeddingModel) {
         this.embeddingModel = embeddingModel;
         this.scanner = new Scanner(System.in);
     }
@@ -61,16 +61,14 @@ public class ConsolePerceptionSystem implements IPerceptionSystem {
 
     private boolean handleSpecialCommands(String input) {
         String command = input.toLowerCase();
-        switch (command) {
-            case "shutdown":
-            case "exit":
-                throw new ShutdownException();
-            case "help":
+        return switch (command) {
+            case "shutdown", "exit" -> throw new ShutdownException();
+            case "help" -> {
                 printHelp();
-                return true;
-            default:
-                return false;
-        }
+                yield true;
+            }
+            default -> false;
+        };
     }
 
     private void printHelp() {
@@ -111,7 +109,7 @@ public class ConsolePerceptionSystem implements IPerceptionSystem {
     private Thought createThought(String text, ThoughtType type) {
         List<Double> embedding = generateEmbedding(text);
         ThoughtContent content = new ThoughtContent(text, null, embedding, null, null, null);
-        ThoughtMetadata metadata = new ThoughtMetadata(type, ThoughtOrigin.USER, Collections.emptyList(), java.time.Instant.now());
+        ThoughtMeta metadata = new ThoughtMeta(type, ThoughtOrigin.USER, Collections.emptyList(), java.time.Instant.now());
         ThoughtState state = new ThoughtState(0.9, 1.0, 1.0); // High clarity/salience for user input
         return new Thought(UUID.randomUUID().toString(), content, state, metadata);
     }
@@ -128,7 +126,7 @@ public class ConsolePerceptionSystem implements IPerceptionSystem {
 
             // Note: The trace for this feedback will need to be added by the component that manages the session,
             // as the perception system itself doesn't know which action this feedback is for.
-            ThoughtMetadata metadata = new ThoughtMetadata(ThoughtType.REPORT, ThoughtOrigin.USER, Collections.emptyList(), java.time.Instant.now());
+            ThoughtMeta metadata = new ThoughtMeta(ThoughtType.REPORT, ThoughtOrigin.USER, Collections.emptyList(), java.time.Instant.now());
             ThoughtState state = new ThoughtState(1.0, 1.0, 1.0); // Feedback is always high clarity
             return new Thought(UUID.randomUUID().toString(), content, state, metadata);
         } catch (NumberFormatException e) {

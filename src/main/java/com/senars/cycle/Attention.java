@@ -1,6 +1,7 @@
 package com.senars.cycle;
 
 import com.senars.core.Thought;
+
 import java.util.Optional;
 
 /**
@@ -8,7 +9,7 @@ import java.util.Optional;
  * evaluating all candidate Thoughts and selecting the single one with the
  * highest Salience to become the focus of the current cognitive cycle.
  */
-public interface IAttentionFunnel {
+public interface Attention {
 
     /**
      * Adds a new Thought to the pool of candidates for attention.

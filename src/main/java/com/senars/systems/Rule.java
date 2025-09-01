@@ -1,6 +1,7 @@
 package com.senars.systems;
 
 import com.senars.core.Thought;
+
 import java.util.Optional;
 
 /**

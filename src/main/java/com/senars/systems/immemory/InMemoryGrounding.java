@@ -1,11 +1,10 @@
 package com.senars.systems.immemory;
 
-import com.senars.core.Thought;
-import com.senars.systems.IGroundingSystem;
-
 import com.senars.core.Feedback;
+import com.senars.core.Thought;
 import com.senars.core.ThoughtState;
-import com.senars.systems.IMemoryNexus;
+import com.senars.systems.Grounding;
+import com.senars.systems.Memory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -18,20 +17,20 @@ import java.util.Objects;
  * Memory Nexus, reinforcing or correcting the system's knowledge based on
  * action outcomes.
  */
-public class InMemoryGroundingSystem implements IGroundingSystem {
+public class InMemoryGrounding implements Grounding {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(InMemoryGroundingSystem.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(InMemoryGrounding.class);
     private static final double DEFAULT_CLARITY_ADJUSTMENT_FACTOR = 0.1;
 
-    private final IMemoryNexus memoryNexus;
+    private final Memory memory;
     private final double clarityAdjustmentFactor;
 
-    public InMemoryGroundingSystem(IMemoryNexus memoryNexus) {
-        this(memoryNexus, DEFAULT_CLARITY_ADJUSTMENT_FACTOR);
+    public InMemoryGrounding(Memory memory) {
+        this(memory, DEFAULT_CLARITY_ADJUSTMENT_FACTOR);
     }
 
-    public InMemoryGroundingSystem(IMemoryNexus memoryNexus, double clarityAdjustmentFactor) {
-        this.memoryNexus = Objects.requireNonNull(memoryNexus);
+    public InMemoryGrounding(Memory memory, double clarityAdjustmentFactor) {
+        this.memory = Objects.requireNonNull(memory);
         this.clarityAdjustmentFactor = clarityAdjustmentFactor;
     }
 
@@ -58,7 +57,7 @@ public class InMemoryGroundingSystem implements IGroundingSystem {
                 feedbackReport.id(), traceIds.size(), adjustment);
 
         for (String thoughtId : traceIds) {
-            memoryNexus.getThoughtById(thoughtId).ifPresent(thoughtToUpdate -> {
+            memory.getThoughtById(thoughtId).ifPresent(thoughtToUpdate -> {
                 double currentClarity = thoughtToUpdate.state().clarity();
                 double newClarity = Math.max(0.0, Math.min(1.0, currentClarity + adjustment));
 
@@ -69,7 +68,7 @@ public class InMemoryGroundingSystem implements IGroundingSystem {
                             new ThoughtState(newClarity, thoughtToUpdate.state().salience(), thoughtToUpdate.state().activation()),
                             thoughtToUpdate.metadata()
                     );
-                    memoryNexus.saveThought(updatedThought);
+                    memory.saveThought(updatedThought);
                     LOGGER.debug("Updated clarity of thought {} from {} to {}",
                             updatedThought.id(), currentClarity, newClarity);
                 }

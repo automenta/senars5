@@ -15,10 +15,11 @@ import java.util.List;
  * @param feedback   Structured feedback on an action's outcome, typically for REPORT thoughts.
  */
 public record ThoughtContent(
-    String text,
-    String symbolic,
-    List<Double> embedding,
-    Object perceptual,
-    Object procedural,
-    Feedback feedback
-) {}
+        String text,
+        String symbolic,
+        List<Double> embedding,
+        Object perceptual,
+        Object procedural,
+        Feedback feedback
+) {
+}

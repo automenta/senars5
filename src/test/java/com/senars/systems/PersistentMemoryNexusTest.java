@@ -5,15 +5,11 @@ import dev.langchain4j.data.embedding.Embedding;
 import dev.langchain4j.data.segment.TextSegment;
 import dev.langchain4j.model.embedding.EmbeddingModel;
 import dev.langchain4j.model.output.Response;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.mockito.Mockito;
 
-import java.io.File;
-import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
 import java.util.Arrays;
@@ -27,13 +23,12 @@ import static org.mockito.Mockito.when;
 
 public class PersistentMemoryNexusTest {
 
-    private PersistentMemoryNexus memoryNexus;
+    @TempDir
+    Path tempDir;
+    private PersistentMemory memoryNexus;
     private EmbeddingModel mockEmbeddingModel;
     private Path graphDbPath;
     private Path embeddingStorePath;
-
-    @TempDir
-    Path tempDir;
 
     @BeforeEach
     void setUp() {
@@ -47,7 +42,7 @@ public class PersistentMemoryNexusTest {
         Embedding mockModelEmbedding = Embedding.from(Arrays.asList(9.9f, 9.8f, 9.7f));
         when(mockEmbeddingModel.embed(any(TextSegment.class))).thenReturn(Response.from(mockModelEmbedding));
 
-        memoryNexus = new PersistentMemoryNexus(graphDbPath.toString(), embeddingStorePath.toString(), mockEmbeddingModel);
+        memoryNexus = new PersistentMemory(graphDbPath.toString(), embeddingStorePath.toString(), mockEmbeddingModel);
     }
 
     @Test
@@ -56,7 +51,7 @@ public class PersistentMemoryNexusTest {
         List<Double> originalEmbedding = Arrays.asList(0.1, 0.2, 0.3);
         ThoughtContent content = new ThoughtContent("test text", "test:symbol", originalEmbedding, null, null, null);
         ThoughtState state = new ThoughtState(1.0, 1.0, 1.0);
-        ThoughtMetadata metadata = new ThoughtMetadata(ThoughtType.BELIEF, ThoughtOrigin.USER, Collections.emptyList(), Instant.now());
+        ThoughtMeta metadata = new ThoughtMeta(ThoughtType.BELIEF, ThoughtOrigin.USER, Collections.emptyList(), Instant.now());
         Thought originalThought = new Thought("test-id-1", content, state, metadata);
 
         // 2. Save the thought
@@ -80,7 +75,7 @@ public class PersistentMemoryNexusTest {
         // 1. Create a Thought with a null embedding
         ThoughtContent content = new ThoughtContent("test text without embedding", "test:symbol:no_embedding", null, null, null, null);
         ThoughtState state = new ThoughtState(0.5, 0.5, 0.5);
-        ThoughtMetadata metadata = new ThoughtMetadata(ThoughtType.GOAL, ThoughtOrigin.SYSTEM, Collections.emptyList(), Instant.now());
+        ThoughtMeta metadata = new ThoughtMeta(ThoughtType.GOAL, ThoughtOrigin.SYSTEM, Collections.emptyList(), Instant.now());
         Thought originalThought = new Thought("test-id-2", content, state, metadata);
 
         // 2. Save the thought

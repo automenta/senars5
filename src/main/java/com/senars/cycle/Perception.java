@@ -1,13 +1,14 @@
 package com.senars.cycle;
 
 import com.senars.core.Thought;
+
 import java.util.List;
 
 /**
  * Interface for the Perception System, which transforms raw multi-modal data
  * from the environment or user into new Thought objects.
  */
-public interface IPerceptionSystem {
+public interface Perception {
 
     /**
      * Processes some form of raw input data and transforms it into one or more

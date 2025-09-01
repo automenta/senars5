@@ -81,19 +81,6 @@ public class MotiveHierarchy {
     }
 
     /**
-     * Sets the current Intention. The intention must be a GOAL thought.
-     *
-     * @param intention The GOAL thought to set as the current intention.
-     * @throws IllegalArgumentException if the thought is not of type GOAL.
-     */
-    public void setIntention(Thought intention) {
-        if (intention != null && intention.metadata().type() != ThoughtType.GOAL) {
-            throw new IllegalArgumentException("Intention must be of type GOAL.");
-        }
-        this.intention = intention;
-    }
-
-    /**
      * Clears the current intention.
      */
     public void clearIntention() {
@@ -107,5 +94,18 @@ public class MotiveHierarchy {
      */
     public Optional<Thought> getIntention() {
         return Optional.ofNullable(intention);
+    }
+
+    /**
+     * Sets the current Intention. The intention must be a GOAL thought.
+     *
+     * @param intention The GOAL thought to set as the current intention.
+     * @throws IllegalArgumentException if the thought is not of type GOAL.
+     */
+    public void setIntention(Thought intention) {
+        if (intention != null && intention.metadata().type() != ThoughtType.GOAL) {
+            throw new IllegalArgumentException("Intention must be of type GOAL.");
+        }
+        this.intention = intention;
     }
 }

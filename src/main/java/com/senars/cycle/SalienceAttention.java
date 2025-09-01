@@ -4,7 +4,6 @@ import com.senars.core.Thought;
 import com.senars.motive.MotiveHierarchy;
 import com.senars.salience.SalienceCalculator;
 
-import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
@@ -15,7 +14,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
  * A concrete implementation of the Attention Funnel that prioritizes thoughts
  * based on their calculated salience.
  */
-public class AttentionFunnel implements IAttentionFunnel {
+public class SalienceAttention implements Attention {
 
     private final List<Thought> candidates = new CopyOnWriteArrayList<>();
     private final SalienceCalculator salienceCalculator;
@@ -27,7 +26,7 @@ public class AttentionFunnel implements IAttentionFunnel {
      * @param salienceCalculator The calculator used to determine thought salience.
      * @param motiveHierarchy    The motive hierarchy used for salience calculation.
      */
-    public AttentionFunnel(SalienceCalculator salienceCalculator, MotiveHierarchy motiveHierarchy) {
+    public SalienceAttention(SalienceCalculator salienceCalculator, MotiveHierarchy motiveHierarchy) {
         this.salienceCalculator = Objects.requireNonNull(salienceCalculator);
         this.motiveHierarchy = Objects.requireNonNull(motiveHierarchy);
     }
@@ -47,7 +46,7 @@ public class AttentionFunnel implements IAttentionFunnel {
         }
 
         Optional<Thought> focusThought = candidates.stream()
-            .max(Comparator.comparingDouble(thought -> salienceCalculator.calculate(thought, motiveHierarchy)));
+                .max(Comparator.comparingDouble(thought -> salienceCalculator.calculate(thought, motiveHierarchy)));
 
         focusThought.ifPresent(candidates::remove);
 

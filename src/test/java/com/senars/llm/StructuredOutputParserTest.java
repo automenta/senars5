@@ -8,9 +8,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.*;
 
 
 class StructuredOutputParserTest {
@@ -43,12 +41,13 @@ class StructuredOutputParserTest {
     @Test
     void testParseWithValidJson() {
         // Arrange
-        String jsonResponse = "{\n" +
-                "  \"type\": \"BELIEF\",\n" +
-                "  \"content\": \"The sky is blue.\",\n" +
-                "  \"clarity\": 0.95,\n" +
-                "  \"salience\": 75.0\n" +
-                "}";
+        String jsonResponse = """
+                {
+                  "type": "BELIEF",
+                  "content": "The sky is blue.",
+                  "clarity": 0.95,
+                  "salience": 75.0
+                }""";
 
         // Act
         List<Thought> thoughts = outputParser.parse(jsonResponse);

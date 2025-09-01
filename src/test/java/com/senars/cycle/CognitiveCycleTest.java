@@ -1,21 +1,14 @@
 package com.senars.cycle;
 
-import com.senars.core.Feedback;
-import com.senars.core.SessionManager;
-import com.senars.core.Thought;
-import com.senars.core.ThoughtContent;
-import com.senars.core.ThoughtMetadata;
-import com.senars.core.ThoughtOrigin;
-import com.senars.core.ThoughtState;
-import com.senars.core.ThoughtType;
-import com.senars.systems.IGovernanceLayer;
-import com.senars.systems.IGroundingSystem;
-import com.senars.systems.IMemoryNexus;
+import com.senars.core.*;
 import com.senars.effort.EffortPredictor;
 import com.senars.motive.MotiveHierarchy;
 import com.senars.salience.SalienceCalculator;
-import com.senars.systems.immemory.InMemoryMemoryNexus;
-import com.senars.systems.immemory.InMemoryGovernanceLayer;
+import com.senars.systems.Governor;
+import com.senars.systems.Grounding;
+import com.senars.systems.Memory;
+import com.senars.systems.immemory.InMemoryGovernor;
+import com.senars.systems.immemory.InMemoryMemory;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -24,37 +17,32 @@ import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.Instant;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
-import java.util.Collections;
 import java.util.UUID;
-import java.util.concurrent.atomic.AtomicReference;
 
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class CognitiveCycleTest {
 
+    @Spy
+    private final Memory memoryNexus = new InMemoryMemory();
+    @Spy
+    private final Governor governanceLayer = new InMemoryGovernor(Collections.emptyList());
     private CognitiveCycle cognitiveCycle;
-
     @Mock
-    private IPerceptionSystem perceptionSystem;
+    private Perception perceptionSystem;
     @Mock
-    private ICognitiveProcessor cognitiveProcessor;
+    private Cognition cognitiveProcessor;
     @Mock
-    private IActionSystem actionSystem;
+    private Action actionSystem;
     @Mock
-    private SessionManager sessionManager;
+    private Sessions sessions;
     @Mock
-    private IGroundingSystem groundingSystem;
-
-    @Spy
-    private IMemoryNexus memoryNexus = new InMemoryMemoryNexus();
-    @Spy
-    private IGovernanceLayer governanceLayer = new InMemoryGovernanceLayer(Collections.emptyList());
-
-    private IAttentionFunnel attentionFunnel;
+    private Grounding groundingSystem;
+    private Attention attentionFunnel;
 
     // Real dependencies for a more integrated test
     private MotiveHierarchy motiveHierarchy;
@@ -67,7 +55,7 @@ class CognitiveCycleTest {
         motiveHierarchy = new MotiveHierarchy();
         effortPredictor = new EffortPredictor(memoryNexus); // Pass the memory nexus spy
         salienceCalculator = new SalienceCalculator(effortPredictor);
-        attentionFunnel = new SalienceBasedAttentionFunnel(salienceCalculator, motiveHierarchy);
+        attentionFunnel = new SalienceBasedAttention(salienceCalculator, motiveHierarchy);
 
         cognitiveCycle = new CognitiveCycle(
                 perceptionSystem,
@@ -76,17 +64,17 @@ class CognitiveCycleTest {
                 actionSystem,
                 memoryNexus,
                 governanceLayer,
-                sessionManager,
+                sessions,
                 groundingSystem
         );
     }
 
     private Thought createTestThought(ThoughtType type, double activation) {
         return new Thought(
-            UUID.randomUUID().toString(),
-            new ThoughtContent("test content for " + type, null, null, null, null, null),
-            new ThoughtState(1.0, 0.0, activation), // clarity, salience (unused), activation
-            new ThoughtMetadata(type, ThoughtOrigin.SYSTEM, List.of(), Instant.now())
+                UUID.randomUUID().toString(),
+                new ThoughtContent("test content for " + type, null, null, null, null, null),
+                new ThoughtState(1.0, 0.0, activation), // clarity, salience (unused), activation
+                new ThoughtMeta(type, ThoughtOrigin.SYSTEM, List.of(), Instant.now())
         );
     }
 
@@ -174,26 +162,26 @@ class CognitiveCycleTest {
                 "action-1",
                 new ThoughtContent("Do something", null, null, null, null, null),
                 new ThoughtState(1.0, 1.0, 1.0),
-                new ThoughtMetadata(ThoughtType.ACTION_PLAN, ThoughtOrigin.LLM_INFERENCE, List.of("goal-1"), Instant.now())
+                new ThoughtMeta(ThoughtType.ACTION_PLAN, ThoughtOrigin.LLM_INFERENCE, List.of("goal-1"), Instant.now())
         );
         Thought feedbackReport = new Thought(
                 "feedback-1",
                 new ThoughtContent("Good job", null, null, null, null, new Feedback(0.9, "User feedback")),
                 new ThoughtState(1.0, 1.0, 1.0),
-                new ThoughtMetadata(ThoughtType.REPORT, ThoughtOrigin.USER, Collections.emptyList(), Instant.now())
+                new ThoughtMeta(ThoughtType.REPORT, ThoughtOrigin.USER, Collections.emptyList(), Instant.now())
         );
 
         when(perceptionSystem.perceive()).thenReturn(List.of(feedbackReport));
-        when(sessionManager.getLastActionPlan()).thenReturn(Optional.of(actionPlan));
+        when(sessions.getLastActionPlan()).thenReturn(Optional.of(actionPlan));
 
         cognitiveCycle.step();
 
-        verify(sessionManager).getLastActionPlan();
+        verify(sessions).getLastActionPlan();
         verify(groundingSystem).processFeedback(argThat(report ->
                 report.metadata().trace().equals(actionPlan.metadata().trace()) &&
-                report.content().feedback().success() == 0.9
+                        report.content().feedback().success() == 0.9
         ));
-        verify(sessionManager).clearLastActionPlan();
+        verify(sessions).clearLastActionPlan();
         // Ensure feedback is not added to the attention funnel
         // We can check if the funnel is empty or check its size before and after.
         // For this test, we can assume if groundingSystem was called, it wasn't funneled.

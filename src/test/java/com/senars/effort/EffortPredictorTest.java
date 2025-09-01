@@ -1,7 +1,7 @@
 package com.senars.effort;
 
 import com.senars.core.*;
-import com.senars.systems.IMemoryNexus;
+import com.senars.systems.Memory;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
@@ -17,12 +17,12 @@ import static org.mockito.Mockito.when;
 class EffortPredictorTest {
 
     private static final double DELTA = 1e-9;
-    private IMemoryNexus mockMemoryNexus;
+    private Memory mockMemoryNexus;
     private EffortPredictor predictor;
 
     @BeforeEach
     void setUp() {
-        mockMemoryNexus = Mockito.mock(IMemoryNexus.class);
+        mockMemoryNexus = Mockito.mock(Memory.class);
         predictor = new EffortPredictor(mockMemoryNexus);
     }
 
@@ -31,7 +31,7 @@ class EffortPredictorTest {
                 UUID.randomUUID().toString(),
                 new ThoughtContent(text, null, null, null, null, null),
                 new ThoughtState(1.0, 0, 1.0),
-                new ThoughtMetadata(ThoughtType.BELIEF, ThoughtOrigin.SYSTEM, Collections.emptyList(), Instant.now())
+                new ThoughtMeta(ThoughtType.BELIEF, ThoughtOrigin.SYSTEM, Collections.emptyList(), Instant.now())
         );
     }
 
@@ -94,7 +94,7 @@ class EffortPredictorTest {
                 UUID.randomUUID().toString(),
                 new ThoughtContent("Schema", EffortPredictor.EFFORT_MODEL_SCHEMA_NAME, null, null, proceduralContent, null),
                 new ThoughtState(1.0, 1.0, 1.0),
-                new ThoughtMetadata(ThoughtType.SCHEMA, ThoughtOrigin.SYSTEM, Collections.emptyList(), Instant.now())
+                new ThoughtMeta(ThoughtType.SCHEMA, ThoughtOrigin.SYSTEM, Collections.emptyList(), Instant.now())
         );
     }
 }

@@ -2,11 +2,11 @@ package com.senars;
 
 import com.senars.config.AppConfig;
 import com.senars.core.*;
-import com.senars.llm.Langchain4jCognitiveProcessor;
+import com.senars.llm.Langchain4JCognition;
 import com.senars.llm.PromptBuilder;
 import com.senars.llm.StructuredOutputParser;
-import com.senars.systems.IMemoryNexus;
-import com.senars.systems.immemory.InMemoryMemoryNexus;
+import com.senars.systems.Memory;
+import com.senars.systems.immemory.InMemoryMemory;
 import dev.langchain4j.model.chat.ChatLanguageModel;
 import dev.langchain4j.model.ollama.OllamaChatModel;
 import org.junit.jupiter.api.BeforeEach;
@@ -28,7 +28,7 @@ import static org.junit.jupiter.api.Assertions.*;
 @Disabled("Requires a running Ollama instance")
 public class IntegrationTest {
 
-    private Langchain4jCognitiveProcessor cognitiveProcessor;
+    private Langchain4JCognition cognitiveProcessor;
 
     @BeforeEach
     void setUp() {
@@ -43,12 +43,12 @@ public class IntegrationTest {
                 .build();
 
         // 3. Set up real dependencies
-        IMemoryNexus memoryNexus = new InMemoryMemoryNexus();
+        Memory memoryNexus = new InMemoryMemory();
         PromptBuilder promptBuilder = new PromptBuilder();
         StructuredOutputParser outputParser = new StructuredOutputParser();
 
         // 4. Instantiate the real processor
-        cognitiveProcessor = new Langchain4jCognitiveProcessor(
+        cognitiveProcessor = new Langchain4JCognition(
                 chatModel,
                 memoryNexus,
                 promptBuilder,
@@ -66,7 +66,7 @@ public class IntegrationTest {
                 UUID.randomUUID().toString(),
                 new ThoughtContent("In one sentence, what is the purpose of a cognitive architecture?", null, null, null, null, null),
                 new ThoughtState(1.0, 1.0, 1.0),
-                new ThoughtMetadata(ThoughtType.GOAL, ThoughtOrigin.USER, Collections.emptyList(), Instant.now())
+                new ThoughtMeta(ThoughtType.GOAL, ThoughtOrigin.USER, Collections.emptyList(), Instant.now())
         );
 
         // Act
@@ -76,7 +76,7 @@ public class IntegrationTest {
         assertNotNull(resultThoughts);
         assertFalse(resultThoughts.isEmpty());
 
-        Thought result = resultThoughts.get(0);
+        Thought result = resultThoughts.getFirst();
         assertNotNull(result);
         assertEquals(ThoughtType.REPORT, result.metadata().type());
         assertNotNull(result.content().text());

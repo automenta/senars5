@@ -1,13 +1,14 @@
 package com.senars.cycle;
 
 import com.senars.core.Thought;
+
 import java.util.List;
 
 /**
  * Interface for the Cognitive Processor, which uses an LLM engine to perform
  * the core cognitive work of the system (e.g., inference, planning, reflection).
  */
-public interface ICognitiveProcessor {
+public interface Cognition {
 
     /**
      * Processes the single focus Thought selected by the Attention Funnel.

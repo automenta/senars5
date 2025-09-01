@@ -1,11 +1,6 @@
 package com.senars.systems;
 
-import com.senars.core.Thought;
-import com.senars.core.ThoughtContent;
-import com.senars.core.ThoughtMetadata;
-import com.senars.core.ThoughtState;
-import com.senars.core.ThoughtType;
-import com.senars.core.ThoughtOrigin;
+import com.senars.core.*;
 import com.senars.systems.graphdb.TinkerGraphDB;
 import com.senars.systems.vectorstore.FileBasedEmbeddingStore;
 import dev.langchain4j.data.embedding.Embedding;
@@ -16,13 +11,13 @@ import java.time.Instant;
 import java.util.*;
 import java.util.stream.Collectors;
 
-public class PersistentMemoryNexus implements IMemoryNexus {
+public class PersistentMemory implements Memory {
 
     private final TinkerGraphDB graphDB;
     private final FileBasedEmbeddingStore embeddingStore;
     private final EmbeddingModel embeddingModel;
 
-    public PersistentMemoryNexus(String graphDbPath, String embeddingStorePath, EmbeddingModel embeddingModel) {
+    public PersistentMemory(String graphDbPath, String embeddingStorePath, EmbeddingModel embeddingModel) {
         this.graphDB = new TinkerGraphDB(graphDbPath);
         this.embeddingStore = new FileBasedEmbeddingStore(embeddingStorePath, embeddingModel);
         this.embeddingModel = embeddingModel;
@@ -130,7 +125,7 @@ public class PersistentMemoryNexus implements IMemoryNexus {
                 (Double) v.property("salience").value(),
                 (Double) v.property("activation").value()
         );
-        ThoughtMetadata metadata = new ThoughtMetadata(
+        ThoughtMeta metadata = new ThoughtMeta(
                 ThoughtType.valueOf((String) v.property("type").value()),
                 ThoughtOrigin.valueOf((String) v.property("origin").value()),
                 Arrays.asList(((String) v.property("trace").value()).split(",")),

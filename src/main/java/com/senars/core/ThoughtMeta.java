@@ -11,9 +11,10 @@ import java.util.List;
  * @param trace     An ordered list of Thought IDs that led to this Thought's creation.
  * @param timestamp The creation time for recency and decay calculations.
  */
-public record ThoughtMetadata(
-    ThoughtType type,
-    ThoughtOrigin origin,
-    List<String> trace,
-    Instant timestamp
-) {}
+public record ThoughtMeta(
+        ThoughtType type,
+        ThoughtOrigin origin,
+        List<String> trace,
+        Instant timestamp
+) {
+}

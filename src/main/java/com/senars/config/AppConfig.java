@@ -32,11 +32,6 @@ public class AppConfig {
         }
     }
 
-    // Singleton holder
-    private static class ConfigHolder {
-        private static final AppConfig INSTANCE = new AppConfig();
-    }
-
     public static AppConfig getInstance() {
         return ConfigHolder.INSTANCE;
     }
@@ -60,5 +55,10 @@ public class AppConfig {
 
     public String getGraphDbFilePath() {
         return properties.getProperty("graphdb.filepath", "./data/graph_db.json");
+    }
+
+    // Singleton holder
+    private static class ConfigHolder {
+        private static final AppConfig INSTANCE = new AppConfig();
     }
 }

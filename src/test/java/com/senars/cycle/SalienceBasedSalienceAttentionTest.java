@@ -17,7 +17,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
-class SalienceBasedAttentionFunnelTest {
+class SalienceBasedSalienceAttentionTest {
 
     @Mock
     private SalienceCalculator salienceCalculator;
@@ -25,11 +25,11 @@ class SalienceBasedAttentionFunnelTest {
     @Mock
     private MotiveHierarchy motiveHierarchy;
 
-    private SalienceBasedAttentionFunnel attentionFunnel;
+    private SalienceBasedAttention attentionFunnel;
 
     @BeforeEach
     void setUp() {
-        attentionFunnel = new SalienceBasedAttentionFunnel(salienceCalculator, motiveHierarchy);
+        attentionFunnel = new SalienceBasedAttention(salienceCalculator, motiveHierarchy);
     }
 
     private Thought createTestThought(String id, double activation) {
@@ -37,7 +37,7 @@ class SalienceBasedAttentionFunnelTest {
                 id,
                 new ThoughtContent("Test content for " + id, null, List.of(1.0, 2.0), null, null, null),
                 new ThoughtState(1.0, 0.0, activation), // clarity, salience (not used here), activation
-                new ThoughtMetadata(ThoughtType.BELIEF, ThoughtOrigin.PERCEPTION, List.of(), Instant.now())
+                new ThoughtMeta(ThoughtType.BELIEF, ThoughtOrigin.PERCEPTION, List.of(), Instant.now())
         );
     }
 

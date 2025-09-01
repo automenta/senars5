@@ -4,5 +4,5 @@ public enum ThoughtOrigin {
     PERCEPTION,
     LLM_INFERENCE,
     USER,
-    SYSTEM;
+    SYSTEM
 }

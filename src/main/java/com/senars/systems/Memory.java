@@ -1,6 +1,7 @@
 package com.senars.systems;
 
 import com.senars.core.Thought;
+
 import java.util.List;
 import java.util.Optional;
 
@@ -8,7 +9,7 @@ import java.util.Optional;
  * Interface for the Memory Nexus, a hybrid Vector and Graph Database
  * responsible for storing and retrieving all Thought objects.
  */
-public interface IMemoryNexus {
+public interface Memory {
 
     /**
      * Saves a Thought to the memory system.

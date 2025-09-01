@@ -1,8 +1,8 @@
 package com.senars.llm;
 
 import com.senars.core.Thought;
-import com.senars.cycle.ICognitiveProcessor;
-import com.senars.systems.IMemoryNexus;
+import com.senars.cycle.Cognition;
+import com.senars.systems.Memory;
 import dev.langchain4j.data.message.AiMessage;
 import dev.langchain4j.data.message.UserMessage;
 import dev.langchain4j.model.chat.ChatLanguageModel;
@@ -18,31 +18,31 @@ import java.util.Objects;
  * An implementation of the ICognitiveProcessor that uses Langchain4j to interact with a large language model.
  * This class orchestrates the process of context assembly, prompt generation, LLM interaction, and output parsing.
  */
-public class Langchain4jCognitiveProcessor implements ICognitiveProcessor {
+public class Langchain4JCognition implements Cognition {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(Langchain4jCognitiveProcessor.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(Langchain4JCognition.class);
 
     private final ChatLanguageModel chatModel;
-    private final IMemoryNexus memoryNexus;
+    private final Memory memoryNexus;
     private final PromptBuilder promptBuilder;
     private final StructuredOutputParser outputParser;
 
     /**
      * Constructs a new Langchain4jCognitiveProcessor.
      *
-     * @param chatModel     The Langchain4j chat model to use for LLM interaction.
-     * @param memoryNexus   The memory nexus for retrieving context and schemas.
+     * @param chat     The Langchain4j chat model to use for LLM interaction.
+     * @param memory   The memory nexus for retrieving context and schemas.
      * @param promptBuilder The builder responsible for creating prompts.
      * @param outputParser  The parser for interpreting LLM responses.
      */
-    public Langchain4jCognitiveProcessor(
-            ChatLanguageModel chatModel,
-            IMemoryNexus memoryNexus,
+    public Langchain4JCognition(
+            ChatLanguageModel chat,
+            Memory memory,
             PromptBuilder promptBuilder,
             StructuredOutputParser outputParser
     ) {
-        this.chatModel = Objects.requireNonNull(chatModel, "chatModel cannot be null");
-        this.memoryNexus = Objects.requireNonNull(memoryNexus, "memoryNexus cannot be null");
+        this.chatModel = Objects.requireNonNull(chat, "chatModel cannot be null");
+        this.memoryNexus = Objects.requireNonNull(memory, "memoryNexus cannot be null");
         this.promptBuilder = Objects.requireNonNull(promptBuilder, "promptBuilder cannot be null");
         this.outputParser = Objects.requireNonNull(outputParser, "outputParser cannot be null");
     }

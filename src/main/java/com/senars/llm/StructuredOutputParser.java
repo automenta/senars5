@@ -1,14 +1,5 @@
 package com.senars.llm;
 
-import com.senars.core.Thought;
-import com.senars.core.ThoughtContent;
-import com.senars.core.ThoughtMetadata;
-import com.senars.core.ThoughtOrigin;
-import com.senars.core.ThoughtState;
-import com.senars.core.ThoughtType;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.senars.core.*;
@@ -48,7 +39,7 @@ public class StructuredOutputParser {
                     UUID.randomUUID().toString(),
                     new ThoughtContent(content, null, null, null, null, null),
                     new ThoughtState(clarity, salience, 1.0), // Default activation
-                    new ThoughtMetadata(
+                    new ThoughtMeta(
                             type,
                             ThoughtOrigin.LLM_INFERENCE,
                             Collections.emptyList(),
@@ -68,7 +59,7 @@ public class StructuredOutputParser {
                 UUID.randomUUID().toString(),
                 new ThoughtContent(content, null, null, null, null, null),
                 new ThoughtState(0.9, 50.0, 1.0), // High clarity, medium salience, high activation
-                new ThoughtMetadata(
+                new ThoughtMeta(
                         ThoughtType.REPORT,
                         ThoughtOrigin.LLM_INFERENCE,
                         Collections.emptyList(),

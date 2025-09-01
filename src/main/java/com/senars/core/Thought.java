@@ -10,8 +10,9 @@ package com.senars.core;
  * @param metadata The contextual information and lineage of the Thought.
  */
 public record Thought(
-    String id,
-    ThoughtContent content,
-    ThoughtState state,
-    ThoughtMetadata metadata
-) {}
+        String id,
+        ThoughtContent content,
+        ThoughtState state,
+        ThoughtMeta metadata
+) {
+}

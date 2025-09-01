@@ -7,25 +7,25 @@ import org.junit.jupiter.api.Test;
 import java.time.Instant;
 import java.util.Collections;
 import java.util.Optional;
-import java.util.UUID;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-class FifoAttentionFunnelTest {
+class FifoSalienceAttentionTest {
 
-    private IAttentionFunnel fifoFunnel;
+    private Attention fifoFunnel;
 
     @BeforeEach
     void setUp() {
-        fifoFunnel = new FifoAttentionFunnel();
+        fifoFunnel = new FifoAttention();
     }
 
     private Thought createTestThought(String id) {
         return new Thought(
-            id,
-            new ThoughtContent("test", null, null, null, null, null),
-            new ThoughtState(1.0, 1.0, 1.0),
-            new ThoughtMetadata(ThoughtType.BELIEF, ThoughtOrigin.SYSTEM, Collections.emptyList(), Instant.now())
+                id,
+                new ThoughtContent("test", null, null, null, null, null),
+                new ThoughtState(1.0, 1.0, 1.0),
+                new ThoughtMeta(ThoughtType.BELIEF, ThoughtOrigin.SYSTEM, Collections.emptyList(), Instant.now())
         );
     }
 

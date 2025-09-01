@@ -1,21 +1,13 @@
 package com.senars.cycle;
 
-import com.senars.core.SessionManager;
-import com.senars.core.Thought;
-import com.senars.core.ThoughtContent;
-import com.senars.core.ThoughtMetadata;
-import com.senars.core.ThoughtOrigin;
-import com.senars.core.ThoughtState;
-import com.senars.core.ThoughtType;
-import com.senars.systems.IGovernanceLayer;
-import com.senars.systems.IGroundingSystem;
-import com.senars.systems.IMemoryNexus;
+import com.senars.core.*;
+import com.senars.systems.Governor;
+import com.senars.systems.Grounding;
+import com.senars.systems.Memory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -29,33 +21,33 @@ public class CognitiveCycle {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(CognitiveCycle.class);
 
-    private final IPerceptionSystem perceptionSystem;
-    private final IAttentionFunnel attentionFunnel;
-    private final ICognitiveProcessor cognitiveProcessor;
-    private final IActionSystem actionSystem;
-    private final IMemoryNexus memoryNexus;
-    private final IGovernanceLayer governanceLayer;
-    private final SessionManager sessionManager;
-    private final IGroundingSystem groundingSystem;
+    private final Perception perceptionSystem;
+    private final Attention attentionFunnel;
+    private final Cognition cognitiveProcessor;
+    private final Action actionSystem;
+    private final Memory memoryNexus;
+    private final Governor governanceLayer;
+    private final Sessions sessions;
+    private final Grounding groundingSystem;
 
     public CognitiveCycle(
-        IPerceptionSystem perceptionSystem,
-        IAttentionFunnel attentionFunnel,
-        ICognitiveProcessor cognitiveProcessor,
-        IActionSystem actionSystem,
-        IMemoryNexus memoryNexus,
-        IGovernanceLayer governanceLayer,
-        SessionManager sessionManager,
-        IGroundingSystem groundingSystem
+            Perception perception,
+            Attention attention,
+            Cognition cognition,
+            Action action,
+            Memory memory,
+            Governor governor,
+            Sessions sessions,
+            Grounding grounding
     ) {
-        this.perceptionSystem = Objects.requireNonNull(perceptionSystem);
-        this.attentionFunnel = Objects.requireNonNull(attentionFunnel);
-        this.cognitiveProcessor = Objects.requireNonNull(cognitiveProcessor);
-        this.actionSystem = Objects.requireNonNull(actionSystem);
-        this.memoryNexus = Objects.requireNonNull(memoryNexus);
-        this.governanceLayer = Objects.requireNonNull(governanceLayer);
-        this.sessionManager = Objects.requireNonNull(sessionManager);
-        this.groundingSystem = Objects.requireNonNull(groundingSystem);
+        this.perceptionSystem = Objects.requireNonNull(perception);
+        this.attentionFunnel = Objects.requireNonNull(attention);
+        this.cognitiveProcessor = Objects.requireNonNull(cognition);
+        this.actionSystem = Objects.requireNonNull(action);
+        this.memoryNexus = Objects.requireNonNull(memory);
+        this.governanceLayer = Objects.requireNonNull(governor);
+        this.sessions = Objects.requireNonNull(sessions);
+        this.groundingSystem = Objects.requireNonNull(grounding);
     }
 
     /**
@@ -113,7 +105,7 @@ public class CognitiveCycle {
                     createReplanGoal(thought, vetoReason.get());
                 } else {
                     LOGGER.info("ACTION_PLAN approved. Executing...");
-                    sessionManager.setLastActionPlan(thought); // Track the action being executed
+                    sessions.setLastActionPlan(thought); // Track the action being executed
                     actionSystem.executePlan(thought);
                 }
             } catch (Exception e) {
@@ -127,18 +119,18 @@ public class CognitiveCycle {
     private void createReplanGoal(Thought vetoedPlan, String reason) {
         String newId = UUID.randomUUID().toString();
         Thought replanGoal = new Thought(
-            newId,
-            new ThoughtContent(
-                "Reformulate plan " + vetoedPlan.id() + " due to safety violation: " + reason,
-                null, null, null, null, null
-            ),
-            new ThoughtState(1.0, 100.0, 1.0), // High clarity, salience, and activation
-            new ThoughtMetadata(
-                ThoughtType.GOAL,
-                ThoughtOrigin.SYSTEM,
-                List.of(vetoedPlan.id()),
-                Instant.now()
-            )
+                newId,
+                new ThoughtContent(
+                        "Reformulate plan " + vetoedPlan.id() + " due to safety violation: " + reason,
+                        null, null, null, null, null
+                ),
+                new ThoughtState(1.0, 100.0, 1.0), // High clarity, salience, and activation
+                new ThoughtMeta(
+                        ThoughtType.GOAL,
+                        ThoughtOrigin.SYSTEM,
+                        List.of(vetoedPlan.id()),
+                        Instant.now()
+                )
         );
         LOGGER.info("Created replan goal: {}", replanGoal.id());
         memoryNexus.saveThought(replanGoal);
@@ -146,7 +138,7 @@ public class CognitiveCycle {
     }
 
     private void processFeedbackReport(Thought feedbackReport) {
-        Optional<Thought> lastActionOpt = sessionManager.getLastActionPlan();
+        Optional<Thought> lastActionOpt = sessions.getLastActionPlan();
         if (lastActionOpt.isEmpty()) {
             LOGGER.warn("Received feedback report {} but there is no last action plan in the session to attribute it to. Ignoring.", feedbackReport.id());
             return;
@@ -156,20 +148,21 @@ public class CognitiveCycle {
         LOGGER.info("Attributing feedback report {} to last action plan {}", feedbackReport.id(), lastAction.id());
 
         // Create a new, enriched feedback report with the trace from the action it's for.
+        var feedbackMeta = feedbackReport.metadata();
         Thought enrichedReport = new Thought(
                 feedbackReport.id(),
                 feedbackReport.content(),
                 feedbackReport.state(),
-                new ThoughtMetadata(
-                        feedbackReport.metadata().type(),
-                        feedbackReport.metadata().origin(),
+                new ThoughtMeta(
+                        feedbackMeta.type(),
+                        feedbackMeta.origin(),
                         lastAction.metadata().trace(), // The crucial link!
-                        feedbackReport.metadata().timestamp()
+                        feedbackMeta.timestamp()
                 )
         );
 
         groundingSystem.processFeedback(enrichedReport);
         memoryNexus.saveThought(enrichedReport); // Save the enriched report for provenance
-        sessionManager.clearLastActionPlan(); // Clear the session to prevent re-attributing feedback
+        sessions.clearLastActionPlan(); // Clear the session to prevent re-attributing feedback
     }
 }

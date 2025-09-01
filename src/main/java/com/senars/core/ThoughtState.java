@@ -10,7 +10,8 @@ package com.senars.core;
  * @param activation [0, 1] How "close to the surface" this Thought is in Memory Nexus.
  */
 public record ThoughtState(
-    double clarity,
-    double salience,
-    double activation
-) {}
+        double clarity,
+        double salience,
+        double activation
+) {
+}

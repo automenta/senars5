@@ -2,7 +2,8 @@ package com.senars.effort;
 
 import com.senars.core.Thought;
 import com.senars.core.ThoughtType;
-import com.senars.systems.IMemoryNexus;
+import com.senars.systems.Memory;
+
 import java.util.Optional;
 
 /**
@@ -12,10 +13,10 @@ import java.util.Optional;
 public class EffortPredictor {
 
     public static final String EFFORT_MODEL_SCHEMA_NAME = "senars:effort_prediction_model_v1";
-    private final IMemoryNexus memoryNexus;
+    private final Memory memory;
 
-    public EffortPredictor(IMemoryNexus memoryNexus) {
-        this.memoryNexus = memoryNexus;
+    public EffortPredictor(Memory memory) {
+        this.memory = memory;
     }
 
     /**
@@ -27,12 +28,11 @@ public class EffortPredictor {
      * @return The predicted effort.
      */
     public double predict(Thought thought) {
-        Optional<Thought> modelSchema = memoryNexus.findSchemaBySymbolicName(EFFORT_MODEL_SCHEMA_NAME);
+        Optional<Thought> modelSchema = memory.findSchemaBySymbolicName(EFFORT_MODEL_SCHEMA_NAME);
 
         if (modelSchema.isPresent()) {
             Thought schema = modelSchema.get();
-            if (schema.metadata().type() == ThoughtType.SCHEMA && schema.content().procedural() instanceof IEffortPredictionModel) {
-                IEffortPredictionModel model = (IEffortPredictionModel) schema.content().procedural();
+            if (schema.metadata().type() == ThoughtType.SCHEMA && schema.content().procedural() instanceof IEffortPredictionModel model) {
                 return model.predict(thought);
             }
         }

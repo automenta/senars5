@@ -9,11 +9,7 @@ import org.apache.tinkerpop.gremlin.tinkergraph.structure.TinkerGraph;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
+import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -43,7 +39,7 @@ public class TinkerGraphDB {
                 GraphSONReader reader = GraphSONReader.build().create();
                 reader.readGraph(is, graph);
             } catch (IOException e) {
-                LOGGER.error("Error loading graph database from " + dbPath, e);
+                LOGGER.error("Error loading graph database from {}", dbPath, e);
             }
         } else {
             LOGGER.info("No existing graph database found. Creating a new one.");
@@ -61,11 +57,7 @@ public class TinkerGraphDB {
         // Check if vertex exists
         Optional<Vertex> existing = getVertex(id);
         Vertex v;
-        if (existing.isPresent()) {
-            v = existing.get();
-        } else {
-            v = graph.addVertex(T.id, id, T.label, label);
-        }
+        v = existing.orElseGet(() -> graph.addVertex(T.id, id, T.label, label));
 
         for (Map.Entry<String, Object> entry : properties.entrySet()) {
             v.property(entry.getKey(), entry.getValue());
@@ -138,7 +130,7 @@ public class TinkerGraphDB {
             writer.writeGraph(os, graph);
             LOGGER.info("Successfully persisted graph database to: {}", dbPath);
         } catch (IOException e) {
-            LOGGER.error("Failed to persist graph database to file: " + dbPath, e);
+            LOGGER.error("Failed to persist graph database to file: {}", dbPath, e);
         }
     }
 

@@ -8,6 +8,7 @@ package com.senars.core;
  * @param correction An optional, descriptive correction or explanation for failures.
  */
 public record Feedback(
-    double success,
-    String correction
-) {}
+        double success,
+        String correction
+) {
+}

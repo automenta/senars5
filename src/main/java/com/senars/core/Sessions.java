@@ -9,9 +9,19 @@ import java.util.concurrent.atomic.AtomicReference;
  * persist across individual cognitive steps, such as the last action taken.
  * It is designed to be thread-safe.
  */
-public class SessionManager {
+public class Sessions {
 
     private final AtomicReference<Thought> lastActionPlan = new AtomicReference<>();
+
+    /**
+     * Retrieves the last action plan that was executed.
+     * This is useful for linking feedback to the action that prompted it.
+     *
+     * @return An Optional containing the last action plan, or empty if none has been set.
+     */
+    public Optional<Thought> getLastActionPlan() {
+        return Optional.ofNullable(this.lastActionPlan.get());
+    }
 
     /**
      * Sets the last executed action plan.
@@ -25,16 +35,6 @@ public class SessionManager {
             throw new IllegalArgumentException("Only ACTION_PLAN thoughts can be set as the last action plan.");
         }
         this.lastActionPlan.set(actionPlan);
-    }
-
-    /**
-     * Retrieves the last action plan that was executed.
-     * This is useful for linking feedback to the action that prompted it.
-     *
-     * @return An Optional containing the last action plan, or empty if none has been set.
-     */
-    public Optional<Thought> getLastActionPlan() {
-        return Optional.ofNullable(this.lastActionPlan.get());
     }
 
     /**

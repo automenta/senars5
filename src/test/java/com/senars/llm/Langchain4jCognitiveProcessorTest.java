@@ -1,8 +1,8 @@
 package com.senars.llm;
 
 import com.senars.core.Thought;
-import com.senars.cycle.ICognitiveProcessor;
-import com.senars.systems.IMemoryNexus;
+import com.senars.cycle.Cognition;
+import com.senars.systems.Memory;
 import dev.langchain4j.data.message.AiMessage;
 import dev.langchain4j.data.message.UserMessage;
 import dev.langchain4j.model.chat.ChatLanguageModel;
@@ -17,8 +17,9 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.util.Collections;
 import java.util.List;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.Mockito.*;
-import static org.junit.jupiter.api.Assertions.*;
 
 @ExtendWith(MockitoExtension.class)
 class Langchain4jCognitiveProcessorTest {
@@ -26,7 +27,7 @@ class Langchain4jCognitiveProcessorTest {
     @Mock
     private ChatLanguageModel mockChatModel;
     @Mock
-    private IMemoryNexus mockMemoryNexus;
+    private Memory mockMemoryNexus;
     @Mock
     private PromptBuilder mockPromptBuilder;
     @Mock
@@ -36,11 +37,11 @@ class Langchain4jCognitiveProcessorTest {
     @Mock
     private Thought mockResultThought;
 
-    private ICognitiveProcessor cognitiveProcessor;
+    private Cognition cognitiveProcessor;
 
     @BeforeEach
     void setUp() {
-        cognitiveProcessor = new Langchain4jCognitiveProcessor(
+        cognitiveProcessor = new Langchain4JCognition(
                 mockChatModel,
                 mockMemoryNexus,
                 mockPromptBuilder,
