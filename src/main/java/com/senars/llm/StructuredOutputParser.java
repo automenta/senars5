@@ -1,7 +1,8 @@
 package com.senars.llm;
 
-import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.senars.core.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -13,43 +14,36 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * Parses the structured output (e.g., JSON) from the LLM into a list of Thought objects.
+ * Parses the structured output (a JSON array of Thought objects) from the LLM into a list of Thought objects.
  */
 public class StructuredOutputParser {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(StructuredOutputParser.class);
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final ObjectMapper objectMapper;
 
     /**
-     * Parses the LLM's response string into a list of Thoughts.
+     * Constructs a new parser and configures the ObjectMapper.
+     */
+    public StructuredOutputParser() {
+        this.objectMapper = new ObjectMapper();
+        // Register the module that handles Java 8 date/time types like Instant
+        this.objectMapper.registerModule(new JavaTimeModule());
+    }
+
+    /**
+     * Parses the LLM's response string, expecting a JSON array of Thought objects.
      *
-     * @param llmResponse The response from the language model, expected to be in a structured format.
-     * @return A list of new Thought objects.
+     * @param llmResponse The response from the language model.
+     * @return A list of new Thought objects. Returns an empty list if parsing fails.
      */
     public List<Thought> parse(String llmResponse) {
         try {
-            JsonNode rootNode = objectMapper.readTree(llmResponse);
-
-            ThoughtType type = ThoughtType.valueOf(rootNode.get("type").asText("BELIEF"));
-            String content = rootNode.get("content").asText();
-            double clarity = rootNode.get("clarity").asDouble(0.8); // Default clarity
-            double salience = rootNode.get("salience").asDouble(50.0); // Default salience
-
-            Thought thought = new Thought(
-                    UUID.randomUUID().toString(),
-                    new ThoughtContent(content, null, null, null, null, null),
-                    new ThoughtState(clarity, salience, 1.0), // Default activation
-                    new ThoughtMeta(
-                            type,
-                            ThoughtOrigin.LLM_INFERENCE,
-                            Collections.emptyList(),
-                            Instant.now()
-                    )
-            );
-            return List.of(thought);
-
+            // We expect the LLM to return a JSON array of Thought objects.
+            // Using TypeReference allows Jackson to correctly deserialize the generic List<Thought>.
+            return objectMapper.readValue(llmResponse, new TypeReference<List<Thought>>() {});
         } catch (IOException e) {
-            LOGGER.warn("Failed to parse LLM response as JSON. Falling back to simple report. Error: {}", e.getMessage());
+            LOGGER.warn("Failed to parse LLM response as JSON array. Falling back to simple report. Error: {}", e.getMessage());
+            // Fallback for non-JSON or malformed responses
             return List.of(createReportThought(llmResponse));
         }
     }
