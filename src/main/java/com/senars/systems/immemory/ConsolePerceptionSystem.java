@@ -30,8 +30,15 @@ public class ConsolePerceptionSystem implements IPerceptionSystem {
 
     @Override
     public List<Thought> perceive() {
+        System.out.print("> "); // Prompt for user input
         if (scanner.hasNextLine()) {
             String input = scanner.nextLine().trim();
+
+            // Handle special commands before attempting to parse as a Thought
+            if (handleSpecialCommands(input)) {
+                return Collections.emptyList(); // Command was handled, no thought produced
+            }
+
             try {
                 if (input.toLowerCase().startsWith("goal:")) {
                     return Collections.singletonList(createGoal(input.substring(5).trim()));
@@ -42,14 +49,42 @@ public class ConsolePerceptionSystem implements IPerceptionSystem {
                 } else if (input.toLowerCase().startsWith("feedback:")) {
                     return Collections.singletonList(createFeedbackReport(input.substring(9).trim()));
                 } else if (!input.isEmpty()) {
+                    // Default to creating a belief if no prefix is provided
                     return Collections.singletonList(createBelief(input));
                 }
             } catch (Exception e) {
                 LOGGER.error("Failed to create thought from input: '{}'", input, e);
-                // Optionally, create a "parse_error" thought or just ignore.
             }
         }
         return Collections.emptyList();
+    }
+
+    private boolean handleSpecialCommands(String input) {
+        String command = input.toLowerCase();
+        switch (command) {
+            case "shutdown":
+            case "exit":
+                throw new ShutdownException();
+            case "help":
+                printHelp();
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    private void printHelp() {
+        System.out.println("\n--- SeNARS Console Help ---");
+        System.out.println("Create thoughts by typing a prefix followed by your text:");
+        System.out.println("  goal: <your goal>       - Create a new goal for the system.");
+        System.out.println("  belief: <a fact>        - Add a new belief to the system's memory.");
+        System.out.println("  question: <your query>  - Ask a question.");
+        System.out.println("  feedback: <0.0-1.0>     - Provide a score for the last action's outcome.");
+        System.out.println("\nIf you don't provide a prefix, the input will be treated as a belief.");
+        System.out.println("\nSpecial Commands:");
+        System.out.println("  help                    - Display this help message.");
+        System.out.println("  shutdown / exit         - Terminate the application.");
+        System.out.println("---------------------------\n");
     }
 
     private List<Double> generateEmbedding(String text) {
