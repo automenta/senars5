@@ -42,6 +42,13 @@ public class PersistentMemoryNexus implements IMemoryNexus {
         properties.put("salience", thought.state().salience());
         properties.put("activation", thought.state().activation());
 
+        if (thought.content().embedding() != null && !thought.content().embedding().isEmpty()) {
+            String embeddingString = thought.content().embedding().stream()
+                    .map(String::valueOf)
+                    .collect(Collectors.joining(","));
+            properties.put("embedding", embeddingString);
+        }
+
         graphDB.addVertex(thought.id(), "Thought", properties);
 
         // Create edges for trace
@@ -101,10 +108,19 @@ public class PersistentMemoryNexus implements IMemoryNexus {
     }
 
     private Thought vertexToThought(Vertex v) {
+        List<Double> embedding = null;
+        if (v.property("embedding").isPresent()) {
+            String embeddingString = (String) v.property("embedding").value();
+            if (embeddingString != null && !embeddingString.isEmpty()) {
+                embedding = Arrays.stream(embeddingString.split(","))
+                        .map(Double::valueOf)
+                        .collect(Collectors.toList());
+            }
+        }
         ThoughtContent content = new ThoughtContent(
                 (String) v.property("text").value(),
                 (String) v.property("symbolic").value(),
-                null, // embedding is not stored in graph
+                embedding, // embedding is now retrieved from graph
                 null,
                 null,
                 null
