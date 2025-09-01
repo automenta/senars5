@@ -29,6 +29,7 @@ public class CognitiveCycle {
     private final Governor governor;
     private final Sessions sessions;
     private final Grounding grounding;
+    private final ActionFeedbackQueue feedbackQueue;
 
     public CognitiveCycle(
             Perception perception,
@@ -38,7 +39,8 @@ public class CognitiveCycle {
             Memory memory,
             Governor governor,
             Sessions sessions,
-            Grounding grounding
+            Grounding grounding,
+            ActionFeedbackQueue feedbackQueue
     ) {
         this.perception = Objects.requireNonNull(perception);
         this.attention = Objects.requireNonNull(attention);
@@ -48,6 +50,7 @@ public class CognitiveCycle {
         this.governor = Objects.requireNonNull(governor);
         this.sessions = Objects.requireNonNull(sessions);
         this.grounding = Objects.requireNonNull(grounding);
+        this.feedbackQueue = Objects.requireNonNull(feedbackQueue);
     }
 
     /**
@@ -56,7 +59,7 @@ public class CognitiveCycle {
     public void step() {
         try {
             // 1. Perception Stage
-            List<Thought> perceivedThoughts = perception.perceive();
+            List<Thought> perceivedThoughts = perception.perceive(feedbackQueue);
             if (!perceivedThoughts.isEmpty()) {
                 LOGGER.info("Perceived {} new thoughts.", perceivedThoughts.size());
                 for (Thought thought : perceivedThoughts) {
@@ -121,7 +124,7 @@ public class CognitiveCycle {
             } else {
                 LOGGER.info("ACTION_PLAN approved. Executing...");
                 sessions.setLastActionPlan(thought); // Track the action being executed
-                action.executePlan(thought);
+                action.executePlan(thought, feedbackQueue);
             }
         } catch (Exception e) {
             LOGGER.error("Error during action plan review or execution for thought: {}", thought.id(), e);

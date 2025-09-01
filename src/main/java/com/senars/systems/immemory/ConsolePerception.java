@@ -1,12 +1,15 @@
 package com.senars.systems.immemory;
 
 import com.senars.core.*;
+import com.senars.cycle.ActionFeedbackQueue;
 import com.senars.cycle.Perception;
 import dev.langchain4j.data.embedding.Embedding;
 import dev.langchain4j.model.embedding.EmbeddingModel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Scanner;
@@ -29,36 +32,47 @@ public class ConsolePerception implements Perception {
     }
 
     @Override
-    public List<Thought> perceive() {
-        System.out.print("> "); // Prompt for user input
-        if (scanner.hasNextLine()) {
-            String input = scanner.nextLine().trim();
+    public List<Thought> perceive(ActionFeedbackQueue feedbackQueue) {
+        List<Thought> newThoughts = new ArrayList<>();
 
-            // Handle special commands before attempting to parse as a Thought
-            if (handleSpecialCommands(input)) {
-                return Collections.emptyList(); // Command was handled, no thought produced
-            }
+        // 1. Poll for action feedback
+        Thought feedbackThought = feedbackQueue.poll();
+        if (feedbackThought != null) {
+            newThoughts.add(feedbackThought);
+        }
 
-            try {
+        // 2. Poll for console input (non-blocking)
+        try {
+            if (System.in.available() > 0 && scanner.hasNextLine()) {
+                String input = scanner.nextLine().trim();
+                System.out.print("> "); // Print prompt after input to avoid clutter
+
+                if (handleSpecialCommands(input)) {
+                    return newThoughts; // Command was handled, no thought produced
+                }
+
                 if (input.toLowerCase().startsWith("goal:")) {
-                    return Collections.singletonList(createGoal(input.substring(5).trim()));
+                    newThoughts.add(createGoal(input.substring(5).trim()));
                 } else if (input.toLowerCase().startsWith("belief:")) {
-                    return Collections.singletonList(createBelief(input.substring(7).trim()));
+                    newThoughts.add(createBelief(input.substring(7).trim()));
                 } else if (input.toLowerCase().startsWith("question:")) {
-                    return Collections.singletonList(createQuestion(input.substring(9).trim()));
+                    newThoughts.add(createQuestion(input.substring(9).trim()));
                 } else if (input.toLowerCase().startsWith("feedback:")) {
-                    return Collections.singletonList(createFeedbackReport(input.substring(9).trim()));
+                    newThoughts.add(createFeedbackReport(input.substring(9).trim()));
                 } else if (input.toLowerCase().startsWith("why")) {
-                    return Collections.singletonList(createExplanationRequest(input));
+                    newThoughts.add(createExplanationRequest(input));
                 } else if (!input.isEmpty()) {
                     // Default to creating a belief if no prefix is provided
-                    return Collections.singletonList(createBelief(input));
+                    newThoughts.add(createBelief(input));
                 }
-            } catch (Exception e) {
-                LOGGER.error("Failed to create thought from input: '{}'", input, e);
             }
+        } catch (IOException | IllegalStateException e) {
+            LOGGER.error("Error checking console input.", e);
+        } catch (Exception e) {
+            LOGGER.error("Failed to create thought from console input.", e);
         }
-        return Collections.emptyList();
+
+        return newThoughts;
     }
 
     private boolean handleSpecialCommands(String input) {

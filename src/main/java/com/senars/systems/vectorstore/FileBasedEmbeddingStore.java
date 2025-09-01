@@ -1,8 +1,9 @@
 package com.senars.systems.vectorstore;
 
+import com.senars.core.Thought;
+import com.senars.systems.VectorStore;
 import dev.langchain4j.data.embedding.Embedding;
 import dev.langchain4j.data.segment.TextSegment;
-import dev.langchain4j.model.embedding.EmbeddingModel;
 import dev.langchain4j.store.embedding.EmbeddingMatch;
 import dev.langchain4j.store.embedding.EmbeddingStore;
 import dev.langchain4j.store.embedding.inmemory.InMemoryEmbeddingStore;
@@ -18,70 +19,87 @@ import java.util.stream.Collectors;
 
 /**
  * A file-based embedding store that uses LangChain4j's InMemoryEmbeddingStore with file persistence.
+ * This class implements the VectorStore interface for use within the SeNARS system.
  */
-public class FileBasedEmbeddingStore {
+public class FileBasedEmbeddingStore implements VectorStore {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(FileBasedEmbeddingStore.class);
-    private final EmbeddingStore<TextSegment> store;
-    private final EmbeddingModel embeddingModel;
+    private EmbeddingStore<TextSegment> store;
     private final Path storePath;
 
     /**
      * Initializes the embedding store, loading from a file if it exists, otherwise creating a new one.
      * @param filePath The path to the file for storing embeddings.
-     * @param embeddingModel The model to use for creating embeddings.
      */
-    public FileBasedEmbeddingStore(String filePath, EmbeddingModel embeddingModel) {
+    public FileBasedEmbeddingStore(String filePath) {
         this.storePath = Paths.get(filePath);
-        this.embeddingModel = embeddingModel;
+        // Initialize with an empty store, which will be replaced if a file is found during load.
+        this.store = new InMemoryEmbeddingStore<>();
+        load();
+    }
 
-        if (Files.exists(storePath)) {
-            LOGGER.info("Loading existing embedding store from: {}", storePath);
-            this.store = InMemoryEmbeddingStore.fromFile(storePath);
-        } else {
-            LOGGER.info("No existing store found. Creating new embedding store.");
-            this.store = new InMemoryEmbeddingStore<>();
+    @Override
+    public void add(Thought thought) {
+        if (thought.content().embedding() == null || thought.content().embedding().isEmpty()) {
+            return; // Cannot store a thought without an embedding
         }
+        Embedding embedding = Embedding.from(toFloatArray(thought.content().embedding()));
+        // The segment is not strictly necessary for the current implementation of findSimilar,
+        // but it's good practice to store it for future use.
+        TextSegment segment = TextSegment.from(thought.content().text() != null ? thought.content().text() : "", null);
+        store.add(thought.id(), embedding);
     }
 
-    /**
-     * Adds a text segment with associated metadata to the store.
-     * @param id The ID of the thought to store.
-     * @param text The text of the thought.
-     */
-    public void add(String id, String text) {
-        TextSegment segment = TextSegment.from(text, new dev.langchain4j.data.document.Metadata().add("id", id));
-        Embedding embedding = embeddingModel.embed(segment).content();
-        store.add(embedding, segment);
-    }
-
-    /**
-     * Finds the most similar concepts to a given query text.
-     * @param queryEmbedding The embedding to search for.
-     * @param maxResults The maximum number of results to return.
-     * @return A list of concept IDs of the most similar concepts.
-     */
-    public List<String> findSimilar(Embedding queryEmbedding, int maxResults) {
-        List<EmbeddingMatch<TextSegment>> relevant = store.findRelevant(queryEmbedding, maxResults);
-
-        return relevant.stream()
-                .map(match -> match.embedded().metadata().getString("id"))
+    @Override
+    public List<String> findSimilar(List<Double> embedding, int topK) {
+        Embedding referenceEmbedding = Embedding.from(toFloatArray(embedding));
+        List<EmbeddingMatch<TextSegment>> matches = store.findRelevant(referenceEmbedding, topK);
+        return matches.stream()
+                .map(EmbeddingMatch::embeddingId)
                 .collect(Collectors.toList());
     }
 
-    /**
-     * Persists the embedding store to the file system.
-     */
+    @Override
+    public void remove(String thoughtId) {
+        // The default InMemoryEmbeddingStore in LangChain4j does not support removal.
+        LOGGER.warn("remove(thoughtId) is not supported by FileBasedEmbeddingStore and has been ignored for thoughtId: {}", thoughtId);
+    }
+
+    @Override
     public void persist() {
-        try {
-            // Ensure parent directory exists
-            if (storePath.getParent() != null) {
-                Files.createDirectories(storePath.getParent());
+        if (store instanceof InMemoryEmbeddingStore) {
+            try {
+                // Ensure parent directory exists
+                if (storePath.getParent() != null) {
+                    Files.createDirectories(storePath.getParent());
+                }
+                ((InMemoryEmbeddingStore<TextSegment>) store).serializeToFile(storePath);
+                LOGGER.info("Successfully persisted embedding store to: {}", storePath);
+            } catch (IOException e) {
+                LOGGER.error("Failed to persist embedding store to file: {}", storePath, e);
             }
-            ((InMemoryEmbeddingStore<TextSegment>) store).serializeToFile(storePath);
-            LOGGER.info("Successfully persisted embedding store to: {}", storePath);
-        } catch (IOException e) {
-            LOGGER.error("Failed to persist embedding store to file: {}", storePath, e);
         }
+    }
+
+    @Override
+    public void load() {
+        if (Files.exists(storePath)) {
+            LOGGER.info("Loading existing embedding store from: {}", storePath);
+            this.store = InMemoryEmbeddingStore.fromFile(storePath);
+            LOGGER.info("Successfully loaded embedding store.");
+        } else {
+            LOGGER.info("No existing store found at {}. A new, empty store will be used.", storePath);
+        }
+    }
+
+    private float[] toFloatArray(List<Double> doubleList) {
+        if (doubleList == null) {
+            return new float[0];
+        }
+        float[] floatArray = new float[doubleList.size()];
+        for (int i = 0; i < doubleList.size(); i++) {
+            floatArray[i] = doubleList.get(i).floatValue();
+        }
+        return floatArray;
     }
 }

@@ -11,10 +11,11 @@ import java.util.List;
 public interface Perception {
 
     /**
-     * Processes some form of raw input data and transforms it into one or more
-     * perceptual Thoughts (e.g., BELIEF or QUESTION types).
+     * Processes raw input data and feedback from the action system, transforming
+     * them into one or more perceptual Thoughts (e.g., BELIEF, QUESTION, REPORT types).
      *
-     * @return A list of new Thoughts generated from the input.
+     * @param feedbackQueue The queue containing feedback from executed actions.
+     * @return A list of new Thoughts generated from all perceptual sources.
      */
-    List<Thought> perceive();
+    List<Thought> perceive(ActionFeedbackQueue feedbackQueue);
 }

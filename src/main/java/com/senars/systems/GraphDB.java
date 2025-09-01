@@ -62,4 +62,9 @@ public interface GraphDB {
      * Persists the current state of the graph to a file.
      */
     void persist();
+
+    /**
+     * Loads the graph state from a file.
+     */
+    void load();
 }

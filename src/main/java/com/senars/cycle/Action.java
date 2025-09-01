@@ -12,9 +12,11 @@ public interface Action {
      * Executes the given action plan. This method is called only after the
      * plan has been approved by the Governance Layer. The execution may
      * result in effects on the external environment (e.g., API calls,
-     * robotic commands, sending messages).
+     * robotic commands, sending messages). The results of the action
+     * should be placed into the feedback queue as new REPORT thoughts.
      *
      * @param actionPlan The approved ACTION_PLAN Thought to execute.
+     * @param feedbackQueue The queue to place the resulting REPORT thought into.
      */
-    void executePlan(Thought actionPlan);
+    void executePlan(Thought actionPlan, ActionFeedbackQueue feedbackQueue);
 }

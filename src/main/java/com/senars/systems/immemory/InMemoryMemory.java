@@ -8,6 +8,7 @@ import com.senars.systems.GraphDB;
 import com.senars.systems.Memory;
 import com.senars.systems.VectorStore;
 import com.senars.systems.graphdb.TinkerGraphDB;
+import com.senars.systems.vectorstore.FileBasedEmbeddingStore;
 import com.senars.systems.vectorstore.LangChain4jVectorStore;
 
 import java.util.Collections;
@@ -33,13 +34,12 @@ public class InMemoryMemory implements Memory {
 
     public InMemoryMemory(AppConfig config) {
         String graphDbPath = (config != null) ? config.getGraphDbFilePath() : "target/test-db/graph.json";
-        this.graphDB = new TinkerGraphDB(graphDbPath);
-        this.vectorStore = new LangChain4jVectorStore();
+        String vectorStorePath = (config != null) ? config.getVectorStoreFilePath() : "target/test-db/vector_store.json";
 
-        // Only seed if the database is new (i.e., empty)
-        if (graphDB.getAllThoughts().isEmpty()) {
-            seedDefaultSchemas();
-        }
+        this.graphDB = new TinkerGraphDB(graphDbPath);
+        this.vectorStore = new FileBasedEmbeddingStore(vectorStorePath);
+
+        load();
     }
 
     /**
@@ -143,5 +143,15 @@ public class InMemoryMemory implements Memory {
     @Override
     public void persist() {
         graphDB.persist();
+        vectorStore.persist();
+    }
+
+    public void load() {
+        graphDB.load();
+        vectorStore.load();
+        // Only seed if the database is new (i.e., empty after loading)
+        if (graphDB.getAllThoughts().isEmpty()) {
+            seedDefaultSchemas();
+        }
     }
 }

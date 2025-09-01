@@ -78,6 +78,18 @@ public class Genesis {
         }
     }
 
+    /**
+     * Loads initial schema Thoughts from a JSON resource file.
+     * After loading, it generates and sets the embedding for each thought.
+     *
+     * @param resourcePath   The path to the JSON file in the resources folder.
+     * @param embeddingModel The model to use for generating embeddings.
+     * @return A list of Thought objects.
+     */
+    public static List<Thought> loadSchemasFromFile(String resourcePath, EmbeddingModel embeddingModel) {
+        return loadKnowledgeFromFile(resourcePath, embeddingModel); // Re-use the same logic
+    }
+
 
     /**
      * Creates the list of foundational Drive thoughts for the system.
@@ -173,5 +185,43 @@ public class Genesis {
             case MAINTAIN_COGNITIVE_INTEGRITY ->
                     "The meta-drive for self-improvement, making Thoughts about the system's own performance, health, and SCHEMA efficacy inherently salient.";
         };
+    }
+
+    /**
+     * Creates the initial research goal for demonstration purposes.
+     *
+     * @param embeddingModel The model to generate the embedding for the goal's text.
+     * @return A Thought object representing the research goal.
+     */
+    public static Thought createResearchGoal(EmbeddingModel embeddingModel) {
+        String text = "Provide a summary of the latest announcements on the official OpenAI blog.";
+        List<Double> embedding = new ArrayList<>();
+        for (float f : embeddingModel.embed(text).content().vector()) {
+            embedding.add((double) f);
+        }
+
+        return new Thought(
+                "goal-genesis-research-1",
+                new ThoughtContent(
+                        text,
+                        null,
+                        embedding,
+                        null,
+                        null,
+                        null,
+                        null
+                ),
+                new ThoughtState(
+                        1.0, // clarity
+                        100.0, // high initial salience to kick things off
+                        1.0  // activation
+                ),
+                new ThoughtMeta(
+                        ThoughtType.GOAL,
+                        ThoughtOrigin.SYSTEM,
+                        List.of(),
+                        Instant.now()
+                )
+        );
     }
 }

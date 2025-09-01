@@ -62,6 +62,16 @@ public class LangChain4jVectorStore implements VectorStore {
         LOGGER.warn("remove(thoughtId) is not supported by LangChain4jVectorStore and has been ignored for thoughtId: {}", thoughtId);
     }
 
+    @Override
+    public void persist() {
+        LOGGER.warn("persist() is not supported by the non-persistent LangChain4jVectorStore.");
+    }
+
+    @Override
+    public void load() {
+        LOGGER.warn("load() is not supported by the non-persistent LangChain4jVectorStore.");
+    }
+
     private float[] toFloatArray(List<Double> doubleList) {
         if (doubleList == null) {
             return null;

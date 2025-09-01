@@ -3,6 +3,7 @@ package com.senars.systems.immemory;
 import com.senars.core.Thought;
 import com.senars.core.ThoughtType;
 import com.senars.cycle.Action;
+import com.senars.cycle.ActionFeedbackQueue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -15,7 +16,7 @@ public class ConsoleAction implements Action {
     private static final Logger LOGGER = LoggerFactory.getLogger(ConsoleAction.class);
 
     @Override
-    public void executePlan(Thought actionPlan) {
+    public void executePlan(Thought actionPlan, ActionFeedbackQueue feedbackQueue) {
         if (actionPlan == null || actionPlan.metadata().type() != ThoughtType.ACTION_PLAN) {
             LOGGER.warn("Attempted to execute a thought that was not an ACTION_PLAN. Thought ID: {}", actionPlan != null ? actionPlan.id() : "null");
             return;

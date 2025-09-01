@@ -9,12 +9,14 @@ import com.senars.effort.EffortPredictor;
 import com.senars.llm.Langchain4JCognition;
 import com.senars.llm.PromptBuilder;
 import com.senars.llm.StructuredOutputParser;
+import com.senars.llm.ToolKit;
 import com.senars.motive.MotiveHierarchy;
 import com.senars.salience.SalienceCalculator;
 import com.senars.systems.Governor;
 import com.senars.systems.Grounding;
 import com.senars.systems.Memory;
 import com.senars.systems.Rule;
+import com.senars.cycle.ToolUsingAction;
 import com.senars.systems.immemory.*;
 import com.senars.systems.rules.KeywordBlocklistRule;
 import com.senars.xai.Explain;
@@ -56,15 +58,19 @@ public class Main {
         LOGGER.info("Executing Genesis Protocol...");
         List<Thought> genesisDrives = Genesis.createGenesisDrives(embeddingModel);
         List<Thought> genesisBeliefs = Genesis.loadKnowledgeFromFile("genesis_knowledge.json", embeddingModel);
+        List<Thought> genesisSchemas = Genesis.loadSchemasFromFile("genesis_schemas.json", embeddingModel);
+
 
         genesisDrives.forEach(memory::saveThought);
         genesisBeliefs.forEach(memory::saveThought);
-        LOGGER.info("Loaded {} Genesis Drives and {} Genesis Beliefs into Memory Nexus.", genesisDrives.size(), genesisBeliefs.size());
+        genesisSchemas.forEach(memory::saveThought);
+        LOGGER.info("Loaded {} Genesis Drives, {} Beliefs, and {} Schemas into Memory Nexus.", genesisDrives.size(), genesisBeliefs.size(), genesisSchemas.size());
 
 
         // 4. Cognitive Cycle Components
+        ToolKit toolKit = new ToolKit();
         Perception perception = new ConsolePerception(embeddingModel);
-        Action action = new ConsoleAction();
+        Action action = new ToolUsingAction(toolKit);
 
         // 5. Attention and Salience
         MotiveHierarchy motives = new MotiveHierarchy(genesisDrives);
@@ -74,15 +80,23 @@ public class Main {
         motives.addAmbition(primeAmbition);
         memory.saveThought(primeAmbition);
 
+        // Add a more ambitious goal to test the new tool-use capabilities
+        Thought researchGoal = Genesis.createResearchGoal(embeddingModel);
+        memory.saveThought(researchGoal);
+
+
         LOGGER.info("--- GENESIS PROTOCOL COMPLETE ---");
         genesisDrives.forEach(drive -> LOGGER.info("Loaded Drive: {}", drive.content().text()));
         genesisBeliefs.forEach(belief -> LOGGER.info("Loaded Belief: {}", belief.content().text()));
+        genesisSchemas.forEach(schema -> LOGGER.info("Loaded Schema: {}", schema.content().symbolic()));
         LOGGER.info("Established Prime Ambition: {}", primeAmbition.content().text());
+        LOGGER.info("Set initial Goal: {}", researchGoal.content().text());
         LOGGER.info("---------------------------------");
 
         EffortPredictor effortPredictor = new EffortPredictor(memory);
         SalienceCalculator salienceCalculator = new SalienceCalculator(effortPredictor);
         Attention attention = new SalienceBasedAttention(salienceCalculator, motives);
+        attention.addCandidate(researchGoal); // Ensure the new goal is considered on the first cycle
 
         // 5. LLM-based Cognitive Processor
         OllamaChatModel chatModel = OllamaChatModel.builder()
@@ -104,10 +118,12 @@ public class Main {
                 outputParser,
                 sessions,
                 explain,
-                inference
+                inference,
+                toolKit
         );
 
         // 6. The Cognitive Cycle itself
+        ActionFeedbackQueue feedbackQueue = new ActionFeedbackQueue();
         CognitiveCycle cognitiveCycle = new CognitiveCycle(
                 perception,
                 attention,
@@ -116,7 +132,8 @@ public class Main {
                 memory,
                 governance,
                 sessions,
-                grounding
+                grounding,
+                feedbackQueue
         );
 
         LOGGER.info("SeNARS Cognitive System Initialized. Starting cognitive cycle.");

@@ -82,4 +82,9 @@ public interface Memory {
      * Persists the underlying memory stores.
      */
     void persist();
+
+    /**
+     * Loads the underlying memory stores.
+     */
+    void load();
 }

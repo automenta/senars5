@@ -5,6 +5,9 @@ import com.senars.cycle.Cognition;
 import com.senars.systems.Memory;
 import com.senars.cycle.Inference;
 import com.senars.xai.Explain;
+import dev.langchain4j.agent.tool.ToolExecutionRequest;
+import dev.langchain4j.agent.tool.ToolSpecification;
+import com.google.gson.Gson;
 import dev.langchain4j.data.message.AiMessage;
 import dev.langchain4j.data.message.UserMessage;
 import dev.langchain4j.model.chat.ChatLanguageModel;
@@ -36,6 +39,8 @@ public class Langchain4JCognition implements Cognition {
     private final Sessions sessions;
     private final Explain explain;
     private final Inference inference;
+    private final ToolKit toolKit;
+    private final Gson gson = new Gson();
 
     /**
      * Constructs a new Langchain4jCognitiveProcessor.
@@ -47,6 +52,7 @@ public class Langchain4JCognition implements Cognition {
      * @param sessions      The session manager, used for context like the last action.
      * @param explain       The explanation engine.
      * @param inference     The logical inference engine.
+     * @param toolKit       The toolkit containing available tools.
      */
     public Langchain4JCognition(
             ChatLanguageModel chat,
@@ -55,7 +61,8 @@ public class Langchain4JCognition implements Cognition {
             StructuredOutputParser outputParser,
             Sessions sessions,
             Explain explain,
-            Inference inference
+            Inference inference,
+            ToolKit toolKit
     ) {
         this.chatModel = requireNonNull(chat, "chatModel cannot be null");
         this.memory = requireNonNull(memory, "memory cannot be null");
@@ -64,47 +71,24 @@ public class Langchain4JCognition implements Cognition {
         this.sessions = requireNonNull(sessions, "sessions cannot be null");
         this.explain = requireNonNull(explain, "explain cannot be null");
         this.inference = requireNonNull(inference, "inference cannot be null");
+        this.toolKit = requireNonNull(toolKit, "toolKit cannot be null");
     }
 
     @Override
     public List<Thought> process(Thought focusThought) {
         LOGGER.info("Processing thought: {} of type {}", focusThought.id(), focusThought.metadata().type());
 
-        // Check if the thought is a logical query to be handled by the inference engine
         if (focusThought.metadata().type() == ThoughtType.GOAL && LOGICAL_QUERY_SYMBOL.equals(focusThought.content().symbolic())) {
             LOGGER.info("Detected logical query. Delegating to Inference engine.");
             return inference.reason(focusThought);
         }
-
 
         if (focusThought.metadata().type() == ThoughtType.EXPLANATION_REQUEST) {
             return handleExplanationRequest(focusThought);
         }
 
         // Step 1: Context Assembly
-        LOGGER.debug("Assembling context for thought: {}", focusThought.id());
-
-        // Get trace context (the direct history of this thought)
-        List<Thought> traceContext = memory.getTrace(focusThought.id());
-        LOGGER.debug("Retrieved {} thoughts from trace.", traceContext.size());
-
-        // Get semantic context (similar thoughts)
-        List<Thought> semanticContext = new ArrayList<>();
-        if (focusThought.content().embedding() != null && !focusThought.content().embedding().isEmpty()) {
-            semanticContext = memory.retrieveSimilar(focusThought.content().embedding(), SIMILAR_THOUGHTS_COUNT);
-            LOGGER.debug("Retrieved {} similar thoughts from vector store.", semanticContext.size());
-        } else {
-            LOGGER.debug("Focus thought has no embedding, skipping semantic search.");
-        }
-
-        // Combine and deduplicate context
-        Set<Thought> combinedContextSet = new HashSet<>(traceContext);
-        combinedContextSet.addAll(semanticContext);
-        // Remove the focus thought itself from the context, as it's the subject of the prompt
-        combinedContextSet.remove(focusThought);
-
-        List<Thought> context = new ArrayList<>(combinedContextSet);
-        LOGGER.info("Assembled a total of {} unique context thoughts.", context.size());
+        List<Thought> context = assembleContext(focusThought);
 
         // Step 2: Schema Selection
         Thought schema = findRelevantSchema(focusThought);
@@ -114,22 +98,66 @@ public class Langchain4JCognition implements Cognition {
             LOGGER.info("No relevant schema found. Using fallback prompt.");
         }
 
-
-        // 3. Prompt Generation
-        String prompt = promptBuilder.build(schema, focusThought, context);
+        // Step 3: Prompt Generation
+        List<ToolSpecification> toolSpecifications = toolKit.getToolSpecifications();
+        String prompt = promptBuilder.build(schema, focusThought, context, toolSpecifications);
         LOGGER.debug("Generated prompt: {}", prompt);
 
-        // 3. LLM Call
+        // Step 4: LLM Call
         Response<AiMessage> response = chatModel.generate(UserMessage.from(prompt));
         String responseText = response.content().text();
         LOGGER.debug("Received response: {}", responseText);
 
+        // Step 5: Output Parsing and Thought Generation
+        return parseResponse(responseText, focusThought);
+    }
 
-        // 4. Output Parsing
-        List<Thought> newThoughts = outputParser.parse(responseText);
-        LOGGER.info("Generated {} new thoughts.", newThoughts.size());
+    private List<Thought> parseResponse(String responseText, Thought focusThought) {
+        // Attempt to parse as a tool execution request first
+        ToolExecutionRequest toolRequest = toolKit.parse(responseText);
+        if (toolRequest != null) {
+            LOGGER.info("LLM requested to execute tool: {}", toolRequest.name());
+            ThoughtContent content = new ThoughtContent(
+                    "Authorize execution of " + toolRequest.name(),
+                    gson.toJson(toolRequest), // Store the full request as symbolic content
+                    null, null, null, null, null
+            );
+            ThoughtMeta meta = new ThoughtMeta(
+                    ThoughtType.ACTION_PLAN,
+                    ThoughtOrigin.LLM_INFERENCE,
+                    List.of(focusThought.id()), // Trace back to the thought that triggered this plan
+                    Instant.now()
+            );
+            ThoughtState state = new ThoughtState(1.0, 1.0, 1.0);
+            Thought actionPlan = new Thought(UUID.randomUUID().toString(), content, state, meta);
+            return List.of(actionPlan);
+        }
 
-        return newThoughts;
+        // If not a tool request, parse as a standard structured response
+        LOGGER.info("Response is not a tool request. Parsing as structured output.");
+        return outputParser.parse(responseText);
+    }
+
+    private List<Thought> assembleContext(Thought focusThought) {
+        LOGGER.debug("Assembling context for thought: {}", focusThought.id());
+        List<Thought> traceContext = memory.getTrace(focusThought.id());
+        LOGGER.debug("Retrieved {} thoughts from trace.", traceContext.size());
+
+        List<Thought> semanticContext = new ArrayList<>();
+        if (focusThought.content().embedding() != null && !focusThought.content().embedding().isEmpty()) {
+            semanticContext = memory.retrieveSimilar(focusThought.content().embedding(), SIMILAR_THOUGHTS_COUNT);
+            LOGGER.debug("Retrieved {} similar thoughts from vector store.", semanticContext.size());
+        } else {
+            LOGGER.debug("Focus thought has no embedding, skipping semantic search.");
+        }
+
+        Set<Thought> combinedContextSet = new HashSet<>(traceContext);
+        combinedContextSet.addAll(semanticContext);
+        combinedContextSet.remove(focusThought);
+
+        List<Thought> context = new ArrayList<>(combinedContextSet);
+        LOGGER.info("Assembled a total of {} unique context thoughts.", context.size());
+        return context;
     }
 
     private List<Thought> handleExplanationRequest(Thought explanationRequest) {

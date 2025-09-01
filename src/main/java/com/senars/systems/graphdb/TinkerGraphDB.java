@@ -36,17 +36,7 @@ public class TinkerGraphDB implements GraphDB {
         this.objectMapper = new ObjectMapper();
         this.objectMapper.registerModule(new JavaTimeModule());
 
-        if (Files.exists(dbPath)) {
-            LOGGER.info("Loading existing graph database from: {}", dbPath);
-            try (InputStream is = new FileInputStream(dbPath.toFile())) {
-                GraphSONReader reader = GraphSONReader.build().create();
-                reader.readGraph(is, graph);
-            } catch (IOException e) {
-                LOGGER.error("Error loading graph database from {}", dbPath, e);
-            }
-        } else {
-            LOGGER.info("No existing graph database found at {}. Creating a new one.", dbPath);
-        }
+        load();
     }
 
     @Override
@@ -142,6 +132,24 @@ public class TinkerGraphDB implements GraphDB {
             LOGGER.info("Successfully persisted graph database.");
         } catch (IOException e) {
             LOGGER.error("Failed to persist graph database to file: {}", dbPath, e);
+        }
+    }
+
+    @Override
+    public void load() {
+        if (Files.exists(dbPath)) {
+            LOGGER.info("Loading existing graph database from: {}", dbPath);
+            try (InputStream is = new FileInputStream(dbPath.toFile())) {
+                // Clear the graph before loading to prevent merging issues
+                graph.traversal().V().drop().iterate();
+                GraphSONReader reader = GraphSONReader.build().create();
+                reader.readGraph(is, graph);
+                LOGGER.info("Successfully loaded graph database.");
+            } catch (IOException e) {
+                LOGGER.error("Error loading graph database from {}", dbPath, e);
+            }
+        } else {
+            LOGGER.info("No existing graph database found at {}. Starting with a new one.", dbPath);
         }
     }
 

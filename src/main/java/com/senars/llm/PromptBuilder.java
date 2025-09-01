@@ -1,6 +1,9 @@
 package com.senars.llm;
 
 import com.senars.core.Thought;
+import com.google.gson.Gson;
+import com.senars.core.Thought;
+import dev.langchain4j.agent.tool.ToolSpecification;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -13,37 +16,55 @@ import java.util.List;
 public class PromptBuilder {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(PromptBuilder.class);
+    private final Gson gson = new Gson();
 
     /**
      * Builds a prompt for the LLM.
      *
-     * @param schema        The schema thought to use as a template. Can be null.
-     * @param focusThought  The main thought being processed.
-     * @param context       A list of related thoughts for context.
+     * @param schema             The schema thought to use as a template. Can be null.
+     * @param focusThought       The main thought being processed.
+     * @param context            A list of related thoughts for context.
+     * @param toolSpecifications A list of available tools for the LLM.
      * @return A string representing the fully constructed prompt.
      */
-    public String build(Thought schema, Thought focusThought, List<Thought> context) {
+    public String build(Thought schema, Thought focusThought, List<Thought> context, List<ToolSpecification> toolSpecifications) {
+        StringBuilder prompt = new StringBuilder();
+
+        // 1. Add Schema instructions or a fallback
         if (schema != null && schema.content() != null && schema.content().text() != null) {
             LOGGER.debug("Using schema to build prompt. Schema ID: {}", schema.id());
-            String template = schema.content().text();
-
-            String focusText = (focusThought.content() != null && focusThought.content().text() != null)
-                    ? focusThought.content().text() : "";
-            template = template.replace("{{focus}}", focusText);
-
-            StringBuilder contextBuilder = new StringBuilder();
-            for (Thought thought : context) {
-                if (thought.content() != null && thought.content().text() != null) {
-                    contextBuilder.append("- ").append(thought.content().text()).append("\n");
-                }
-            }
-            template = template.replace("{{context}}", contextBuilder.toString());
-
-            return template;
+            prompt.append(schema.content().text());
         } else {
             LOGGER.warn("Schema is null or has no text content. Falling back to simple prompt generation.");
-            return "Based on the following thought, what should be the next step? Thought: " + focusThought.content().text();
+            prompt.append("You are a helpful reasoning engine. Your goal is to decide the next best step.");
         }
+        prompt.append("\n\n");
+
+        // 2. Add Tool instructions
+        if (toolSpecifications != null && !toolSpecifications.isEmpty()) {
+            prompt.append("You have the following tools available to you:\n");
+            prompt.append(gson.toJson(toolSpecifications));
+            prompt.append("\nTo use a tool, respond with a JSON object matching the tool's schema.\n");
+            prompt.append("If you do not need to use a tool, respond with your final answer or next thought in the structured format expected.\n\n");
+        }
+
+        // 3. Add Context
+        if (context != null && !context.isEmpty()) {
+            prompt.append("Here is some context from previous thoughts:\n");
+            for (Thought thought : context) {
+                if (thought.content() != null && thought.content().text() != null) {
+                    prompt.append("- [").append(thought.metadata().type()).append("] ").append(thought.content().text()).append("\n");
+                }
+            }
+            prompt.append("\n");
+        }
+
+        // 4. Add the Focus Thought
+        prompt.append("The current focus is a ").append(focusThought.metadata().type()).append(" with the content: '")
+              .append(focusThought.content().text()).append("'.\n");
+        prompt.append("What is the next logical step or action?");
+
+        return prompt.toString();
     }
 
     /**

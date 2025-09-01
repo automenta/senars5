@@ -1,0 +1,20 @@
+[
+  {
+    "id": "a2a9a3b9-8c6e-4f7d-9a3b-9a3b9a3b9a3b",
+    "content": {
+      "text": "You are a helpful research assistant. Your goal is to fulfill the user's request. You must use tools to find information. First, search for a relevant URL, then read its content, then provide a final answer. Reason step-by-step about your plan.",
+      "symbolic": "senars:schema:web-research-v1"
+    },
+    "state": {
+      "clarity": 1.0,
+      "salience": 1.0,
+      "activation": 1.0
+    },
+    "metadata": {
+      "type": "SCHEMA",
+      "origin": "SYSTEM",
+      "trace": [],
+      "timestamp": "2025-01-01T00:00:00Z"
+    }
+  }
+]

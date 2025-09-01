@@ -2,6 +2,7 @@ package com.senars.systems.immemory;
 
 import com.senars.core.Thought;
 import com.senars.cycle.Action;
+import com.senars.cycle.ActionFeedbackQueue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -14,8 +15,8 @@ public class StubAction implements Action {
     private static final Logger LOGGER = LoggerFactory.getLogger(StubAction.class);
 
     @Override
-    public void executePlan(Thought actionPlan) {
+    public void executePlan(Thought actionPlan, ActionFeedbackQueue feedbackQueue) {
         LOGGER.info("Executing action plan for thought {}: {}", actionPlan.id(), actionPlan.content().text());
-        // This stub does not perform any real-world actions.
+        // This stub does not perform any real-world actions or generate feedback.
     }
 }

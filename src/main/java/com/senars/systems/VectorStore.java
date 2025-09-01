@@ -35,4 +35,13 @@ public interface VectorStore {
      */
     void remove(String thoughtId);
 
+    /**
+     * Persists the current state of the vector store to its backing storage.
+     */
+    void persist();
+
+    /**
+     * Loads the state of the vector store from its backing storage.
+     */
+    void load();
 }
