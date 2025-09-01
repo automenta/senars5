@@ -58,12 +58,34 @@ public class Main {
         IGovernanceLayer governanceLayer = new InMemoryGovernanceLayer(rules);
         IGroundingSystem groundingSystem = new InMemoryGroundingSystem(memoryNexus);
 
-        // 3. Cognitive Cycle Components
+        // 3. Genesis & Bootstrapping
+        LOGGER.info("Executing Genesis Protocol...");
+        List<Thought> genesisDrives = Genesis.createGenesisDrives(embeddingModel);
+        List<Thought> genesisBeliefs = Genesis.loadKnowledgeFromFile("genesis_knowledge.json", embeddingModel);
+
+        genesisDrives.forEach(memoryNexus::saveThought);
+        genesisBeliefs.forEach(memoryNexus::saveThought);
+        LOGGER.info("Loaded {} Genesis Drives and {} Genesis Beliefs into Memory Nexus.", genesisDrives.size(), genesisBeliefs.size());
+
+
+        // 4. Cognitive Cycle Components
         IPerceptionSystem perceptionSystem = new ConsolePerceptionSystem(embeddingModel);
         IActionSystem actionSystem = new ConsoleActionSystem();
 
-        // 4. Attention and Salience
-        MotiveHierarchy motiveHierarchy = new MotiveHierarchy();
+        // 5. Attention and Salience
+        MotiveHierarchy motiveHierarchy = new MotiveHierarchy(genesisDrives);
+
+        // Establish Prime Ambition
+        Thought primeAmbition = Genesis.createPrimeAmbition(embeddingModel);
+        motiveHierarchy.addAmbition(primeAmbition);
+        memoryNexus.saveThought(primeAmbition);
+
+        LOGGER.info("--- GENESIS PROTOCOL COMPLETE ---");
+        genesisDrives.forEach(drive -> LOGGER.info("Loaded Drive: {}", drive.content().text()));
+        genesisBeliefs.forEach(belief -> LOGGER.info("Loaded Belief: {}", belief.content().text()));
+        LOGGER.info("Established Prime Ambition: {}", primeAmbition.content().text());
+        LOGGER.info("---------------------------------");
+
         EffortPredictor effortPredictor = new EffortPredictor(memoryNexus);
         SalienceCalculator salienceCalculator = new SalienceCalculator(effortPredictor);
         IAttentionFunnel attentionFunnel = new SalienceBasedAttentionFunnel(salienceCalculator, motiveHierarchy);

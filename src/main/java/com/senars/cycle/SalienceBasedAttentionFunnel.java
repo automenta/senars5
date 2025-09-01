@@ -1,10 +1,14 @@
 package com.senars.cycle;
 
 import com.senars.core.Thought;
+import com.senars.core.Thought;
 import com.senars.motive.MotiveHierarchy;
 import com.senars.salience.SalienceCalculator;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Comparator;
+import java.util.List;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -31,18 +35,31 @@ public class SalienceBasedAttentionFunnel implements IAttentionFunnel {
         }
     }
 
+    private static final Logger LOGGER = LoggerFactory.getLogger(SalienceBasedAttentionFunnel.class);
+// ...
     @Override
     public Optional<Thought> selectFocusThought() {
         if (candidates.isEmpty()) {
             return Optional.empty();
         }
 
-        // Find the thought with the maximum salience score
-        Optional<Thought> bestThought = candidates.stream()
+        LOGGER.debug("--- Attention Funnel: Selecting Focus Thought ---");
+        List<Thought> currentCandidates = List.copyOf(candidates);
+
+        // Calculate salience for all candidates and find the one with the max score
+        Optional<Thought> bestThought = currentCandidates.stream()
+                .peek(thought -> {
+                    double salience = salienceCalculator.calculate(thought, motiveHierarchy);
+                    LOGGER.debug("Candidate: '{}' (ID: {}) - Calculated Salience: {}", thought.content().text(), thought.id(), String.format("%.4f", salience));
+                })
                 .max(Comparator.comparingDouble(thought -> salienceCalculator.calculate(thought, motiveHierarchy)));
 
-        // Remove the selected thought from the candidates list
-        bestThought.ifPresent(candidates::remove);
+        bestThought.ifPresent(thought -> {
+            LOGGER.info("Selected Focus Thought: '{}' (ID: {})", thought.content().text(), thought.id());
+            candidates.remove(thought);
+        });
+        LOGGER.debug("-------------------------------------------------");
+
 
         return bestThought;
     }

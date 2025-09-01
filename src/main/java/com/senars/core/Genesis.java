@@ -1,17 +1,80 @@
 package com.senars.core;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.senars.motive.Drive;
 import dev.langchain4j.model.embedding.EmbeddingModel;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import java.io.InputStream;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * The Genesis class is responsible for creating the initial, immutable set of Thoughts
- * that every SeNARS instance starts with, such as the foundational Drives.
+ * that every SeNARS instance starts with, such as foundational Drives and knowledge.
  */
 public class Genesis {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(Genesis.class);
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper()
+            .registerModule(new JavaTimeModule());
+
+    /**
+     * Loads initial belief Thoughts from a JSON resource file.
+     * After loading, it generates and sets the embedding for each thought.
+     *
+     * @param resourcePath   The path to the JSON file in the resources folder.
+     * @param embeddingModel The model to use for generating embeddings.
+     * @return A list of Thought objects.
+     */
+    public static List<Thought> loadKnowledgeFromFile(String resourcePath, EmbeddingModel embeddingModel) {
+        try (InputStream inputStream = Genesis.class.getClassLoader().getResourceAsStream(resourcePath)) {
+            if (inputStream == null) {
+                LOGGER.error("Genesis resource file not found: {}", resourcePath);
+                return Collections.emptyList();
+            }
+
+            List<Thought> thoughts = OBJECT_MAPPER.readValue(inputStream, new TypeReference<List<Thought>>() {});
+
+            // Generate and set embeddings for each thought
+            return thoughts.stream()
+                    .map(thought -> {
+                        if (thought.content().text() != null && !thought.content().text().isEmpty()) {
+                            List<Double> embedding = new ArrayList<>();
+                            for (float f : embeddingModel.embed(thought.content().text()).content().vector()) {
+                                embedding.add((double) f);
+                            }
+                            // Create a new Thought with the updated embedding
+                            return new Thought(
+                                thought.id(),
+                                new ThoughtContent(
+                                    thought.content().text(),
+                                    thought.content().symbolic(),
+                                    embedding,
+                                    thought.content().perceptual(),
+                                    thought.content().procedural(),
+                                    thought.content().feedback()
+                                ),
+                                thought.state(),
+                                thought.metadata()
+                            );
+                        }
+                        return thought;
+                    })
+                    .collect(Collectors.toList());
+
+        } catch (Exception e) {
+            LOGGER.error("Failed to load or process genesis knowledge from {}", resourcePath, e);
+            return Collections.emptyList();
+        }
+    }
+
 
     /**
      * Creates the list of foundational Drive thoughts for the system.
@@ -56,6 +119,43 @@ public class Genesis {
             drives.add(driveThought);
         }
         return List.copyOf(drives);
+    }
+
+    /**
+     * Creates the system's prime ambition as a GOAL thought.
+     *
+     * @param embeddingModel The model to generate the embedding for the ambition's text.
+     * @return A Thought object representing the prime ambition.
+     */
+    public static Thought createPrimeAmbition(EmbeddingModel embeddingModel) {
+        String text = "My primary ambition is to understand my own architecture, purpose, and capabilities based on my foundational knowledge.";
+        List<Double> embedding = new ArrayList<>();
+        for (float f : embeddingModel.embed(text).content().vector()) {
+            embedding.add((double) f);
+        }
+
+        return new Thought(
+            "ambition-genesis-1",
+            new ThoughtContent(
+                text,
+                null,
+                embedding,
+                null,
+                null,
+                null
+            ),
+            new ThoughtState(
+                1.0, // clarity
+                0.0, // salience
+                1.0  // activation
+            ),
+            new ThoughtMetadata(
+                ThoughtType.GOAL,
+                ThoughtOrigin.SYSTEM,
+                List.of(),
+                Instant.now()
+            )
+        );
     }
 
     private static String getDriveText(Drive drive) {

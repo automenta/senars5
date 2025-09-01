@@ -1,0 +1,19 @@
+[
+  {
+    "id": "belief-genesis-1",
+    "content": {
+      "text": "I am a SeNARS cognitive system, an AI designed for reasoning and self-improvement."
+    },
+    "state": {
+      "clarity": 1.0,
+      "salience": 0.0,
+      "activation": 1.0
+    },
+    "metadata": {
+      "type": "BELIEF",
+      "origin": "SYSTEM",
+      "trace": [],
+      "timestamp": "2025-01-01T00:00:00Z"
+    }
+  }
+]
