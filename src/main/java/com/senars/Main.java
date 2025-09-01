@@ -13,7 +13,7 @@ import com.senars.motive.MotiveHierarchy;
 import com.senars.salience.SalienceCalculator;
 import com.senars.systems.Governor;
 import com.senars.systems.Grounding;
-import com.senars.systems.PersistentMemory;
+import com.senars.systems.Memory;
 import com.senars.systems.Rule;
 import com.senars.systems.immemory.*;
 import com.senars.systems.rules.KeywordBlocklistRule;
@@ -44,11 +44,7 @@ public class Main {
         EmbeddingModel embeddingModel = new AllMiniLmL6V2EmbeddingModel();
 
         // 2. Foundational Systems
-        PersistentMemory memory = new PersistentMemory(
-                config.getGraphDbFilePath(),
-                config.getVectorStoreFilePath(),
-                embeddingModel
-        );
+        Memory memory = new InMemoryMemory(config);
         List<Rule> rules = List.of(
                 new KeywordBlocklistRule(List.of("delete all files", "shutdown", "rm -rf"))
         );

@@ -1,36 +1,54 @@
 package com.senars.systems.immemory;
 
+import com.senars.config.AppConfig;
 import com.senars.core.*;
 import com.senars.effort.EffortPredictor;
 import com.senars.effort.LinearTextEffortModel;
-import com.senars.salience.VectorMath;
+import com.senars.systems.GraphDB;
 import com.senars.systems.Memory;
+import com.senars.systems.VectorStore;
+import com.senars.systems.graphdb.TinkerGraphDB;
+import com.senars.systems.vectorstore.LangChain4jVectorStore;
 
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 /**
- * An in-memory implementation of the IMemoryNexus interface.
- * Suitable for testing and development without requiring external databases.
- * Note: The semantic search is a naive O(n) implementation.
+ * An in-memory implementation of the Memory facade.
+ * This class orchestrates an in-memory graph database and an in-memory vector store.
+ * It is suitable for testing and development without requiring external databases.
  */
 public class InMemoryMemory implements Memory {
 
-    private final Map<String, Thought> thoughts = new ConcurrentHashMap<>();
+    private final GraphDB graphDB;
+    private final VectorStore vectorStore;
 
     public InMemoryMemory() {
-        seedDefaultSchemas();
+        // For tests or scenarios without config, use a default in-memory-only path.
+        this(null);
     }
 
+    public InMemoryMemory(AppConfig config) {
+        String graphDbPath = (config != null) ? config.getGraphDbFilePath() : "target/test-db/graph.json";
+        this.graphDB = new TinkerGraphDB(graphDbPath);
+        this.vectorStore = new LangChain4jVectorStore();
+
+        // Only seed if the database is new (i.e., empty)
+        if (graphDB.getAllThoughts().isEmpty()) {
+            seedDefaultSchemas();
+        }
+    }
+
+    /**
+     * Seeds the memory with essential, system-level schemas upon initialization.
+     */
     private void seedDefaultSchemas() {
-        // Create the default effort prediction model schema
         ThoughtContent content = new ThoughtContent(
                 "Default effort prediction model based on text length.",
                 EffortPredictor.EFFORT_MODEL_SCHEMA_NAME,
                 null,
                 null,
-                new LinearTextEffortModel(0.01, 1.0), // Procedural content is the model itself
+                new LinearTextEffortModel(0.01, 1.0),
                 null
         );
 
@@ -41,26 +59,35 @@ public class InMemoryMemory implements Memory {
                 java.time.Instant.now()
         );
 
-        ThoughtState state = new ThoughtState(1.0, 1.0, 1.0); // Max clarity, salience, activation
+        ThoughtState state = new ThoughtState(1.0, 1.0, 1.0);
 
         Thought schemaThought = new Thought(
-                UUID.randomUUID().toString(),
+                UUID.nameUUIDFromBytes(EffortPredictor.EFFORT_MODEL_SCHEMA_NAME.getBytes()).toString(),
                 content,
                 state,
                 metadata
         );
 
-        saveThought(schemaThought);
+        graphDB.saveThought(schemaThought);
     }
 
     @Override
     public void saveThought(Thought thought) {
-        thoughts.put(thought.id(), thought);
+        graphDB.saveThought(thought);
+        if (thought.content().embedding() != null && !thought.content().embedding().isEmpty()) {
+            vectorStore.add(thought);
+        }
+    }
+
+    @Override
+    public void deleteThought(String thoughtId) {
+        graphDB.deleteThought(thoughtId);
+        vectorStore.remove(thoughtId);
     }
 
     @Override
     public Optional<Thought> getThoughtById(String id) {
-        return Optional.ofNullable(thoughts.get(id));
+        return graphDB.getThoughtById(id);
     }
 
     @Override
@@ -68,56 +95,31 @@ public class InMemoryMemory implements Memory {
         if (embedding == null || embedding.isEmpty()) {
             return Collections.emptyList();
         }
-
-        // Naive O(n) semantic search.
-        return thoughts.values().stream()
-                .filter(thought -> thought.content().embedding() != null && !thought.content().embedding().isEmpty())
-                .map(thought -> {
-                    double similarity = VectorMath.cosineSimilarity(embedding, thought.content().embedding());
-                    return new AbstractMap.SimpleEntry<>(thought, similarity);
-                })
-                .sorted(Map.Entry.<Thought, Double>comparingByValue().reversed())
-                .limit(topK)
-                .map(Map.Entry::getKey)
+        List<String> similarIds = vectorStore.findSimilar(embedding, topK);
+        return similarIds.stream()
+                .map(this::getThoughtById)
+                .filter(Optional::isPresent)
+                .map(Optional::get)
                 .collect(Collectors.toList());
     }
 
     @Override
     public List<Thought> getTrace(String thoughtId) {
-        List<Thought> trace = new ArrayList<>();
-        Optional<Thought> currentThoughtOpt = getThoughtById(thoughtId);
-
-        while (currentThoughtOpt.isPresent()) {
-            Thought currentThought = currentThoughtOpt.get();
-            trace.add(currentThought);
-
-            List<String> parentIds = currentThought.metadata().trace();
-            if (parentIds == null || parentIds.isEmpty()) {
-                break;
-            }
-
-            // For simplicity in this mock, we only trace back the first parent.
-            // A full graph implementation would handle multiple parents.
-            currentThoughtOpt = getThoughtById(parentIds.get(0));
-        }
-
-        Collections.reverse(trace); // To get the trace in chronological order.
-        return trace;
-    }
-
-    /**
-     * A simple method to retrieve all thoughts for demonstration purposes.
-     * @return A list of all thoughts in the memory nexus.
-     */
-    public List<Thought> getAllThoughts() {
-        return new ArrayList<>(thoughts.values());
+        return graphDB.getTrace(thoughtId);
     }
 
     @Override
     public Optional<Thought> findSchemaBySymbolicName(String name) {
-        return thoughts.values().stream()
-                .filter(t -> t.metadata().type() == com.senars.core.ThoughtType.SCHEMA)
-                .filter(t -> t.content().symbolic() != null && t.content().symbolic().equals(name))
-                .findFirst();
+        return graphDB.findSchemaBySymbolicName(name);
+    }
+
+    @Override
+    public List<Thought> getAllThoughts() {
+        return graphDB.getAllThoughts();
+    }
+
+    @Override
+    public void persist() {
+        graphDB.persist();
     }
 }

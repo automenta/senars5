@@ -1,5 +1,10 @@
 package com.senars.systems.graphdb;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import com.senars.config.AppConfig;
+import com.senars.core.*;
+import com.senars.systems.GraphDB;
 import org.apache.tinkerpop.gremlin.structure.Graph;
 import org.apache.tinkerpop.gremlin.structure.T;
 import org.apache.tinkerpop.gremlin.structure.Vertex;
@@ -13,26 +18,25 @@ import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.Map;
-import java.util.Optional;
+import java.time.Instant;
+import java.util.*;
+import java.util.stream.Collectors;
 
-/**
- * A file-based graph database that uses Apache TinkerPop's TinkerGraph.
- * It persists the graph to a file in GraphSON format.
- */
-public class TinkerGraphDB {
+public class TinkerGraphDB implements GraphDB {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(TinkerGraphDB.class);
+    private static final String TRACE_EDGE_LABEL = "trace";
+
     private final Graph graph;
+    private final ObjectMapper objectMapper;
     private final Path dbPath;
 
-    /**
-     * Initializes the graph database, loading from a file if it exists.
-     * @param filePath The path to the database file.
-     */
     public TinkerGraphDB(String filePath) {
         this.dbPath = Paths.get(filePath);
         this.graph = TinkerGraph.open();
+        this.objectMapper = new ObjectMapper();
+        this.objectMapper.registerModule(new JavaTimeModule());
+
         if (Files.exists(dbPath)) {
             LOGGER.info("Loading existing graph database from: {}", dbPath);
             try (InputStream is = new FileInputStream(dbPath.toFile())) {
@@ -42,110 +46,158 @@ public class TinkerGraphDB {
                 LOGGER.error("Error loading graph database from {}", dbPath, e);
             }
         } else {
-            LOGGER.info("No existing graph database found. Creating a new one.");
+            LOGGER.info("No existing graph database found at {}. Creating a new one.", dbPath);
         }
     }
 
-    /**
-     * Adds or updates a vertex in the graph.
-     * If a vertex with the given id already exists, it will be updated with the new properties.
-     * @param id The unique ID of the vertex.
-     * @param label The label of the vertex (e.g., "Concept", "Experience").
-     * @param properties A map of properties for the vertex.
-     */
-    public void addVertex(String id, String label, Map<String, Object> properties) {
-        // Check if vertex exists
-        Optional<Vertex> existing = getVertex(id);
-        Vertex v;
-        v = existing.orElseGet(() -> graph.addVertex(T.id, id, T.label, label));
+    @Override
+    public synchronized void saveThought(Thought thought) {
+        try {
+            Vertex v = graph.traversal().V(thought.id()).tryNext().orElseGet(() -> graph.addVertex(T.id, thought.id()));
 
-        for (Map.Entry<String, Object> entry : properties.entrySet()) {
-            v.property(entry.getKey(), entry.getValue());
+            v.property("content_text", thought.content().text());
+            v.property("content_symbolic", thought.content().symbolic());
+            serializeAndStore(v, "content_perceptual", thought.content().perceptual());
+            serializeAndStore(v, "content_procedural", thought.content().procedural());
+            serializeAndStore(v, "content_feedback", thought.content().feedback());
+            v.property("state_clarity", thought.state().clarity());
+            v.property("state_salience", thought.state().salience());
+            v.property("state_activation", thought.state().activation());
+            v.property("meta_type", thought.metadata().type().name());
+            v.property("meta_origin", thought.metadata().origin().name());
+            v.property("meta_timestamp", thought.metadata().timestamp().toString());
+
+            v.edges(org.apache.tinkerpop.gremlin.structure.Direction.OUT, TRACE_EDGE_LABEL).forEachRemaining(org.apache.tinkerpop.gremlin.structure.Edge::remove);
+            if (thought.metadata().trace() != null) {
+                for (String parentId : thought.metadata().trace()) {
+                    Optional<Vertex> parentV = graph.traversal().V(parentId).tryNext();
+                    parentV.ifPresent(parent -> v.addEdge(TRACE_EDGE_LABEL, parent));
+                }
+            }
+        } catch (Exception e) {
+            LOGGER.error("Error saving thought with id {}", thought.id(), e);
         }
     }
 
-    /**
-     * Retrieves a vertex by its ID.
-     * @param id The ID of the vertex.
-     * @return An Optional containing the vertex if found.
-     */
-    public Optional<Vertex> getVertex(String id) {
-        return graph.traversal().V(id).tryNext();
+    @Override
+    public Optional<Thought> getThoughtById(String id) {
+        return graph.traversal().V(id).tryNext().map(this::vertexToThought);
     }
 
-    /**
-     * Adds an edge between two vertices.
-     * @param fromId The ID of the source vertex.
-     * @param toId The ID of the target vertex.
-     * @param label The label for the edge.
-     */
-    public void addEdge(String fromId, String toId, String label) {
-        Optional<Vertex> fromV = getVertex(fromId);
-        Optional<Vertex> toV = getVertex(toId);
-        if (fromV.isPresent() && toV.isPresent()) {
-            fromV.get().addEdge(label, toV.get());
-        } else {
-            LOGGER.warn("Could not create edge from {} to {}. One or both vertices not found.", fromId, toId);
+    @Override
+    public void deleteThought(String thoughtId) {
+        graph.traversal().V(thoughtId).tryNext().ifPresent(Vertex::remove);
+    }
+
+    @Override
+    public List<Thought> getTrace(String thoughtId) {
+        List<Thought> sortedTrace = new ArrayList<>();
+        Set<String> visited = new HashSet<>();
+        if (graph.traversal().V(thoughtId).tryNext().isEmpty()) {
+            return sortedTrace;
         }
+        topologicalSortUtil(thoughtId, visited, sortedTrace);
+        return sortedTrace;
     }
 
-    /**
-     * Retrieves vertices connected to a given vertex by an edge with a specific label.
-     * @param fromId The ID of the source vertex.
-     * @param edgeLabel The label of the edge to traverse.
-     * @return A list of connected vertices.
-     */
-    public java.util.List<Vertex> getRelatedVertices(String fromId, String edgeLabel) {
-        Optional<Vertex> fromV = getVertex(fromId);
-        if (fromV.isPresent()) {
-            return fromV.get().graph().traversal().V(fromV.get()).out(edgeLabel).toList();
+    private void topologicalSortUtil(String thoughtId, Set<String> visited, List<Thought> sortedTrace) {
+        visited.add(thoughtId);
+        Optional<Vertex> currentVertexOpt = graph.traversal().V(thoughtId).tryNext();
+        if (currentVertexOpt.isEmpty()) return;
+        Vertex currentVertex = currentVertexOpt.get();
+        Iterator<Vertex> parents = currentVertex.vertices(org.apache.tinkerpop.gremlin.structure.Direction.OUT, TRACE_EDGE_LABEL);
+        while(parents.hasNext()) {
+            Vertex parent = parents.next();
+            if (!visited.contains(parent.id().toString())) {
+                topologicalSortUtil(parent.id().toString(), visited, sortedTrace);
+            }
         }
-        return java.util.Collections.emptyList();
+        sortedTrace.add(vertexToThought(currentVertex));
     }
 
-    /**
-     * Retrieves vertices that have an incoming edge with a specific label to a given vertex.
-     * @param toId The ID of the target vertex.
-     * @param edgeLabel The label of the incoming edge.
-     * @return A list of source vertices.
-     */
-    public java.util.List<Vertex> getVerticesWithIncomingEdge(String toId, String edgeLabel) {
-        Optional<Vertex> toV = getVertex(toId);
-        if (toV.isPresent()) {
-            return toV.get().graph().traversal().V(toV.get()).in(edgeLabel).toList();
-        }
-        return java.util.Collections.emptyList();
+    @Override
+    public Optional<Thought> findSchemaBySymbolicName(String name) {
+        return graph.traversal().V()
+                .has("meta_type", ThoughtType.SCHEMA.name())
+                .has("content_symbolic", name)
+                .tryNext()
+                .map(this::vertexToThought);
     }
 
+    @Override
+    public List<Thought> getAllThoughts() {
+        return graph.traversal().V().toList().stream()
+                .map(this::vertexToThought)
+                .collect(Collectors.toList());
+    }
 
-    /**
-     * Persists the graph to the file system.
-     */
+    @Override
     public void persist() {
+        LOGGER.info("Persisting graph database to: {}", dbPath);
         try (OutputStream os = new FileOutputStream(dbPath.toFile())) {
             if (dbPath.getParent() != null) {
                 Files.createDirectories(dbPath.getParent());
             }
-            GraphSONWriter writer = GraphSONWriter.build().create();
-            writer.writeGraph(os, graph);
-            LOGGER.info("Successfully persisted graph database to: {}", dbPath);
+            GraphSONWriter.build().create().writeGraph(os, graph);
+            LOGGER.info("Successfully persisted graph database.");
         } catch (IOException e) {
             LOGGER.error("Failed to persist graph database to file: {}", dbPath, e);
         }
     }
 
-    /**
-     * Closes the graph database connection.
-     */
-    public void close() {
-        try {
-            graph.close();
-        } catch (Exception e) {
-            LOGGER.error("Error closing graph database.", e);
+    private void serializeAndStore(Vertex v, String key, Object obj) {
+        if (obj != null) {
+            try {
+                String json = objectMapper.writeValueAsString(obj);
+                v.property(key, json);
+                v.property(key + "_class", obj.getClass().getName());
+            } catch (IOException e) {
+                LOGGER.error("Failed to serialize object for key {}", key, e);
+            }
         }
     }
 
-    public java.util.List<Vertex> getVerticesByProperty(String key, Object value) {
-        return graph.traversal().V().has(key, value).toList();
+    private <T> T deserialize(Vertex v, String key, Class<T> defaultClass) {
+        if (v.property(key).isPresent()) {
+            String json = v.property(key).value().toString();
+            String className = v.property(key + "_class").value().toString();
+            try {
+                Class<?> clazz = Class.forName(className);
+                return (T) objectMapper.readValue(json, clazz);
+            } catch (IOException | ClassNotFoundException e) {
+                LOGGER.error("Failed to deserialize object for key {}", key, e);
+            }
+        }
+        return null;
+    }
+
+    private Thought vertexToThought(Vertex v) {
+        if (v == null) return null;
+        String text = v.property("content_text").isPresent() ? v.property("content_text").value().toString() : null;
+        String symbolic = v.property("content_symbolic").isPresent() ? v.property("content_symbolic").value().toString() : null;
+        ThoughtContent content = new ThoughtContent(
+                text,
+                symbolic,
+                null,
+                deserialize(v, "content_perceptual", Object.class),
+                deserialize(v, "content_procedural", Object.class),
+                deserialize(v, "content_feedback", Feedback.class)
+        );
+        double clarity = v.property("state_clarity").isPresent() ? (double) v.property("state_clarity").value() : 0.0;
+        double salience = v.property("state_salience").isPresent() ? (double) v.property("state_salience").value() : 0.0;
+        double activation = v.property("state_activation").isPresent() ? (double) v.property("state_activation").value() : 0.0;
+        ThoughtState state = new ThoughtState(clarity, salience, activation);
+        List<String> trace = new ArrayList<>();
+        v.vertices(org.apache.tinkerpop.gremlin.structure.Direction.OUT, TRACE_EDGE_LABEL).forEachRemaining(parent -> trace.add(parent.id().toString()));
+        String typeStr = v.property("meta_type").isPresent() ? v.property("meta_type").value().toString() : "BELIEF";
+        String originStr = v.property("meta_origin").isPresent() ? v.property("meta_origin").value().toString() : "SYSTEM";
+        String timestampStr = v.property("meta_timestamp").isPresent() ? v.property("meta_timestamp").value().toString() : Instant.now().toString();
+        ThoughtMeta meta = new ThoughtMeta(
+                ThoughtType.valueOf(typeStr),
+                ThoughtOrigin.valueOf(originStr),
+                trace,
+                Instant.parse(timestampStr)
+        );
+        return new Thought(v.id().toString(), content, state, meta);
     }
 }
