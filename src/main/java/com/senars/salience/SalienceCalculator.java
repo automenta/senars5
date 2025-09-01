@@ -60,6 +60,14 @@ public class SalienceCalculator {
             }
         }
 
+        // Compare with drives
+        for (Thought drive : motiveHierarchy.getDrives()) {
+            List<Double> driveEmbedding = drive.content().embedding();
+            if (driveEmbedding != null && !driveEmbedding.isEmpty()) {
+                maxSimilarity = Math.max(maxSimilarity, VectorMath.cosineSimilarity(thoughtEmbedding, driveEmbedding));
+            }
+        }
+
         return maxSimilarity;
     }
 }

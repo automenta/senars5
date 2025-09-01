@@ -86,7 +86,7 @@ public class ConsolePerceptionSystem implements IPerceptionSystem {
             double score = Double.parseDouble(feedbackInput);
             score = Math.max(0.0, Math.min(1.0, score)); // Clamp score to [0, 1]
 
-            Feedback feedback = new Feedback("User console feedback.", score);
+            Feedback feedback = new Feedback(score, "User console feedback.");
             ThoughtContent content = new ThoughtContent(
                     "User feedback report. Score: " + score,
                     null, null, null, null, feedback);

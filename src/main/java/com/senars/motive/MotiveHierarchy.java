@@ -14,11 +14,39 @@ import java.util.concurrent.CopyOnWriteArrayList;
  */
 public class MotiveHierarchy {
 
+    // Top-level, permanent, intrinsic needs.
+    private final List<Thought> drives;
+
     // Mid-level, long-term goals. Using CopyOnWriteArrayList for thread-safety.
     private final List<Thought> ambitions = new CopyOnWriteArrayList<>();
 
     // Low-level, current goal. Can be null if the system is idle.
     private volatile Thought intention;
+
+    /**
+     * Default constructor, initializes with no drives.
+     */
+    public MotiveHierarchy() {
+        this.drives = Collections.emptyList();
+    }
+
+    /**
+     * Constructor that initializes the hierarchy with a set of drives.
+     *
+     * @param drives The list of drive thoughts.
+     */
+    public MotiveHierarchy(List<Thought> drives) {
+        this.drives = drives != null ? List.copyOf(drives) : Collections.emptyList();
+    }
+
+    /**
+     * Gets an unmodifiable list of the system's intrinsic Drives.
+     *
+     * @return The list of drive thoughts.
+     */
+    public List<Thought> getDrives() {
+        return drives;
+    }
 
     /**
      * Sets a new Ambition. Ambitions must be GOAL thoughts.

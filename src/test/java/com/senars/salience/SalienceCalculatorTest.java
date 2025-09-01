@@ -126,4 +126,60 @@ class SalienceCalculatorTest {
         // Expected: (activation + motiveBonus) * clarity / effort = (0.5 + 0) * 0.8 / 2.0 = 0.2
         assertEquals(0.2, salience, DELTA);
     }
+
+    private Thought createTestDrive(String text, List<Double> embedding) {
+        return new Thought(
+                UUID.randomUUID().toString(),
+                new ThoughtContent(text, null, embedding, null, null, null),
+                new ThoughtState(1.0, 1.0, 1.0),
+                new ThoughtMetadata(ThoughtType.BELIEF, ThoughtOrigin.SYSTEM, List.of(), Instant.now())
+        );
+    }
+
+    @Test
+    void testCalculate_withDriveMatch() {
+        List<Double> embedding = List.of(0.0, 1.0);
+        Thought drive = createTestDrive("drive", embedding);
+        // Re-initialize calculator and motiveHierarchy for this specific test case
+        motiveHierarchy = new MotiveHierarchy(List.of(drive));
+        calculator = new SalienceCalculator(mockEffortPredictor);
+        when(mockEffortPredictor.predict(any(Thought.class))).thenReturn(1.0);
+
+
+        Thought thoughtToScore = createTestThought("test", embedding, 0.3, 0.9);
+        double salience = calculator.calculate(thoughtToScore, motiveHierarchy);
+        // Motive bonus should be 1.0
+        // Expected: (0.3 + 1.0) * 0.9 / 1.0 = 1.3 * 0.9 = 1.17
+        assertEquals(1.17, salience, DELTA);
+    }
+
+    @Test
+    void testCalculate_choosesMaxMotiveBonus_withDrive() {
+        List<Double> embeddingThought = List.of(1.0, 0.0, 0.0);
+        List<Double> embeddingIntention = List.of(0.7, 0.714, 0.0);
+        List<Double> embeddingAmbition = List.of(0.8, 0.6, 0.0);
+        List<Double> embeddingDrive = List.of(1.0, 0.0, 0.0);
+
+        Thought intention = createTestGoal("intention", embeddingIntention);
+        Thought ambition = createTestGoal("ambition", embeddingAmbition);
+        Thought drive = createTestDrive("drive", embeddingDrive);
+
+        motiveHierarchy = new MotiveHierarchy(List.of(drive));
+        motiveHierarchy.addAmbition(ambition);
+        motiveHierarchy.setIntention(intention);
+        calculator = new SalienceCalculator(mockEffortPredictor);
+        when(mockEffortPredictor.predict(any(Thought.class))).thenReturn(1.0);
+
+
+        Thought thoughtToScore = createTestThought("test", embeddingThought, 0.1, 1.0);
+
+        double salience = calculator.calculate(thoughtToScore, motiveHierarchy);
+        // cos(thought, intention) is approx 0.7
+        // cos(thought, ambition) is 0.8
+        // cos(thought, drive) is 1.0
+        // Max similarity should be 1.0 from the drive.
+        // Motive bonus should be 1.0
+        // Expected: (0.1 + 1.0) * 1.0 / 1.0 = 1.1
+        assertEquals(1.1, salience, DELTA);
+    }
 }
