@@ -10,6 +10,7 @@ import com.senars.llm.Langchain4JCognition;
 import com.senars.llm.PromptBuilder;
 import com.senars.llm.StructuredOutputParser;
 import com.senars.motive.MotiveHierarchy;
+import com.senars.xai.Explain;
 import com.senars.salience.SalienceCalculator;
 import com.senars.systems.Governor;
 import com.senars.systems.Grounding;
@@ -92,16 +93,19 @@ public class Main {
 
         PromptBuilder promptBuilder = new PromptBuilder();
         StructuredOutputParser outputParser = new StructuredOutputParser();
+        Sessions sessions = new Sessions();
+        Explain explain = new Explain(memory);
 
         Cognition cognitiveProcessor = new Langchain4JCognition(
                 chatModel,
                 memory,
                 promptBuilder,
-                outputParser
+                outputParser,
+                sessions,
+                explain
         );
 
         // 6. The Cognitive Cycle itself
-        Sessions sessions = new Sessions();
         CognitiveCycle cognitiveCycle = new CognitiveCycle(
                 perception,
                 attention,

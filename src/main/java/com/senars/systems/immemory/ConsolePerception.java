@@ -48,6 +48,8 @@ public class ConsolePerception implements Perception {
                     return Collections.singletonList(createQuestion(input.substring(9).trim()));
                 } else if (input.toLowerCase().startsWith("feedback:")) {
                     return Collections.singletonList(createFeedbackReport(input.substring(9).trim()));
+                } else if (input.toLowerCase().startsWith("why")) {
+                    return Collections.singletonList(createExplanationRequest(input));
                 } else if (!input.isEmpty()) {
                     // Default to creating a belief if no prefix is provided
                     return Collections.singletonList(createBelief(input));
@@ -80,9 +82,26 @@ public class ConsolePerception implements Perception {
         System.out.println("  feedback: <0.0-1.0>     - Provide a score for the last action's outcome.");
         System.out.println("\nIf you don't provide a prefix, the input will be treated as a belief.");
         System.out.println("\nSpecial Commands:");
+        System.out.println("  why                     - Explain the reasoning for the last action.");
+        System.out.println("  why: <thought_id>       - Explain the reasoning for a specific thought.");
         System.out.println("  help                    - Display this help message.");
         System.out.println("  shutdown / exit         - Terminate the application.");
         System.out.println("---------------------------\n");
+    }
+
+    private Thought createExplanationRequest(String input) {
+        String targetId;
+        String[] parts = input.split(":", 2);
+        if (parts.length > 1 && !parts[1].isBlank()) {
+            targetId = parts[1].trim();
+        } else {
+            targetId = "last_action"; // Special keyword for the cognitive processor
+        }
+
+        ThoughtContent content = new ThoughtContent(targetId, null, null, null, null, null);
+        ThoughtMeta metadata = new ThoughtMeta(ThoughtType.EXPLANATION_REQUEST, ThoughtOrigin.USER, Collections.emptyList(), java.time.Instant.now());
+        ThoughtState state = new ThoughtState(1.0, 100.0, 1.0); // High salience to ensure it's processed
+        return new Thought(UUID.randomUUID().toString(), content, state, metadata);
     }
 
     private List<Double> generateEmbedding(String text) {

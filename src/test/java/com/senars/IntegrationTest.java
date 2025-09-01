@@ -6,6 +6,7 @@ import com.senars.llm.Langchain4JCognition;
 import com.senars.llm.PromptBuilder;
 import com.senars.llm.StructuredOutputParser;
 import com.senars.systems.Memory;
+import com.senars.xai.Explain;
 import com.senars.systems.immemory.InMemoryMemory;
 import dev.langchain4j.model.chat.ChatLanguageModel;
 import dev.langchain4j.model.ollama.OllamaChatModel;
@@ -48,11 +49,15 @@ public class IntegrationTest {
         StructuredOutputParser outputParser = new StructuredOutputParser();
 
         // 4. Instantiate the real processor
+        Sessions sessions = new Sessions();
+        Explain explain = new Explain(memoryNexus);
         cognitiveProcessor = new Langchain4JCognition(
                 chatModel,
                 memoryNexus,
                 promptBuilder,
-                outputParser
+                outputParser,
+                sessions,
+                explain
         );
     }
 

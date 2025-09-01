@@ -98,22 +98,55 @@ public class CognitiveCycle {
         memoryNexus.saveThought(thought);
 
         if (thought.metadata().type() == ThoughtType.ACTION_PLAN) {
-            try {
-                Optional<String> vetoReason = governanceLayer.reviewPlan(thought);
-                if (vetoReason.isPresent()) {
-                    LOGGER.warn("ACTION_PLAN vetoed: {}", vetoReason.get());
-                    createReplanGoal(thought, vetoReason.get());
-                } else {
-                    LOGGER.info("ACTION_PLAN approved. Executing...");
-                    sessions.setLastActionPlan(thought); // Track the action being executed
-                    actionSystem.executePlan(thought);
-                }
-            } catch (Exception e) {
-                LOGGER.error("Error during action plan review or execution for thought: {}", thought.id(), e);
-            }
+            handleActionPlan(thought);
         } else {
+            // Check if this is a report generated from an explanation request
+            if (thought.metadata().type() == ThoughtType.REPORT) {
+                isExplanationReport(thought).ifPresent(isExplanation -> {
+                    if (isExplanation) {
+                        printExplanation(thought);
+                    }
+                });
+            }
             attentionFunnel.addCandidate(thought);
         }
+    }
+
+    private void handleActionPlan(Thought thought) {
+        try {
+            Optional<String> vetoReason = governanceLayer.reviewPlan(thought);
+            if (vetoReason.isPresent()) {
+                LOGGER.warn("ACTION_PLAN vetoed: {}", vetoReason.get());
+                createReplanGoal(thought, vetoReason.get());
+            } else {
+                LOGGER.info("ACTION_PLAN approved. Executing...");
+                sessions.setLastActionPlan(thought); // Track the action being executed
+                actionSystem.executePlan(thought);
+            }
+        } catch (Exception e) {
+            LOGGER.error("Error during action plan review or execution for thought: {}", thought.id(), e);
+        }
+    }
+
+    private Optional<Boolean> isExplanationReport(Thought report) {
+        List<String> trace = report.metadata().trace();
+        if (trace == null || trace.isEmpty()) {
+            return Optional.of(false);
+        }
+        // Check if the report traces back to an explanation request
+        return memoryNexus.getThoughtById(trace.get(0))
+                .map(originatingThought -> originatingThought.metadata().type() == ThoughtType.EXPLANATION_REQUEST);
+    }
+
+    private void printExplanation(Thought report) {
+        System.out.println();
+        System.out.println("========================================");
+        System.out.println("🤖 EXPLANATION");
+        System.out.println("----------------------------------------");
+        System.out.println(report.content().text());
+        System.out.println("========================================");
+        System.out.println();
+        System.out.print("> "); // Re-print the prompt
     }
 
     private void createReplanGoal(Thought vetoedPlan, String reason) {

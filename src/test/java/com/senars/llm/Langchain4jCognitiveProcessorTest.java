@@ -1,9 +1,11 @@
 package com.senars.llm;
 
+import com.senars.core.Sessions;
 import com.senars.core.Thought;
 import com.senars.core.ThoughtContent;
 import com.senars.core.ThoughtMeta;
 import com.senars.cycle.Cognition;
+import com.senars.xai.Explain;
 import com.senars.systems.Memory;
 import dev.langchain4j.data.message.AiMessage;
 import dev.langchain4j.data.message.UserMessage;
@@ -39,6 +41,10 @@ class Langchain4jCognitiveProcessorTest {
     @Mock
     private StructuredOutputParser mockOutputParser;
     @Mock
+    private Sessions mockSessions;
+    @Mock
+    private Explain mockExplain;
+    @Mock
     private Thought mockFocusThought;
     @Mock
     private ThoughtContent mockThoughtContent;
@@ -48,6 +54,8 @@ class Langchain4jCognitiveProcessorTest {
     private Thought mockTraceThought;
     @Mock
     private Thought mockSimilarThought;
+    @Mock
+    private ThoughtMeta mockThoughtMeta;
 
 
     private Cognition cognitiveProcessor;
@@ -58,7 +66,9 @@ class Langchain4jCognitiveProcessorTest {
                 mockChatModel,
                 mockMemoryNexus,
                 mockPromptBuilder,
-                mockOutputParser
+                mockOutputParser,
+                mockSessions,
+                mockExplain
         );
     }
 
@@ -83,6 +93,8 @@ class Langchain4jCognitiveProcessorTest {
         // Stubbing the focus thought
         when(mockFocusThought.id()).thenReturn(focusThoughtId);
         when(mockFocusThought.content()).thenReturn(mockThoughtContent);
+        when(mockFocusThought.metadata()).thenReturn(mockThoughtMeta);
+        when(mockThoughtMeta.type()).thenReturn(com.senars.core.ThoughtType.GOAL); // Regular thought type
         when(mockThoughtContent.embedding()).thenReturn(focusThoughtEmbedding);
 
         // Stubbing the memory nexus
