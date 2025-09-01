@@ -7,5 +7,6 @@ public enum ThoughtType {
     ACTION_PLAN,
     REPORT,
     QUESTION,
-    EXPLANATION_REQUEST
+    EXPLANATION_REQUEST,
+    DRIVE
 }

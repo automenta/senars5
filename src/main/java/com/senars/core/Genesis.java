@@ -112,7 +112,7 @@ public class Genesis {
                             1.0  // activation: Drives are always active
                     ),
                     new ThoughtMeta(
-                            ThoughtType.BELIEF, // Drives are foundational beliefs about what is important
+                            ThoughtType.DRIVE, // Drives are a distinct type of thought
                             ThoughtOrigin.SYSTEM,
                             List.of(), // No trace for genesis thoughts
                             Instant.now()

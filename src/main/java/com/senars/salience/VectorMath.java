@@ -41,4 +41,34 @@ public final class VectorMath {
 
         return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
     }
+
+    /**
+     * Calculates the L2 norm (Euclidean magnitude) of a vector.
+     *
+     * @param vector The vector.
+     * @return The magnitude of the vector.
+     */
+    public static double magnitude(List<Double> vector) {
+        double norm = 0.0;
+        for (Double value : vector) {
+            norm += value * value;
+        }
+        return Math.sqrt(norm);
+    }
+
+    /**
+     * Normalizes a vector to have a magnitude of 1 (a unit vector).
+     *
+     * @param vector The vector to normalize.
+     * @return A new List containing the normalized vector. Returns the original vector if magnitude is 0.
+     */
+    public static List<Double> normalize(List<Double> vector) {
+        double mag = magnitude(vector);
+        if (mag == 0.0) {
+            return vector; // Avoid division by zero
+        }
+        return vector.stream()
+                .map(val -> val / mag)
+                .toList();
+    }
 }
