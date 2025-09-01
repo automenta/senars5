@@ -10,7 +10,10 @@ import com.senars.systems.VectorStore;
 import com.senars.systems.graphdb.TinkerGraphDB;
 import com.senars.systems.vectorstore.LangChain4jVectorStore;
 
-import java.util.*;
+import java.util.Collections;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**

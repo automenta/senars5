@@ -17,13 +17,13 @@ import static org.mockito.Mockito.when;
 class EffortPredictorTest {
 
     private static final double DELTA = 1e-9;
-    private Memory mockMemoryNexus;
+    private Memory mockMemory;
     private EffortPredictor predictor;
 
     @BeforeEach
     void setUp() {
-        mockMemoryNexus = Mockito.mock(Memory.class);
-        predictor = new EffortPredictor(mockMemoryNexus);
+        mockMemory = Mockito.mock(Memory.class);
+        predictor = new EffortPredictor(mockMemory);
     }
 
     private Thought createTestThought(String text) {
@@ -40,7 +40,7 @@ class EffortPredictorTest {
         // Arrange
         IEffortPredictionModel customModel = new LinearTextEffortModel(0.5, 5.0);
         Thought schemaThought = createSchemaThought(customModel);
-        when(mockMemoryNexus.findSchemaBySymbolicName(EffortPredictor.EFFORT_MODEL_SCHEMA_NAME))
+        when(mockMemory.findSchemaBySymbolicName(EffortPredictor.EFFORT_MODEL_SCHEMA_NAME))
                 .thenReturn(Optional.of(schemaThought));
 
         Thought thoughtToPredict = createTestThought("hello world"); // length 11
@@ -56,7 +56,7 @@ class EffortPredictorTest {
     @Test
     void predict_whenSchemaNotFound_usesDefaultModel() {
         // Arrange
-        when(mockMemoryNexus.findSchemaBySymbolicName(EffortPredictor.EFFORT_MODEL_SCHEMA_NAME))
+        when(mockMemory.findSchemaBySymbolicName(EffortPredictor.EFFORT_MODEL_SCHEMA_NAME))
                 .thenReturn(Optional.empty());
 
         Thought thoughtToPredict = createTestThought("hello world"); // length 11
@@ -76,7 +76,7 @@ class EffortPredictorTest {
         // Arrange
         // Create a schema with a String in procedural content instead of a model
         Thought invalidSchema = createSchemaThought("not a model");
-        when(mockMemoryNexus.findSchemaBySymbolicName(EffortPredictor.EFFORT_MODEL_SCHEMA_NAME))
+        when(mockMemory.findSchemaBySymbolicName(EffortPredictor.EFFORT_MODEL_SCHEMA_NAME))
                 .thenReturn(Optional.of(invalidSchema));
 
         Thought thoughtToPredict = createTestThought("hello world");

@@ -2,7 +2,6 @@ package com.senars.systems.graphdb;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
-import com.senars.config.AppConfig;
 import com.senars.core.*;
 import com.senars.systems.GraphDB;
 import org.apache.tinkerpop.gremlin.structure.Graph;
@@ -106,7 +105,7 @@ public class TinkerGraphDB implements GraphDB {
         if (currentVertexOpt.isEmpty()) return;
         Vertex currentVertex = currentVertexOpt.get();
         Iterator<Vertex> parents = currentVertex.vertices(org.apache.tinkerpop.gremlin.structure.Direction.OUT, TRACE_EDGE_LABEL);
-        while(parents.hasNext()) {
+        while (parents.hasNext()) {
             Vertex parent = parents.next();
             if (!visited.contains(parent.id().toString())) {
                 topologicalSortUtil(parent.id().toString(), visited, sortedTrace);
@@ -157,13 +156,14 @@ public class TinkerGraphDB implements GraphDB {
         }
     }
 
-    private <T> T deserialize(Vertex v, String key, Class<T> defaultClass) {
+    private <X> X deserialize(Vertex v, String key, Class<? super X> defaultClass) {
         if (v.property(key).isPresent()) {
             String json = v.property(key).value().toString();
             String className = v.property(key + "_class").value().toString();
             try {
                 Class<?> clazz = Class.forName(className);
-                return (T) objectMapper.readValue(json, clazz);
+                //var clazz = defaultClass;
+                return (X) objectMapper.readValue(json, clazz);
             } catch (IOException | ClassNotFoundException e) {
                 LOGGER.error("Failed to deserialize object for key {}", key, e);
             }

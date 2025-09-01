@@ -43,7 +43,7 @@ class InMemoryMemoryTest {
         // Test retrieval from vector component
         List<Thought> similar = memory.retrieveSimilar(List.of(1.0, 0.1), 1); // Slightly different vector
         assertFalse(similar.isEmpty());
-        assertEquals("T1", similar.get(0).id());
+        assertEquals("T1", similar.getFirst().id());
     }
 
     @Test
@@ -60,7 +60,7 @@ class InMemoryMemoryTest {
 
         List<Thought> similar = memory.retrieveSimilar(List.of(0.5, 0.5), 5);
         assertEquals(1, similar.size());
-        assertEquals("T3", similar.get(0).id());
+        assertEquals("T3", similar.getFirst().id());
     }
 
     @Test

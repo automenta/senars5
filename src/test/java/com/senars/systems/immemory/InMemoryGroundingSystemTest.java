@@ -5,11 +5,13 @@ import com.senars.systems.Memory;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.Instant;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 
@@ -17,20 +19,17 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.*;
 
-import org.mockito.ArgumentCaptor;
-import java.util.Comparator;
-
 @ExtendWith(MockitoExtension.class)
 class InMemoryGroundingSystemTest {
 
     @Mock
-    private Memory memoryNexus;
+    private Memory memory;
 
-    private InMemoryGrounding groundingSystem;
+    private InMemoryGrounding grounding;
 
     @BeforeEach
     void setUp() {
-        groundingSystem = new InMemoryGrounding(memoryNexus, 0.1); // Using a known adjustment factor
+        grounding = new InMemoryGrounding(memory, 0.1); // Using a known adjustment factor
     }
 
     private Thought createTestThought(String id, double clarity) {
@@ -58,13 +57,13 @@ class InMemoryGroundingSystemTest {
         Thought thought1 = createTestThought("thought1", 0.5);
         Thought feedbackReport = createFeedbackReport(List.of("thought1"), 1.0); // 1.0 is success
 
-        when(memoryNexus.getThoughtById("thought1")).thenReturn(Optional.of(thought1));
+        when(memory.getThoughtById("thought1")).thenReturn(Optional.of(thought1));
 
         // Act
-        groundingSystem.processFeedback(feedbackReport);
+        grounding.processFeedback(feedbackReport);
 
         // Assert
-        verify(memoryNexus).saveThought(argThat(thought -> thought.id().equals("thought1") && thought.state().clarity() > 0.5));
+        verify(memory).saveThought(argThat(thought -> thought.id().equals("thought1") && thought.state().clarity() > 0.5));
     }
 
     @Test
@@ -73,13 +72,13 @@ class InMemoryGroundingSystemTest {
         Thought thought1 = createTestThought("thought1", 0.5);
         Thought feedbackReport = createFeedbackReport(List.of("thought1"), 0.0); // 0.0 is failure
 
-        when(memoryNexus.getThoughtById("thought1")).thenReturn(Optional.of(thought1));
+        when(memory.getThoughtById("thought1")).thenReturn(Optional.of(thought1));
 
         // Act
-        groundingSystem.processFeedback(feedbackReport);
+        grounding.processFeedback(feedbackReport);
 
         // Assert
-        verify(memoryNexus).saveThought(argThat(thought -> thought.id().equals("thought1") && thought.state().clarity() < 0.5));
+        verify(memory).saveThought(argThat(thought -> thought.id().equals("thought1") && thought.state().clarity() < 0.5));
     }
 
     @Test
@@ -88,13 +87,13 @@ class InMemoryGroundingSystemTest {
         Thought thought1 = createTestThought("thought1", 0.5);
         Thought feedbackReport = createFeedbackReport(List.of("thought1"), 0.5); // 0.5 is neutral
 
-        when(memoryNexus.getThoughtById("thought1")).thenReturn(Optional.of(thought1));
+        when(memory.getThoughtById("thought1")).thenReturn(Optional.of(thought1));
 
         // Act
-        groundingSystem.processFeedback(feedbackReport);
+        grounding.processFeedback(feedbackReport);
 
         // Assert
-        verify(memoryNexus, never()).saveThought(any());
+        verify(memory, never()).saveThought(any());
     }
 
     @Test
@@ -103,11 +102,11 @@ class InMemoryGroundingSystemTest {
         Thought feedbackReport = createFeedbackReport(Collections.emptyList(), 1.0);
 
         // Act
-        groundingSystem.processFeedback(feedbackReport);
+        grounding.processFeedback(feedbackReport);
 
         // Assert
-        verify(memoryNexus, never()).getThoughtById(any());
-        verify(memoryNexus, never()).saveThought(any());
+        verify(memory, never()).getThoughtById(any());
+        verify(memory, never()).saveThought(any());
     }
 
     @Test
@@ -121,10 +120,10 @@ class InMemoryGroundingSystemTest {
         );
 
         // Act
-        groundingSystem.processFeedback(feedbackReport);
+        grounding.processFeedback(feedbackReport);
 
         // Assert
-        verify(memoryNexus, never()).getThoughtById(any());
+        verify(memory, never()).getThoughtById(any());
     }
 
     @Test
@@ -136,17 +135,17 @@ class InMemoryGroundingSystemTest {
         List<String> trace = List.of("thought1", "thought2", "thought3");
         Thought feedbackReport = createFeedbackReport(trace, 1.0); // Full success
 
-        when(memoryNexus.getThoughtById("thought1")).thenReturn(Optional.of(thought1));
-        when(memoryNexus.getThoughtById("thought2")).thenReturn(Optional.of(thought2));
-        when(memoryNexus.getThoughtById("thought3")).thenReturn(Optional.of(thought3));
+        when(memory.getThoughtById("thought1")).thenReturn(Optional.of(thought1));
+        when(memory.getThoughtById("thought2")).thenReturn(Optional.of(thought2));
+        when(memory.getThoughtById("thought3")).thenReturn(Optional.of(thought3));
 
         ArgumentCaptor<Thought> thoughtCaptor = ArgumentCaptor.forClass(Thought.class);
 
         // Act
-        groundingSystem.processFeedback(feedbackReport);
+        grounding.processFeedback(feedbackReport);
 
         // Assert
-        verify(memoryNexus, times(3)).saveThought(thoughtCaptor.capture());
+        verify(memory, times(3)).saveThought(thoughtCaptor.capture());
 
         List<Thought> savedThoughts = thoughtCaptor.getAllValues();
         savedThoughts.sort(Comparator.comparing(Thought::id)); // Sort by ID to ensure consistent order

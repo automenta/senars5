@@ -33,7 +33,7 @@ class StructuredOutputParserTest {
         assertFalse(thoughts.isEmpty());
         assertEquals(1, thoughts.size());
 
-        Thought thought = thoughts.get(0);
+        Thought thought = thoughts.getFirst();
         assertEquals(ThoughtType.REPORT, thought.metadata().type());
         assertEquals(llmResponse, thought.content().text());
     }
@@ -56,7 +56,7 @@ class StructuredOutputParserTest {
         assertNotNull(thoughts);
         assertEquals(1, thoughts.size());
 
-        Thought thought = thoughts.get(0);
+        Thought thought = thoughts.getFirst();
         assertEquals(ThoughtType.BELIEF, thought.metadata().type());
         assertEquals("The sky is blue.", thought.content().text());
         assertEquals(0.95, thought.state().clarity(), 0.001);
@@ -76,7 +76,7 @@ class StructuredOutputParserTest {
         // Should fall back to creating a simple REPORT thought
         assertNotNull(thoughts);
         assertEquals(1, thoughts.size());
-        assertEquals(ThoughtType.REPORT, thoughts.get(0).metadata().type());
-        assertEquals(invalidJson, thoughts.get(0).content().text());
+        assertEquals(ThoughtType.REPORT, thoughts.getFirst().metadata().type());
+        assertEquals(invalidJson, thoughts.getFirst().content().text());
     }
 }

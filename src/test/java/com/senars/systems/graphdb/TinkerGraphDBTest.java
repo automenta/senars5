@@ -1,7 +1,6 @@
 package com.senars.systems.graphdb;
 
 import com.senars.core.*;
-import com.senars.core.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -18,10 +17,9 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class TinkerGraphDBTest {
 
-    private TinkerGraphDB db;
-
     @TempDir
     Path tempDir;
+    private TinkerGraphDB db;
 
     @BeforeEach
     void setUp() {

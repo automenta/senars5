@@ -1,12 +1,6 @@
 package com.senars.llm;
 
-import com.senars.core.Sessions;
-import com.senars.core.Thought;
-import com.senars.core.ThoughtContent;
-import com.senars.core.ThoughtMeta;
-import com.senars.core.ThoughtOrigin;
-import com.senars.core.ThoughtState;
-import com.senars.core.ThoughtType;
+import com.senars.core.*;
 import com.senars.cycle.Cognition;
 import com.senars.systems.Memory;
 import com.senars.xai.Explain;
@@ -18,13 +12,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
+
+import static java.util.Objects.requireNonNull;
 
 /**
  * An implementation of the ICognitiveProcessor that uses Langchain4j to interact with a large language model.
@@ -36,7 +26,7 @@ public class Langchain4JCognition implements Cognition {
     private static final int SIMILAR_THOUGHTS_COUNT = 5;
 
     private final ChatLanguageModel chatModel;
-    private final Memory memoryNexus;
+    private final Memory memory;
     private final PromptBuilder promptBuilder;
     private final StructuredOutputParser outputParser;
     private final Sessions sessions;
@@ -60,12 +50,12 @@ public class Langchain4JCognition implements Cognition {
             Sessions sessions,
             Explain explain
     ) {
-        this.chatModel = Objects.requireNonNull(chat, "chatModel cannot be null");
-        this.memoryNexus = Objects.requireNonNull(memory, "memoryNexus cannot be null");
-        this.promptBuilder = Objects.requireNonNull(promptBuilder, "promptBuilder cannot be null");
-        this.outputParser = Objects.requireNonNull(outputParser, "outputParser cannot be null");
-        this.sessions = Objects.requireNonNull(sessions, "sessions cannot be null");
-        this.explain = Objects.requireNonNull(explain, "explain cannot be null");
+        this.chatModel = requireNonNull(chat, "chatModel cannot be null");
+        this.memory = requireNonNull(memory, "memory cannot be null");
+        this.promptBuilder = requireNonNull(promptBuilder, "promptBuilder cannot be null");
+        this.outputParser = requireNonNull(outputParser, "outputParser cannot be null");
+        this.sessions = requireNonNull(sessions, "sessions cannot be null");
+        this.explain = requireNonNull(explain, "explain cannot be null");
     }
 
     @Override
@@ -80,13 +70,13 @@ public class Langchain4JCognition implements Cognition {
         LOGGER.debug("Assembling context for thought: {}", focusThought.id());
 
         // Get trace context (the direct history of this thought)
-        List<Thought> traceContext = memoryNexus.getTrace(focusThought.id());
+        List<Thought> traceContext = memory.getTrace(focusThought.id());
         LOGGER.debug("Retrieved {} thoughts from trace.", traceContext.size());
 
         // Get semantic context (similar thoughts)
         List<Thought> semanticContext = new ArrayList<>();
         if (focusThought.content().embedding() != null && !focusThought.content().embedding().isEmpty()) {
-            semanticContext = memoryNexus.retrieveSimilar(focusThought.content().embedding(), SIMILAR_THOUGHTS_COUNT);
+            semanticContext = memory.retrieveSimilar(focusThought.content().embedding(), SIMILAR_THOUGHTS_COUNT);
             LOGGER.debug("Retrieved {} similar thoughts from vector store.", semanticContext.size());
         } else {
             LOGGER.debug("Focus thought has no embedding, skipping semantic search.");
@@ -131,7 +121,7 @@ public class Langchain4JCognition implements Cognition {
                 return List.of(createSimpleReport("No last action has been recorded to explain.", explanationRequest.id()));
             }
         } else {
-            targetThoughtOpt = memoryNexus.getThoughtById(targetId);
+            targetThoughtOpt = memory.getThoughtById(targetId);
             if (targetThoughtOpt.isEmpty()) {
                 return List.of(createSimpleReport("Could not find a thought with ID '" + targetId + "' to explain.", explanationRequest.id()));
             }

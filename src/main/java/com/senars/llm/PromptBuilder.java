@@ -54,12 +54,12 @@ public class PromptBuilder {
      */
     public String buildExplanationPrompt(String formattedTrace) {
         return "You are an AI assistant tasked with explaining your own reasoning. " +
-               "Based on the following chain of thoughts, please provide a brief, easy-to-understand narrative " +
-               "explaining the reasoning process. Start from the initial goal or belief and walk through how it led to the conclusion.\n\n" +
-               "Reasoning Trace:\n" +
-               "----------------\n" +
-               formattedTrace +
-               "----------------\n\n" +
-               "Narrative Explanation:";
+                "Based on the following chain of thoughts, please provide a brief, easy-to-understand narrative " +
+                "explaining the reasoning process. Start from the initial goal or belief and walk through how it led to the conclusion.\n\n" +
+                "Reasoning Trace:\n" +
+                "----------------\n" +
+                formattedTrace +
+                "----------------\n\n" +
+                "Narrative Explanation:";
     }
 }

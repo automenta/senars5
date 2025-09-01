@@ -21,14 +21,14 @@ public class CognitiveCycle {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(CognitiveCycle.class);
 
-    private final Perception perceptionSystem;
-    private final Attention attentionFunnel;
-    private final Cognition cognitiveProcessor;
-    private final Action actionSystem;
-    private final Memory memoryNexus;
-    private final Governor governanceLayer;
+    private final Perception perception;
+    private final Attention attention;
+    private final Cognition cognition;
+    private final Action action;
+    private final Memory memory;
+    private final Governor governor;
     private final Sessions sessions;
-    private final Grounding groundingSystem;
+    private final Grounding grounding;
 
     public CognitiveCycle(
             Perception perception,
@@ -40,14 +40,14 @@ public class CognitiveCycle {
             Sessions sessions,
             Grounding grounding
     ) {
-        this.perceptionSystem = Objects.requireNonNull(perception);
-        this.attentionFunnel = Objects.requireNonNull(attention);
-        this.cognitiveProcessor = Objects.requireNonNull(cognition);
-        this.actionSystem = Objects.requireNonNull(action);
-        this.memoryNexus = Objects.requireNonNull(memory);
-        this.governanceLayer = Objects.requireNonNull(governor);
+        this.perception = Objects.requireNonNull(perception);
+        this.attention = Objects.requireNonNull(attention);
+        this.cognition = Objects.requireNonNull(cognition);
+        this.action = Objects.requireNonNull(action);
+        this.memory = Objects.requireNonNull(memory);
+        this.governor = Objects.requireNonNull(governor);
         this.sessions = Objects.requireNonNull(sessions);
-        this.groundingSystem = Objects.requireNonNull(grounding);
+        this.grounding = Objects.requireNonNull(grounding);
     }
 
     /**
@@ -56,7 +56,7 @@ public class CognitiveCycle {
     public void step() {
         try {
             // 1. Perception Stage
-            List<Thought> perceivedThoughts = perceptionSystem.perceive();
+            List<Thought> perceivedThoughts = perception.perceive();
             if (!perceivedThoughts.isEmpty()) {
                 LOGGER.info("Perceived {} new thoughts.", perceivedThoughts.size());
                 for (Thought thought : perceivedThoughts) {
@@ -64,13 +64,13 @@ public class CognitiveCycle {
                     if (thought.metadata().type() == ThoughtType.REPORT && thought.content().feedback() != null) {
                         processFeedbackReport(thought);
                     } else {
-                        attentionFunnel.addCandidate(thought);
+                        attention.addCandidate(thought);
                     }
                 }
             }
 
             // 2. Prioritization Stage
-            Optional<Thought> focusThoughtOpt = attentionFunnel.selectFocusThought();
+            Optional<Thought> focusThoughtOpt = attention.selectFocusThought();
 
             if (focusThoughtOpt.isEmpty()) {
                 LOGGER.debug("No focus thought. System is idle.");
@@ -81,7 +81,7 @@ public class CognitiveCycle {
             LOGGER.info("Focusing on thought: {}", focusThought.id());
 
             // 3. Processing Stage
-            List<Thought> newThoughts = cognitiveProcessor.process(focusThought);
+            List<Thought> newThoughts = cognition.process(focusThought);
 
             for (Thought newThought : newThoughts) {
                 handleNewThought(newThought);
@@ -95,7 +95,7 @@ public class CognitiveCycle {
 
     private void handleNewThought(Thought thought) {
         LOGGER.info("New thought generated: {} - {}", thought.metadata().type(), thought.id());
-        memoryNexus.saveThought(thought);
+        memory.saveThought(thought);
 
         if (thought.metadata().type() == ThoughtType.ACTION_PLAN) {
             handleActionPlan(thought);
@@ -108,20 +108,20 @@ public class CognitiveCycle {
                     }
                 });
             }
-            attentionFunnel.addCandidate(thought);
+            attention.addCandidate(thought);
         }
     }
 
     private void handleActionPlan(Thought thought) {
         try {
-            Optional<String> vetoReason = governanceLayer.reviewPlan(thought);
+            Optional<String> vetoReason = governor.reviewPlan(thought);
             if (vetoReason.isPresent()) {
                 LOGGER.warn("ACTION_PLAN vetoed: {}", vetoReason.get());
                 createReplanGoal(thought, vetoReason.get());
             } else {
                 LOGGER.info("ACTION_PLAN approved. Executing...");
                 sessions.setLastActionPlan(thought); // Track the action being executed
-                actionSystem.executePlan(thought);
+                action.executePlan(thought);
             }
         } catch (Exception e) {
             LOGGER.error("Error during action plan review or execution for thought: {}", thought.id(), e);
@@ -134,7 +134,7 @@ public class CognitiveCycle {
             return Optional.of(false);
         }
         // Check if the report traces back to an explanation request
-        return memoryNexus.getThoughtById(trace.get(0))
+        return memory.getThoughtById(trace.getFirst())
                 .map(originatingThought -> originatingThought.metadata().type() == ThoughtType.EXPLANATION_REQUEST);
     }
 
@@ -166,8 +166,8 @@ public class CognitiveCycle {
                 )
         );
         LOGGER.info("Created replan goal: {}", replanGoal.id());
-        memoryNexus.saveThought(replanGoal);
-        attentionFunnel.addCandidate(replanGoal);
+        memory.saveThought(replanGoal);
+        attention.addCandidate(replanGoal);
     }
 
     private void processFeedbackReport(Thought feedbackReport) {
@@ -194,8 +194,8 @@ public class CognitiveCycle {
                 )
         );
 
-        groundingSystem.processFeedback(enrichedReport);
-        memoryNexus.saveThought(enrichedReport); // Save the enriched report for provenance
+        grounding.processFeedback(enrichedReport);
+        memory.saveThought(enrichedReport); // Save the enriched report for provenance
         sessions.clearLastActionPlan(); // Clear the session to prevent re-attributing feedback
     }
 }

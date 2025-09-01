@@ -28,9 +28,9 @@ import static org.mockito.Mockito.*;
 class CognitiveCycleTest {
 
     @Spy
-    private final Memory memoryNexus = new InMemoryMemory();
+    private final Memory memory = new InMemoryMemory();
     @Spy
-    private final Governor governanceLayer = new InMemoryGovernor(Collections.emptyList());
+    private final Governor governor = new InMemoryGovernor(Collections.emptyList());
     private CognitiveCycle cognitiveCycle;
     @Mock
     private Perception perceptionSystem;
@@ -44,17 +44,13 @@ class CognitiveCycleTest {
     private Grounding groundingSystem;
     private Attention attentionFunnel;
 
-    // Real dependencies for a more integrated test
-    private MotiveHierarchy motiveHierarchy;
-    private SalienceCalculator salienceCalculator;
-    private EffortPredictor effortPredictor;
 
     @BeforeEach
     void setUp() {
         // Setup real components for testing the cycle with salience
-        motiveHierarchy = new MotiveHierarchy();
-        effortPredictor = new EffortPredictor(memoryNexus); // Pass the memory nexus spy
-        salienceCalculator = new SalienceCalculator(effortPredictor);
+        var motiveHierarchy = new MotiveHierarchy();
+        var effortPredictor = new EffortPredictor(memory); // Pass the memory nexus spy
+        var salienceCalculator = new SalienceCalculator(effortPredictor);
         attentionFunnel = new SalienceBasedAttention(salienceCalculator, motiveHierarchy);
 
         cognitiveCycle = new CognitiveCycle(
@@ -62,8 +58,8 @@ class CognitiveCycleTest {
                 attentionFunnel,
                 cognitiveProcessor,
                 actionSystem,
-                memoryNexus,
-                governanceLayer,
+                memory,
+                governor,
                 sessions,
                 groundingSystem
         );
@@ -95,7 +91,7 @@ class CognitiveCycleTest {
         verify(cognitiveProcessor, never()).process(lowSalienceThought);
 
         // Verify the new thought was saved and added back to the funnel
-        verify(memoryNexus).saveThought(newThought);
+        verify(memory).saveThought(newThought);
     }
 
     @Test
@@ -109,12 +105,12 @@ class CognitiveCycleTest {
         cognitiveCycle.step(); // First step processes the GOAL and produces the ACTION_PLAN
 
         // The action plan is saved to memory and added to the funnel
-        verify(memoryNexus).saveThought(actionPlan);
+        verify(memory).saveThought(actionPlan);
 
         // Now the action plan should be the most salient thing
         cognitiveCycle.step(); // Second step should process the ACTION_PLAN
 
-        verify(governanceLayer).reviewPlan(actionPlan);
+        verify(governor).reviewPlan(actionPlan);
         verify(actionSystem).executePlan(actionPlan);
     }
 
@@ -126,16 +122,16 @@ class CognitiveCycleTest {
 
         attentionFunnel.addCandidate(goal);
         when(cognitiveProcessor.process(goal)).thenReturn(List.of(actionPlan));
-        when(governanceLayer.reviewPlan(actionPlan)).thenReturn(Optional.of(vetoReason));
+        when(governor.reviewPlan(actionPlan)).thenReturn(Optional.of(vetoReason));
 
         cognitiveCycle.step(); // Process GOAL, create ACTION_PLAN
         cognitiveCycle.step(); // Process ACTION_PLAN, get vetoed
 
-        verify(governanceLayer).reviewPlan(actionPlan);
+        verify(governor).reviewPlan(actionPlan);
         verify(actionSystem, never()).executePlan(actionPlan);
 
         // Verify a new GOAL was created and saved (one for the plan, one for the goal)
-        verify(memoryNexus, times(2)).saveThought(any(Thought.class));
+        verify(memory, times(2)).saveThought(any(Thought.class));
     }
 
     @Test

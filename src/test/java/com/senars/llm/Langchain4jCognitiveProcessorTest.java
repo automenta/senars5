@@ -5,8 +5,8 @@ import com.senars.core.Thought;
 import com.senars.core.ThoughtContent;
 import com.senars.core.ThoughtMeta;
 import com.senars.cycle.Cognition;
-import com.senars.xai.Explain;
 import com.senars.systems.Memory;
+import com.senars.xai.Explain;
 import dev.langchain4j.data.message.AiMessage;
 import dev.langchain4j.data.message.UserMessage;
 import dev.langchain4j.model.chat.ChatLanguageModel;
@@ -20,13 +20,11 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -35,7 +33,7 @@ class Langchain4jCognitiveProcessorTest {
     @Mock
     private ChatLanguageModel mockChatModel;
     @Mock
-    private Memory mockMemoryNexus;
+    private Memory mockMemory;
     @Mock
     private PromptBuilder mockPromptBuilder;
     @Mock
@@ -64,7 +62,7 @@ class Langchain4jCognitiveProcessorTest {
     void setUp() {
         cognitiveProcessor = new Langchain4JCognition(
                 mockChatModel,
-                mockMemoryNexus,
+                mockMemory,
                 mockPromptBuilder,
                 mockOutputParser,
                 mockSessions,
@@ -98,8 +96,8 @@ class Langchain4jCognitiveProcessorTest {
         when(mockThoughtContent.embedding()).thenReturn(focusThoughtEmbedding);
 
         // Stubbing the memory nexus
-        when(mockMemoryNexus.getTrace(focusThoughtId)).thenReturn(traceContext);
-        when(mockMemoryNexus.retrieveSimilar(focusThoughtEmbedding, 5)).thenReturn(similarContext);
+        when(mockMemory.getTrace(focusThoughtId)).thenReturn(traceContext);
+        when(mockMemory.retrieveSimilar(focusThoughtEmbedding, 5)).thenReturn(similarContext);
 
         // Stubbing the prompt builder and output parser
         ArgumentCaptor<List<Thought>> contextCaptor = ArgumentCaptor.forClass(List.class);
@@ -121,8 +119,8 @@ class Langchain4jCognitiveProcessorTest {
 
 
         // Verify that the collaborators were called in the correct order with the correct parameters
-        verify(mockMemoryNexus).getTrace(focusThoughtId);
-        verify(mockMemoryNexus).retrieveSimilar(focusThoughtEmbedding, 5);
+        verify(mockMemory).getTrace(focusThoughtId);
+        verify(mockMemory).retrieveSimilar(focusThoughtEmbedding, 5);
         verify(mockPromptBuilder).build(isNull(), eq(mockFocusThought), anyList());
         verify(mockChatModel).generate(ArgumentMatchers.<UserMessage>any());
         verify(mockOutputParser).parse(expectedResponseText);

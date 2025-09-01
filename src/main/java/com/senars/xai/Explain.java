@@ -13,10 +13,10 @@ import java.util.stream.Collectors;
  */
 public class Explain {
 
-    private final Memory memoryNexus;
+    private final Memory memory;
 
-    public Explain(Memory memoryNexus) {
-        this.memoryNexus = memoryNexus;
+    public Explain(Memory memory) {
+        this.memory = memory;
     }
 
     /**
@@ -32,7 +32,7 @@ public class Explain {
         }
 
         return targetThought.metadata().trace().stream()
-                .map(memoryNexus::getThoughtById)
+                .map(memory::getThoughtById)
                 .filter(java.util.Optional::isPresent)
                 .map(java.util.Optional::get)
                 .collect(Collectors.toList());
@@ -47,7 +47,7 @@ public class Explain {
      */
     public String formatTrace(List<Thought> trace, Thought targetThought) {
         if (trace.isEmpty()) {
-             return "The thought '" + targetThought.content().text() + "' has no recorded reasoning trace. It may be a foundational thought or user input.";
+            return "The thought '" + targetThought.content().text() + "' has no recorded reasoning trace. It may be a foundational thought or user input.";
         }
 
         StringBuilder explanation = new StringBuilder();

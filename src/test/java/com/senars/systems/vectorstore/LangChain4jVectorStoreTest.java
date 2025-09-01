@@ -7,7 +7,6 @@ import org.junit.jupiter.api.Test;
 import java.time.Instant;
 import java.util.Collections;
 import java.util.List;
-import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -43,7 +42,7 @@ class LangChain4jVectorStoreTest {
 
         // The first result should be T2
         assertFalse(similarIds.isEmpty());
-        assertEquals("T2", similarIds.get(0));
+        assertEquals("T2", similarIds.getFirst());
 
         // The list should contain both IDs
         assertEquals(2, similarIds.size());

@@ -1,11 +1,6 @@
 package com.senars.xai;
 
-import com.senars.core.Thought;
-import com.senars.core.ThoughtContent;
-import com.senars.core.ThoughtMeta;
-import com.senars.core.ThoughtOrigin;
-import com.senars.core.ThoughtState;
-import com.senars.core.ThoughtType;
+import com.senars.core.*;
 import com.senars.systems.Memory;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -25,13 +20,13 @@ import static org.mockito.Mockito.*;
 class ExplainTest {
 
     @Mock
-    private Memory memoryNexus;
+    private Memory memory;
 
     private Explain explain;
 
     @BeforeEach
     void setUp() {
-        explain = new Explain(memoryNexus);
+        explain = new Explain(memory);
     }
 
     private Thought createTestThought(String id, String text, ThoughtType type, List<String> trace) {
@@ -48,14 +43,14 @@ class ExplainTest {
         Thought thought1 = createTestThought("id1", "Goal: A", ThoughtType.GOAL, Collections.emptyList());
         Thought thought2 = createTestThought("id2", "Action: B", ThoughtType.ACTION_PLAN, List.of("id1"));
 
-        when(memoryNexus.getThoughtById("id1")).thenReturn(Optional.of(thought1));
+        when(memory.getThoughtById("id1")).thenReturn(Optional.of(thought1));
 
         List<Thought> trace = explain.getTrace(thought2);
 
         assertNotNull(trace);
         assertEquals(1, trace.size());
-        assertEquals("id1", trace.get(0).id());
-        verify(memoryNexus, times(1)).getThoughtById("id1");
+        assertEquals("id1", trace.getFirst().id());
+        verify(memory, times(1)).getThoughtById("id1");
     }
 
     @Test

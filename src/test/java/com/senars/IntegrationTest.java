@@ -6,8 +6,8 @@ import com.senars.llm.Langchain4JCognition;
 import com.senars.llm.PromptBuilder;
 import com.senars.llm.StructuredOutputParser;
 import com.senars.systems.Memory;
-import com.senars.xai.Explain;
 import com.senars.systems.immemory.InMemoryMemory;
+import com.senars.xai.Explain;
 import dev.langchain4j.model.chat.ChatLanguageModel;
 import dev.langchain4j.model.ollama.OllamaChatModel;
 import org.junit.jupiter.api.BeforeEach;
@@ -44,16 +44,16 @@ public class IntegrationTest {
                 .build();
 
         // 3. Set up real dependencies
-        Memory memoryNexus = new InMemoryMemory();
+        Memory memory = new InMemoryMemory();
         PromptBuilder promptBuilder = new PromptBuilder();
         StructuredOutputParser outputParser = new StructuredOutputParser();
 
         // 4. Instantiate the real processor
         Sessions sessions = new Sessions();
-        Explain explain = new Explain(memoryNexus);
+        Explain explain = new Explain(memory);
         cognitiveProcessor = new Langchain4JCognition(
                 chatModel,
-                memoryNexus,
+                memory,
                 promptBuilder,
                 outputParser,
                 sessions,
