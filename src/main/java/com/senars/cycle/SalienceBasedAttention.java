@@ -1,6 +1,8 @@
 package com.senars.cycle;
 
 import com.senars.core.Thought;
+import com.senars.events.EventBus;
+import com.senars.events.Events;
 import com.senars.motive.MotiveHierarchy;
 import com.senars.salience.SalienceCalculator;
 import org.slf4j.Logger;
@@ -22,10 +24,12 @@ public class SalienceBasedAttention implements Attention {
     private final List<Thought> candidates = new CopyOnWriteArrayList<>();
     private final SalienceCalculator salienceCalculator;
     private final MotiveHierarchy motiveHierarchy;
+    private final EventBus eventBus;
 
-    public SalienceBasedAttention(SalienceCalculator salienceCalculator, MotiveHierarchy motiveHierarchy) {
+    public SalienceBasedAttention(SalienceCalculator salienceCalculator, MotiveHierarchy motiveHierarchy, EventBus eventBus) {
         this.salienceCalculator = salienceCalculator;
         this.motiveHierarchy = motiveHierarchy;
+        this.eventBus = eventBus;
     }
 
     @Override
@@ -57,6 +61,7 @@ public class SalienceBasedAttention implements Attention {
 
         bestThought.ifPresent(thought -> {
             LOGGER.info("Selected Focus Thought: '{}' (ID: {})", thought.content().text(), thought.id());
+            eventBus.publish(new Events.FocusThoughtSelectedEvent(thought));
             candidates.remove(thought);
         });
         LOGGER.debug("-------------------------------------------------");

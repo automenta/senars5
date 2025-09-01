@@ -24,14 +24,16 @@ import java.util.UUID;
 
 import static org.mockito.Mockito.*;
 
+import com.senars.events.EventBus;
+import com.senars.optimizer.SchemaOptimizer;
+
 @ExtendWith(MockitoExtension.class)
 class CognitiveCycleTest {
 
-    @Spy
-    private final Memory memory = new InMemoryMemory();
-    @Spy
-    private final Governor governor = new InMemoryGovernor(Collections.emptyList());
-    private CognitiveCycle cognitiveCycle;
+    @Mock
+    private Memory memory;
+    @Mock
+    private Governor governor;
     @Mock
     private Perception perceptionSystem;
     @Mock
@@ -42,16 +44,24 @@ class CognitiveCycleTest {
     private Sessions sessions;
     @Mock
     private Grounding groundingSystem;
+    @Mock
+    private EventBus eventBus;
+    @Mock
+    private SchemaOptimizer schemaOptimizer;
+    @Mock
+    private ActionFeedbackQueue feedbackQueue;
+
     private Attention attentionFunnel;
+    private CognitiveCycle cognitiveCycle;
 
 
     @BeforeEach
     void setUp() {
         // Setup real components for testing the cycle with salience
         var motiveHierarchy = new MotiveHierarchy();
-        var effortPredictor = new EffortPredictor(memory); // Pass the memory nexus spy
+        var effortPredictor = new EffortPredictor(memory); // Pass the memory nexus mock
         var salienceCalculator = new SalienceCalculator(effortPredictor);
-        attentionFunnel = new SalienceBasedAttention(salienceCalculator, motiveHierarchy);
+        attentionFunnel = new SalienceBasedAttention(salienceCalculator, motiveHierarchy, eventBus);
 
         cognitiveCycle = new CognitiveCycle(
                 perceptionSystem,
@@ -61,7 +71,10 @@ class CognitiveCycleTest {
                 memory,
                 governor,
                 sessions,
-                groundingSystem
+                groundingSystem,
+                feedbackQueue,
+                schemaOptimizer,
+                eventBus
         );
     }
 

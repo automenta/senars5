@@ -1,6 +1,9 @@
 package com.senars.cycle;
 
 import com.senars.core.*;
+import com.senars.events.EventBus;
+import com.senars.events.Events;
+import com.senars.optimizer.SchemaOptimizer;
 import com.senars.systems.Governor;
 import com.senars.systems.Grounding;
 import com.senars.systems.Memory;
@@ -30,6 +33,11 @@ public class CognitiveCycle {
     private final Sessions sessions;
     private final Grounding grounding;
     private final ActionFeedbackQueue feedbackQueue;
+    private final SchemaOptimizer schemaOptimizer;
+    private final EventBus eventBus;
+    private long cycleCount = 0;
+    private static final long OPTIMIZER_RUN_INTERVAL = 50;
+
 
     public CognitiveCycle(
             Perception perception,
@@ -40,7 +48,9 @@ public class CognitiveCycle {
             Governor governor,
             Sessions sessions,
             Grounding grounding,
-            ActionFeedbackQueue feedbackQueue
+            ActionFeedbackQueue feedbackQueue,
+            SchemaOptimizer schemaOptimizer,
+            EventBus eventBus
     ) {
         this.perception = Objects.requireNonNull(perception);
         this.attention = Objects.requireNonNull(attention);
@@ -51,6 +61,8 @@ public class CognitiveCycle {
         this.sessions = Objects.requireNonNull(sessions);
         this.grounding = Objects.requireNonNull(grounding);
         this.feedbackQueue = Objects.requireNonNull(feedbackQueue);
+        this.schemaOptimizer = Objects.requireNonNull(schemaOptimizer);
+        this.eventBus = Objects.requireNonNull(eventBus);
     }
 
     /**
@@ -58,7 +70,14 @@ public class CognitiveCycle {
      */
     public void step() {
         try {
-            // 1. Perception Stage
+            cycleCount++;
+
+            // 1. Run Schema Optimizer periodically
+            if (cycleCount % OPTIMIZER_RUN_INTERVAL == 0) {
+                runSchemaOptimizer();
+            }
+
+            // 2. Perception Stage
             List<Thought> perceivedThoughts = perception.perceive(feedbackQueue);
             if (!perceivedThoughts.isEmpty()) {
                 LOGGER.info("Perceived {} new thoughts.", perceivedThoughts.size());
@@ -99,6 +118,7 @@ public class CognitiveCycle {
     private void handleNewThought(Thought thought) {
         LOGGER.info("New thought generated: {} - {}", thought.metadata().type(), thought.id());
         memory.saveThought(thought);
+        eventBus.publish(new Events.NewThoughtCreatedEvent(thought));
 
         if (thought.metadata().type() == ThoughtType.ACTION_PLAN) {
             handleActionPlan(thought);
@@ -119,10 +139,13 @@ public class CognitiveCycle {
         try {
             Optional<String> vetoReason = governor.reviewPlan(thought);
             if (vetoReason.isPresent()) {
-                LOGGER.warn("ACTION_PLAN vetoed: {}", vetoReason.get());
-                createReplanGoal(thought, vetoReason.get());
+                String reason = vetoReason.get();
+                LOGGER.warn("ACTION_PLAN vetoed: {}", reason);
+                eventBus.publish(new Events.ActionPlanVetoedEvent(thought, reason));
+                createReplanGoal(thought, reason);
             } else {
                 LOGGER.info("ACTION_PLAN approved. Executing...");
+                eventBus.publish(new Events.ActionPlanApprovedEvent(thought));
                 sessions.setLastActionPlan(thought); // Track the action being executed
                 action.executePlan(thought, feedbackQueue);
             }
@@ -200,5 +223,17 @@ public class CognitiveCycle {
         grounding.processFeedback(enrichedReport);
         memory.saveThought(enrichedReport); // Save the enriched report for provenance
         sessions.clearLastActionPlan(); // Clear the session to prevent re-attributing feedback
+    }
+
+    private void runSchemaOptimizer() {
+        LOGGER.info("Cognitive cycle {} reached. Running schema optimizer.", cycleCount);
+        List<Thought> optimizationGoals = schemaOptimizer.run(memory);
+        if (!optimizationGoals.isEmpty()) {
+            LOGGER.info("Schema optimizer generated {} new goal(s).", optimizationGoals.size());
+            for (Thought goal : optimizationGoals) {
+                memory.saveThought(goal); // Save the goal to memory
+                attention.addCandidate(goal); // Add it to the attention funnel
+            }
+        }
     }
 }

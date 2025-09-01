@@ -18,6 +18,13 @@ import org.slf4j.LoggerFactory;
 import java.time.Instant;
 import java.util.*;
 
+import com.senars.optimizer.SchemaOptimizer;
+import dev.langchain4j.data.message.ChatMessage;
+import dev.langchain4j.data.message.SystemMessage;
+
+import java.time.Instant;
+import java.util.*;
+
 import static java.util.Objects.requireNonNull;
 
 /**
@@ -81,6 +88,11 @@ public class Langchain4JCognition implements Cognition {
         if (focusThought.metadata().type() == ThoughtType.GOAL && LOGICAL_QUERY_SYMBOL.equals(focusThought.content().symbolic())) {
             LOGGER.info("Detected logical query. Delegating to Inference engine.");
             return inference.reason(focusThought);
+        }
+
+        if (focusThought.metadata().type() == ThoughtType.GOAL && SchemaOptimizer.REWRITE_SCHEMA_SYMBOLIC.equals(focusThought.content().symbolic())) {
+            LOGGER.info("Detected schema rewrite goal. Delegating to self-optimization handler.");
+            return handleSchemaRewriteGoal(focusThought);
         }
 
         if (focusThought.metadata().type() == ThoughtType.EXPLANATION_REQUEST) {
@@ -225,5 +237,50 @@ public class Langchain4JCognition implements Cognition {
             return null;
         }
         return schemas.getFirst();
+    }
+
+    private List<Thought> handleSchemaRewriteGoal(Thought rewriteGoal) {
+        // The faulty schema is the first (and only) parent in the trace
+        String faultySchemaId = rewriteGoal.metadata().trace().getFirst();
+        Optional<Thought> faultySchemaOpt = memory.getThoughtById(faultySchemaId);
+
+        if (faultySchemaOpt.isEmpty()) {
+            LOGGER.error("Could not find faulty schema with ID {} to rewrite.", faultySchemaId);
+            return List.of(createSimpleReport("Could not find faulty schema with ID " + faultySchemaId, rewriteGoal.id()));
+        }
+
+        Thought faultySchema = faultySchemaOpt.get();
+        // For a more advanced implementation, we could also fetch examples of low-clarity outputs.
+        // For now, just passing the schema's prompt is a good start.
+        String metaPrompt = promptBuilder.buildSchemaRewritePrompt(faultySchema);
+
+        Response<AiMessage> response = chatModel.generate(UserMessage.from(metaPrompt));
+        String newSchemaProceduralContent = response.content().text();
+
+        // Create a new schema thought based on the old one, but with the new procedural content
+        Thought newSchema = new Thought(
+                UUID.randomUUID().toString(),
+                new ThoughtContent(
+                        faultySchema.content().text(), // Keep the same name/description
+                        faultySchema.content().symbolic(), // Keep the same symbolic name
+                        null,   // embedding
+                        null,   // perceptual
+                        newSchemaProceduralContent, // The new, improved prompt
+                        null,   // feedback
+                        null    // rules
+                ),
+                new ThoughtState(0.75, 1.0, 1.0), // Start with a reasonably high, but not perfect, clarity
+                new ThoughtMeta(
+                        ThoughtType.SCHEMA,
+                        ThoughtOrigin.LLM_INFERENCE,
+                        List.of(rewriteGoal.id()), // Trace it back to the optimization goal
+                        Instant.now()
+                )
+        );
+
+        LOGGER.info("Generated new, optimized schema {} to replace {}", newSchema.id(), faultySchema.id());
+        // In a full implementation, we might want to "deprecate" the old schema here.
+        // For now, the new schema will simply be available and hopefully retrieved more often.
+        return List.of(newSchema);
     }
 }

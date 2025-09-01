@@ -2,14 +2,14 @@ package com.senars.systems.immemory;
 
 import com.senars.config.AppConfig;
 import com.senars.core.*;
+import com.senars.db.DatabaseManager;
 import com.senars.effort.EffortPredictor;
 import com.senars.effort.LinearTextEffortModel;
 import com.senars.systems.GraphDB;
 import com.senars.systems.Memory;
 import com.senars.systems.VectorStore;
-import com.senars.systems.graphdb.TinkerGraphDB;
-import com.senars.systems.vectorstore.FileBasedEmbeddingStore;
-import com.senars.systems.vectorstore.LangChain4jVectorStore;
+import com.senars.systems.graphdb.MapDBGraphStore;
+import com.senars.systems.vectorstore.DefaultVectorStore;
 
 import java.util.Collections;
 import java.util.List;
@@ -18,40 +18,30 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
- * An in-memory implementation of the Memory facade.
- * This class orchestrates an in-memory graph database and an in-memory vector store.
- * It is suitable for testing and development without requiring external databases.
+ * A persistent implementation of the Memory facade.
+ * This class orchestrates a MapDB-backed graph database and vector store.
  */
 public class InMemoryMemory implements Memory {
 
     private final GraphDB graphDB;
     private final VectorStore vectorStore;
+    private final DatabaseManager dbManager;
 
-    public InMemoryMemory() {
-        // For tests or scenarios without config, use a default in-memory-only path.
-        this(null);
-    }
-
-    public InMemoryMemory(AppConfig config) {
-        String graphDbPath = (config != null) ? config.getGraphDbFilePath() : "target/test-db/graph.json";
-        String vectorStorePath = (config != null) ? config.getVectorStoreFilePath() : "target/test-db/vector_store.json";
-
-        this.graphDB = new TinkerGraphDB(graphDbPath);
-        this.vectorStore = new FileBasedEmbeddingStore(vectorStorePath);
+    public InMemoryMemory(AppConfig config, DatabaseManager dbManager) {
+        this.dbManager = dbManager;
+        this.graphDB = new MapDBGraphStore(dbManager);
+        this.vectorStore = new DefaultVectorStore(dbManager);
 
         load();
     }
 
-    /**
-     * Seeds the memory with essential, system-level schemas upon initialization.
-     */
     private void seedDefaultSchemas() {
         ThoughtContent content = new ThoughtContent(
                 "Default effort prediction model based on text length.",
                 EffortPredictor.EFFORT_MODEL_SCHEMA_NAME,
                 null,
                 null,
-                new LinearTextEffortModel(0.01, 1.0),
+                new LinearTextEffortModel(0.01, 1.0), // The procedural content is the model object itself
                 null,
                 null
         );
@@ -142,14 +132,13 @@ public class InMemoryMemory implements Memory {
 
     @Override
     public void persist() {
-        graphDB.persist();
-        vectorStore.persist();
+        dbManager.commit();
     }
 
+    @Override
     public void load() {
-        graphDB.load();
-        vectorStore.load();
-        // Only seed if the database is new (i.e., empty after loading)
+        // Data is loaded from MapDB on initialization of the stores.
+        // We just need to check if we need to seed the DB.
         if (graphDB.getAllThoughts().isEmpty()) {
             seedDefaultSchemas();
         }

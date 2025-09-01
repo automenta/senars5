@@ -6,9 +6,15 @@ import com.senars.core.Sessions;
 import com.senars.core.Thought;
 import com.senars.cycle.*;
 import com.senars.effort.EffortPredictor;
+import com.senars.db.DatabaseManager;
+import com.senars.events.EventBus;
+import com.senars.events.LoggingEventSubscriber;
 import com.senars.llm.Langchain4JCognition;
 import com.senars.llm.PromptBuilder;
+import com.senars.optimizer.SchemaOptimizer;
 import com.senars.llm.StructuredOutputParser;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import com.senars.llm.ToolKit;
 import com.senars.motive.MotiveHierarchy;
 import com.senars.salience.SalienceCalculator;
@@ -45,26 +51,35 @@ public class Main {
         // 1. Configuration
         AppConfig config = AppConfig.getInstance();
         EmbeddingModel embeddingModel = new AllMiniLmL6V2EmbeddingModel();
+        EventBus eventBus = new EventBus();
+        LoggingEventSubscriber loggingSubscriber = new LoggingEventSubscriber();
+        loggingSubscriber.subscribeToAll(eventBus);
 
         // 2. Foundational Systems
-        Memory memory = new InMemoryMemory(config);
+        Path dbPath = Paths.get(config.getGraphDbFilePath());
+        DatabaseManager dbManager = new DatabaseManager(dbPath);
+
+        Memory memory = new InMemoryMemory(config, dbManager);
         List<Rule> rules = List.of(
                 new KeywordBlocklistRule(List.of("delete all files", "shutdown", "rm -rf"))
         );
         Governor governance = new InMemoryGovernor(rules);
-        Grounding grounding = new InMemoryGrounding(memory);
+        Grounding grounding = new InMemoryGrounding(memory, eventBus);
+        SchemaOptimizer schemaOptimizer = new SchemaOptimizer(eventBus);
 
         // 3. Genesis & Bootstrapping
         LOGGER.info("Executing Genesis Protocol...");
         List<Thought> genesisDrives = Genesis.createGenesisDrives(embeddingModel);
         List<Thought> genesisBeliefs = Genesis.loadKnowledgeFromFile("genesis_knowledge.json", embeddingModel);
         List<Thought> genesisSchemas = Genesis.loadSchemasFromFile("genesis_schemas.json", embeddingModel);
+        List<Thought> reasoningSchemas = Genesis.loadSchemasFromFile("reasoning_schemas.json", embeddingModel);
 
 
         genesisDrives.forEach(memory::saveThought);
         genesisBeliefs.forEach(memory::saveThought);
         genesisSchemas.forEach(memory::saveThought);
-        LOGGER.info("Loaded {} Genesis Drives, {} Beliefs, and {} Schemas into Memory Nexus.", genesisDrives.size(), genesisBeliefs.size(), genesisSchemas.size());
+        reasoningSchemas.forEach(memory::saveThought);
+        LOGGER.info("Loaded {} Genesis Drives, {} Beliefs, and {} Schemas into Memory Nexus.", genesisDrives.size(), genesisBeliefs.size(), genesisSchemas.size() + reasoningSchemas.size());
 
 
         // 4. Cognitive Cycle Components
@@ -95,7 +110,7 @@ public class Main {
 
         EffortPredictor effortPredictor = new EffortPredictor(memory);
         SalienceCalculator salienceCalculator = new SalienceCalculator(effortPredictor);
-        Attention attention = new SalienceBasedAttention(salienceCalculator, motives);
+        Attention attention = new SalienceBasedAttention(salienceCalculator, motives, eventBus);
         attention.addCandidate(researchGoal); // Ensure the new goal is considered on the first cycle
 
         // 5. LLM-based Cognitive Processor
@@ -133,7 +148,9 @@ public class Main {
                 governance,
                 sessions,
                 grounding,
-                feedbackQueue
+                feedbackQueue,
+                schemaOptimizer,
+                eventBus
         );
 
         LOGGER.info("SeNARS Cognitive System Initialized. Starting cognitive cycle.");
@@ -154,6 +171,7 @@ public class Main {
         } finally {
             LOGGER.info("Persisting memory state...");
             memory.persist();
+            eventBus.shutdown();
             LOGGER.info("SeNARS Cognitive System finished after {} steps.", stepCount);
         }
     }

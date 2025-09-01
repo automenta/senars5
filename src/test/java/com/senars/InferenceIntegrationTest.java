@@ -4,9 +4,14 @@ import com.senars.core.*;
 import com.senars.cycle.Inference;
 import com.senars.systems.Memory;
 import com.senars.systems.immemory.InMemoryMemory;
+import com.senars.config.AppConfig;
+import com.senars.db.DatabaseManager;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
+import java.nio.file.Path;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
@@ -17,11 +22,22 @@ public class InferenceIntegrationTest {
 
     private Memory memory;
     private Inference inference;
+    private DatabaseManager dbManager;
+
+    @TempDir
+    Path tempDir;
 
     @BeforeEach
     void setUp() {
-        memory = new InMemoryMemory();
+        Path dbFile = tempDir.resolve("test-inference.db");
+        dbManager = new DatabaseManager(dbFile);
+        memory = new InMemoryMemory(AppConfig.getInstance(), dbManager);
         inference = new Inference(memory);
+    }
+
+    @AfterEach
+    void tearDown() {
+        dbManager.close();
     }
 
     private Thought createBelief(String symbolicFact) {

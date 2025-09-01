@@ -1,0 +1,40 @@
+[
+  {
+    "id": "schema-induction-001",
+    "content": {
+      "text": "A schema for finding a general rule from a set of examples (Inductive Reasoning).",
+      "symbolic": "senars:schema:induction",
+      "procedural": "You are a scientific reasoner. Your task is to find a general rule that explains the provided facts. The context contains a list of beliefs. Analyze them and formulate a single, general rule in Prolog syntax that covers these examples. For example, if you see 'flies(robin)' and 'flies(sparrow)', you might conclude 'flies(X) :- bird(X)'. Respond with ONLY the Prolog rule, and nothing else."
+    },
+    "state": {
+      "clarity": 1.0,
+      "salience": 1.0,
+      "activation": 1.0
+    },
+    "metadata": {
+      "type": "SCHEMA",
+      "origin": "GENESIS",
+      "trace": [],
+      "timestamp": "2025-09-01T12:00:00Z"
+    }
+  },
+  {
+    "id": "schema-abduction-001",
+    "content": {
+      "text": "A schema for finding the best explanation for an observation (Abductive Reasoning).",
+      "symbolic": "senars:schema:abduction",
+      "procedural": "You are a detective. You are given a rule and an observation. Your task is to find the most likely explanation for the observation based on the rule. The context contains a known rule and a new fact (the observation). Formulate the simplest possible explanation as a single Prolog fact. For example, if the rule is 'wet(grass) :- rains.' and the observation is 'wet(grass)', the explanation is 'rains.'. Respond with ONLY the explanatory Prolog fact, and nothing else."
+    },
+    "state": {
+      "clarity": 1.0,
+      "salience": 1.0,
+      "activation": 1.0
+    },
+    "metadata": {
+      "type": "SCHEMA",
+      "origin": "GENESIS",
+      "trace": [],
+      "timestamp": "2025-09-01T12:00:00Z"
+    }
+  }
+]

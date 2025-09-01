@@ -19,17 +19,22 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.*;
 
+import com.senars.events.EventBus;
+
 @ExtendWith(MockitoExtension.class)
 class InMemoryGroundingSystemTest {
 
     @Mock
     private Memory memory;
+    @Mock
+    private EventBus eventBus;
 
     private InMemoryGrounding grounding;
 
     @BeforeEach
     void setUp() {
-        grounding = new InMemoryGrounding(memory, 0.1); // Using a known adjustment factor
+        // Use the constructor that allows setting both factors for predictable tests
+        grounding = new InMemoryGrounding(memory, eventBus, 0.1, 0.1);
     }
 
     private Thought createTestThought(String id, double clarity) {
@@ -129,6 +134,7 @@ class InMemoryGroundingSystemTest {
     @Test
     void processFeedback_withMultipleThoughtsInTrace_appliesDecayedAdjustment() {
         // Arrange
+        grounding = new InMemoryGrounding(memory, eventBus, 0.1, 0.1); // Ensure symmetric factors for this test
         Thought thought1 = createTestThought("thought1", 0.5); // least recent
         Thought thought2 = createTestThought("thought2", 0.5);
         Thought thought3 = createTestThought("thought3", 0.5); // most recent
@@ -155,22 +161,51 @@ class InMemoryGroundingSystemTest {
         Thought savedThought3 = savedThoughts.get(2);
 
         // Expected clarity values:
-        // initial adjustment = (1.0 - 0.5) * 0.1 = 0.05
-        // thought3 (dist=0): 0.5 + 0.05 * (0.9^0) = 0.55
-        // thought2 (dist=1): 0.5 + 0.05 * (0.9^1) = 0.545
-        // thought1 (dist=2): 0.5 + 0.05 * (0.9^2) = 0.5405
+        // initial adjustment = (1.0 - 0.5) * 2 * 0.1 = 0.1
+        // thought3 (dist=0): 0.5 + 0.1 * (0.9^0) = 0.6
+        // thought2 (dist=1): 0.5 + 0.1 * (0.9^1) = 0.59
+        // thought1 (dist=2): 0.5 + 0.1 * (0.9^2) = 0.581
 
         assertEquals("thought1", savedThought1.id());
-        assertEquals(0.5405, savedThought1.state().clarity(), 1e-9);
+        assertEquals(0.581, savedThought1.state().clarity(), 1e-9);
 
         assertEquals("thought2", savedThought2.id());
-        assertEquals(0.545, savedThought2.state().clarity(), 1e-9);
+        assertEquals(0.59, savedThought2.state().clarity(), 1e-9);
 
         assertEquals("thought3", savedThought3.id());
-        assertEquals(0.55, savedThought3.state().clarity(), 1e-9);
+        assertEquals(0.6, savedThought3.state().clarity(), 1e-9);
 
         // Also assert the order of clarity increase
         assertTrue(savedThought3.state().clarity() > savedThought2.state().clarity());
         assertTrue(savedThought2.state().clarity() > savedThought1.state().clarity());
+    }
+
+    @Test
+    void processFeedback_withAsymmetricFactors_appliesDifferentAdjustments() {
+        // Arrange
+        grounding = new InMemoryGrounding(memory, eventBus, 0.1, 0.4); // 0.1 for success, 0.4 for failure
+        Thought successThought = createTestThought("success_thought", 0.5);
+        Thought failureThought = createTestThought("failure_thought", 0.5);
+        ArgumentCaptor<Thought> thoughtCaptor = ArgumentCaptor.forClass(Thought.class);
+
+        // Act for success
+        when(memory.getThoughtById("success_thought")).thenReturn(Optional.of(successThought));
+        grounding.processFeedback(createFeedbackReport(List.of("success_thought"), 1.0));
+
+        // Act for failure
+        when(memory.getThoughtById("failure_thought")).thenReturn(Optional.of(failureThought));
+        grounding.processFeedback(createFeedbackReport(List.of("failure_thought"), 0.0));
+
+        // Assert
+        verify(memory, times(2)).saveThought(thoughtCaptor.capture());
+        List<Thought> savedThoughts = thoughtCaptor.getAllValues();
+        Thought savedSuccess = savedThoughts.stream().filter(t -> t.id().equals("success_thought")).findFirst().get();
+        Thought savedFailure = savedThoughts.stream().filter(t -> t.id().equals("failure_thought")).findFirst().get();
+
+        // Expected success clarity: 0.5 + (1.0 - 0.5) * 2 * 0.1 = 0.5 + 0.1 = 0.6
+        assertEquals(0.6, savedSuccess.state().clarity(), 1e-9);
+
+        // Expected failure clarity: 0.5 + (0.0 - 0.5) * 2 * 0.4 = 0.5 - 0.4 = 0.1
+        assertEquals(0.1, savedFailure.state().clarity(), 1e-9);
     }
 }

@@ -3,7 +3,9 @@ package com.senars;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import com.senars.config.AppConfig;
 import com.senars.core.*;
+import com.senars.db.DatabaseManager;
 import com.senars.llm.Langchain4JCognition;
 import com.senars.llm.PromptBuilder;
 import com.senars.llm.StructuredOutputParser;
@@ -11,16 +13,20 @@ import com.senars.systems.Memory;
 import com.senars.systems.immemory.InMemoryMemory;
 import com.senars.core.Sessions;
 import com.senars.cycle.Inference;
+import com.senars.llm.ToolKit;
 import com.senars.xai.Explain;
 import dev.langchain4j.data.message.AiMessage;
 import dev.langchain4j.model.chat.ChatLanguageModel;
 import dev.langchain4j.model.output.Response;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import org.mockito.ArgumentCaptor;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.file.Path;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
@@ -35,14 +41,21 @@ public class PlanningIntegrationTest {
     private Memory memory;
     private ChatLanguageModel chatModel;
     private Langchain4JCognition cognition;
+    private DatabaseManager dbManager;
     private final ObjectMapper objectMapper = new ObjectMapper().registerModule(new JavaTimeModule());
+
+    @TempDir
+    Path tempDir;
 
     @BeforeEach
     void setUp() throws IOException {
-        memory = new InMemoryMemory();
+        Path dbFile = tempDir.resolve("test-planning.db");
+        dbManager = new DatabaseManager(dbFile);
+        memory = new InMemoryMemory(AppConfig.getInstance(), dbManager);
         chatModel = mock(ChatLanguageModel.class);
         Sessions sessions = mock(Sessions.class);
         Explain explain = mock(Explain.class);
+        ToolKit toolKit = mock(ToolKit.class);
 
         // Load the planning schema into memory
         try (InputStream schemaStream = getClass().getClassLoader().getResourceAsStream("planning-schema.json")) {
@@ -61,8 +74,14 @@ public class PlanningIntegrationTest {
                 new StructuredOutputParser(),
                 sessions,
                 explain,
-                inference
+                inference,
+                toolKit
         );
+    }
+
+    @AfterEach
+    void tearDown() {
+        dbManager.close();
     }
 
     @Test

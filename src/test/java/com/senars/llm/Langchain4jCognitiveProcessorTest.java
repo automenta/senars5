@@ -46,6 +46,8 @@ class Langchain4jCognitiveProcessorTest {
     @Mock
     private Inference mockInference;
     @Mock
+    private ToolKit mockToolKit;
+    @Mock
     private Thought mockFocusThought;
     @Mock
     private ThoughtContent mockThoughtContent;
@@ -72,7 +74,8 @@ class Langchain4jCognitiveProcessorTest {
                 mockOutputParser,
                 mockSessions,
                 mockExplain,
-                mockInference
+                mockInference,
+                mockToolKit
         );
     }
 
@@ -94,7 +97,7 @@ class Langchain4jCognitiveProcessorTest {
         when(mockMemory.retrieveSimilar(embedding, 5)).thenReturn(new ArrayList<>());
         when(mockMemory.retrieveSimilar(embedding, 1, com.senars.core.ThoughtType.SCHEMA))
                 .thenReturn(List.of(mockSchemaThought));
-        when(mockPromptBuilder.build(eq(mockSchemaThought), eq(mockFocusThought), anyList())).thenReturn("schema_prompt");
+        when(mockPromptBuilder.build(eq(mockSchemaThought), eq(mockFocusThought), anyList(), anyList())).thenReturn("schema_prompt");
         when(mockChatModel.generate(any(UserMessage.class))).thenReturn(Response.from(AiMessage.from("response")));
         when(mockOutputParser.parse(anyString())).thenReturn(List.of(mockResultThought));
 
@@ -119,7 +122,7 @@ class Langchain4jCognitiveProcessorTest {
         when(mockMemory.retrieveSimilar(embedding, 5)).thenReturn(new ArrayList<>());
         when(mockMemory.retrieveSimilar(embedding, 1, com.senars.core.ThoughtType.SCHEMA))
                 .thenReturn(List.of()); // No schema found
-        when(mockPromptBuilder.build(isNull(), eq(mockFocusThought), anyList())).thenReturn("fallback_prompt");
+        when(mockPromptBuilder.build(isNull(), eq(mockFocusThought), anyList(), anyList())).thenReturn("fallback_prompt");
         when(mockChatModel.generate(any(UserMessage.class))).thenReturn(Response.from(AiMessage.from("response")));
         when(mockOutputParser.parse(anyString())).thenReturn(List.of(mockResultThought));
 
@@ -158,7 +161,7 @@ class Langchain4jCognitiveProcessorTest {
 
         // Stubbing the prompt builder and output parser
         ArgumentCaptor<List<Thought>> contextCaptor = ArgumentCaptor.forClass(List.class);
-        when(mockPromptBuilder.build(isNull(), eq(mockFocusThought), contextCaptor.capture())).thenReturn(expectedPrompt);
+        when(mockPromptBuilder.build(isNull(), eq(mockFocusThought), contextCaptor.capture(), anyList())).thenReturn(expectedPrompt);
         when(mockChatModel.generate(ArgumentMatchers.<UserMessage>any())).thenReturn(mockResponse);
         when(mockOutputParser.parse(expectedResponseText)).thenReturn(expectedThoughts);
 

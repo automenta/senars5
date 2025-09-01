@@ -3,6 +3,8 @@ package com.senars.systems.immemory;
 import com.senars.core.Feedback;
 import com.senars.core.Thought;
 import com.senars.core.ThoughtState;
+import com.senars.events.EventBus;
+import com.senars.events.Events;
 import com.senars.systems.Grounding;
 import com.senars.systems.Memory;
 import org.slf4j.Logger;
@@ -20,20 +22,45 @@ import java.util.Objects;
 public class InMemoryGrounding implements Grounding {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(InMemoryGrounding.class);
-    private static final double DEFAULT_CLARITY_ADJUSTMENT_FACTOR = 0.1;
+    private static final double DEFAULT_REINFORCEMENT_FACTOR = 0.1; // Learn moderately from success
+    private static final double DEFAULT_BLAME_FACTOR = 0.2;       // Learn aggressively from failure
 
     private final Memory memory;
-    private final double clarityAdjustmentFactor;
-    private final double decayFactor = 0.9;
+    private final EventBus eventBus;
+    private final double reinforcementFactor;
+    private final double blameFactor;
+    private final double decayFactor = 0.9; // How much less to blame/reward thoughts further up the trace
 
-    public InMemoryGrounding(Memory memory) {
-        this(memory, DEFAULT_CLARITY_ADJUSTMENT_FACTOR);
+    /**
+     * Default constructor using default learning factors.
+     * @param memory The memory system to update.
+     */
+    public InMemoryGrounding(Memory memory, EventBus eventBus) {
+        this(memory, eventBus, DEFAULT_REINFORCEMENT_FACTOR, DEFAULT_BLAME_FACTOR);
     }
 
-    public InMemoryGrounding(Memory memory, double clarityAdjustmentFactor) {
+    /**
+     * Constructor for symmetric learning.
+     * @param memory The memory system to update.
+     * @param clarityAdjustmentFactor The factor to use for both reinforcement and blame.
+     */
+    public InMemoryGrounding(Memory memory, EventBus eventBus, double clarityAdjustmentFactor) {
+        this(memory, eventBus, clarityAdjustmentFactor, clarityAdjustmentFactor);
+    }
+
+    /**
+     * Full constructor for asymmetric learning.
+     * @param memory The memory system to update.
+     * @param reinforcementFactor The factor for adjusting clarity on success (feedback > 0.5).
+     * @param blameFactor The factor for adjusting clarity on failure (feedback < 0.5).
+     */
+    public InMemoryGrounding(Memory memory, EventBus eventBus, double reinforcementFactor, double blameFactor) {
         this.memory = Objects.requireNonNull(memory);
-        this.clarityAdjustmentFactor = clarityAdjustmentFactor;
+        this.eventBus = Objects.requireNonNull(eventBus);
+        this.reinforcementFactor = reinforcementFactor;
+        this.blameFactor = blameFactor;
     }
+
 
     @Override
     public void processFeedback(Thought feedbackReport) {
@@ -50,12 +77,19 @@ public class InMemoryGrounding implements Grounding {
             return;
         }
 
-        // The success metric determines the direction of the adjustment.
-        // Success > 0.5 reinforces (increases clarity), < 0.5 blames (decreases clarity).
-        double initialAdjustment = (feedback.success() - 0.5) * clarityAdjustmentFactor;
+        // Asymmetric adjustment: apply different factors for success and failure.
+        double initialAdjustment;
+        if (feedback.success() >= 0.5) {
+            // Scale the success range [0.5, 1.0] to [0, 1] and apply reinforcement factor
+            initialAdjustment = (feedback.success() - 0.5) * 2 * this.reinforcementFactor;
+        } else {
+            // Scale the failure range [0.0, 0.5) to [-1, 0) and apply blame factor
+            initialAdjustment = (feedback.success() - 0.5) * 2 * this.blameFactor;
+        }
 
-        LOGGER.info("Processing feedback for report {}. Adjusting clarity for {} thoughts with initial factor {} and decay {}.",
-                feedbackReport.id(), traceIds.size(), initialAdjustment, decayFactor);
+
+        LOGGER.info("Processing feedback for report {}. Adjusting clarity for {} thoughts with initial adjustment {} and decay {}.",
+                feedbackReport.id(), traceIds.size(), String.format("%.4f", initialAdjustment), decayFactor);
 
         int traceSize = traceIds.size();
         for (int i = 0; i < traceSize; i++) {
@@ -76,6 +110,7 @@ public class InMemoryGrounding implements Grounding {
                             thoughtToUpdate.metadata()
                     );
                     memory.saveThought(updatedThought);
+                    eventBus.publish(new Events.ClarityUpdatedEvent(updatedThought.id(), currentClarity, newClarity));
                     LOGGER.debug("Updated clarity of thought {} (distance from end: {}) from {} to {} (adjustment: {})",
                             updatedThought.id(), distanceFromEnd, String.format("%.4f", currentClarity), String.format("%.4f", newClarity), String.format("%.4f", decayedAdjustment));
                 }

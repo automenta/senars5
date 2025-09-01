@@ -83,4 +83,16 @@ public class PromptBuilder {
                 "----------------\n\n" +
                 "Narrative Explanation:";
     }
+
+    public String buildSchemaRewritePrompt(Thought faultySchema) {
+        String originalPrompt = String.valueOf(faultySchema.content().procedural());
+        // A more advanced version could include examples of failed outputs.
+        return "You are a prompt engineering expert. The following prompt (which is a 'schema' for an AI) is underperforming, " +
+                "leading to low-quality or inaccurate outputs. " +
+                "Your task is to analyze it and rewrite it to be more robust, clear, and effective. " +
+                "Return ONLY the rewritten prompt, without any explanation, preamble, or markdown formatting.\n\n" +
+                "ORIGINAL PROMPT:\n---\n" +
+                originalPrompt + "\n---\n" +
+                "REWRITTEN PROMPT:";
+    }
 }

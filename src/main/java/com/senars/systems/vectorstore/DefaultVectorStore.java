@@ -1,11 +1,11 @@
 package com.senars.systems.vectorstore;
 
 import com.senars.core.Thought;
+import com.senars.db.DatabaseManager;
 import com.senars.systems.VectorStore;
 import dev.langchain4j.data.embedding.Embedding;
 import dev.langchain4j.data.segment.TextSegment;
 import dev.langchain4j.store.embedding.EmbeddingMatch;
-import dev.langchain4j.store.embedding.inmemory.InMemoryEmbeddingStore;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -13,17 +13,17 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 /**
- * An in-memory implementation of the VectorStore interface using LangChain4j's
- * efficient in-memory embedding store.
+ * The default implementation of the VectorStore interface.
+ * It uses a persistent MapDB-backed EmbeddingStore for durability and semantic search.
  */
-public class LangChain4jVectorStore implements VectorStore {
+public class DefaultVectorStore implements VectorStore {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(LangChain4jVectorStore.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(DefaultVectorStore.class);
 
-    private final InMemoryEmbeddingStore<TextSegment> embeddingStore;
+    private final MapDBEmbeddingStore embeddingStore;
 
-    public LangChain4jVectorStore() {
-        this.embeddingStore = new InMemoryEmbeddingStore<>();
+    public DefaultVectorStore(DatabaseManager dbManager) {
+        this.embeddingStore = new MapDBEmbeddingStore(dbManager);
     }
 
     @Override
@@ -33,13 +33,6 @@ public class LangChain4jVectorStore implements VectorStore {
         }
 
         Embedding embedding = Embedding.from(toFloatArray(thought.content().embedding()));
-
-        // We store the thought's text as the content of the segment for potential future use,
-        // but the ID is the crucial part for linking back to the GraphDB.
-        TextSegment segment = TextSegment.from(
-                thought.content().text() != null ? thought.content().text() : "",
-                new dev.langchain4j.data.document.Metadata());
-
         embeddingStore.add(thought.id(), embedding);
     }
 
@@ -56,20 +49,20 @@ public class LangChain4jVectorStore implements VectorStore {
 
     @Override
     public void remove(String thoughtId) {
-        // The default InMemoryEmbeddingStore in LangChain4j does not support removal of individual embeddings.
-        // This is a known limitation of this specific implementation. For a production system,
-        // a different EmbeddingStore (like Chroma, Milvus, etc.) that supports deletion would be required.
-        LOGGER.warn("remove(thoughtId) is not supported by LangChain4jVectorStore and has been ignored for thoughtId: {}", thoughtId);
+        embeddingStore.remove(thoughtId);
+        LOGGER.debug("Removed embedding for thoughtId: {}", thoughtId);
     }
 
     @Override
     public void persist() {
-        LOGGER.warn("persist() is not supported by the non-persistent LangChain4jVectorStore.");
+        // No-op, persistence is handled by MapDB transactions
+        LOGGER.info("Persist is a no-op for DefaultVectorStore.");
     }
 
     @Override
     public void load() {
-        LOGGER.warn("load() is not supported by the non-persistent LangChain4jVectorStore.");
+        // No-op, loading is handled by MapDB on init
+        LOGGER.info("Load is a no-op for DefaultVectorStore.");
     }
 
     private float[] toFloatArray(List<Double> doubleList) {
