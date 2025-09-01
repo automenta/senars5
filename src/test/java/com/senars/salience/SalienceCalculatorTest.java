@@ -138,7 +138,7 @@ class SalienceCalculatorTest {
     }
 
     @Test
-    void testCalculate_withDriveMatch() {
+    void testCalculate_withDriveMatch_shouldHaveNoEffect() {
         List<Double> embedding = List.of(0.0, 1.0);
         Thought drive = createTestDrive("drive", embedding);
         // Re-initialize calculator and motiveHierarchy for this specific test case
@@ -149,17 +149,17 @@ class SalienceCalculatorTest {
 
         Thought thoughtToScore = createTestThought("test", embedding, 0.3, 0.9);
         double salience = calculator.calculate(thoughtToScore, motiveHierarchy);
-        // Motive bonus should be 1.0
-        // Expected: (0.3 + 1.0) * 0.9 / 1.0 = 1.3 * 0.9 = 1.17
-        assertEquals(1.17, salience, DELTA);
+        // Motive bonus should be 0.0, as drives are ignored
+        // Expected: (0.3 + 0.0) * 0.9 / 1.0 = 0.27
+        assertEquals(0.27, salience, DELTA);
     }
 
     @Test
-    void testCalculate_choosesMaxMotiveBonus_withDrive() {
+    void testCalculate_choosesMaxMotiveBonus_ignoresDrive() {
         List<Double> embeddingThought = List.of(1.0, 0.0, 0.0);
-        List<Double> embeddingIntention = List.of(0.7, 0.714, 0.0);
-        List<Double> embeddingAmbition = List.of(0.8, 0.6, 0.0);
-        List<Double> embeddingDrive = List.of(1.0, 0.0, 0.0);
+        List<Double> embeddingIntention = List.of(0.7, 0.714, 0.0); // cos ~ 0.7
+        List<Double> embeddingAmbition = List.of(0.8, 0.6, 0.0); // cos = 0.8
+        List<Double> embeddingDrive = List.of(1.0, 0.0, 0.0); // cos = 1.0, but should be ignored
 
         Thought intention = createTestGoal("intention", embeddingIntention);
         Thought ambition = createTestGoal("ambition", embeddingAmbition);
@@ -177,10 +177,10 @@ class SalienceCalculatorTest {
         double salience = calculator.calculate(thoughtToScore, motiveHierarchy);
         // cos(thought, intention) is approx 0.7
         // cos(thought, ambition) is 0.8
-        // cos(thought, drive) is 1.0
-        // Max similarity should be 1.0 from the drive.
-        // Motive bonus should be 1.0
-        // Expected: (0.1 + 1.0) * 1.0 / 1.0 = 1.1
-        assertEquals(1.1, salience, DELTA);
+        // cos(thought, drive) is 1.0 (ignored)
+        // Max similarity should be 0.8 from the ambition.
+        // Motive bonus should be 0.8
+        // Expected: (0.1 + 0.8) * 1.0 / 1.0 = 0.9
+        assertEquals(0.9, salience, DELTA);
     }
 }
