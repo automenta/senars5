@@ -35,7 +35,7 @@ class InMemoryGroundingSystemTest {
     private Thought createTestThought(String id, double clarity) {
         return new Thought(
                 id,
-                new ThoughtContent("text", "symbolic", null, null, null, null),
+                new ThoughtContent("text", "symbolic", null, null, null, null, null),
                 new ThoughtState(clarity, 1.0, 1.0),
                 new ThoughtMeta(ThoughtType.BELIEF, ThoughtOrigin.LLM_INFERENCE, Collections.emptyList(), Instant.now())
         );
@@ -45,7 +45,7 @@ class InMemoryGroundingSystemTest {
         Feedback feedback = new Feedback(success, "test feedback");
         return new Thought(
                 "feedback-report",
-                new ThoughtContent("report", null, null, null, null, feedback),
+                new ThoughtContent("report", null, null, null, null, feedback, null),
                 new ThoughtState(1.0, 1.0, 1.0),
                 new ThoughtMeta(ThoughtType.REPORT, ThoughtOrigin.SYSTEM, trace, Instant.now())
         );
@@ -114,7 +114,7 @@ class InMemoryGroundingSystemTest {
         // Arrange
         Thought feedbackReport = new Thought(
                 "report",
-                new ThoughtContent(null, null, null, null, null, null), // Null feedback
+                new ThoughtContent(null, null, null, null, null, null, null), // Null feedback
                 new ThoughtState(1.0, 1.0, 1.0),
                 new ThoughtMeta(ThoughtType.REPORT, ThoughtOrigin.SYSTEM, List.of("id1"), Instant.now())
         );

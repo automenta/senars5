@@ -10,6 +10,7 @@ import com.senars.llm.StructuredOutputParser;
 import com.senars.systems.Memory;
 import com.senars.systems.immemory.InMemoryMemory;
 import com.senars.core.Sessions;
+import com.senars.cycle.Inference;
 import com.senars.xai.Explain;
 import dev.langchain4j.data.message.AiMessage;
 import dev.langchain4j.model.chat.ChatLanguageModel;
@@ -52,13 +53,15 @@ public class PlanningIntegrationTest {
             }
         }
 
+        Inference inference = new Inference(memory);
         cognition = new Langchain4JCognition(
                 chatModel,
                 memory,
                 new PromptBuilder(),
                 new StructuredOutputParser(),
                 sessions,
-                explain
+                explain,
+                inference
         );
     }
 
@@ -67,7 +70,7 @@ public class PlanningIntegrationTest {
         // 1. Define the high-level GOAL
         Thought goal = new Thought(
                 "goal-123",
-                new ThoughtContent("Make a cup of tea.", null, List.of(0.1, 0.2, 0.3), null, null, null),
+                new ThoughtContent("Make a cup of tea.", null, List.of(0.1, 0.2, 0.3), null, null, null, null),
                 new ThoughtState(1.0, 100.0, 1.0),
                 new ThoughtMeta(ThoughtType.GOAL, ThoughtOrigin.USER, List.of(), Instant.now())
         );

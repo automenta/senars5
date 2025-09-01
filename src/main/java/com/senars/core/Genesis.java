@@ -61,7 +61,8 @@ public class Genesis {
                                             embedding,
                                             content.perceptual(),
                                             content.procedural(),
-                                            content.feedback()
+                                            content.feedback(),
+                                            content.rules()
                                     ),
                                     thought.state(),
                                     thought.metadata()
@@ -104,7 +105,8 @@ public class Genesis {
                             embedding,
                             null, // perceptual
                             null, // procedural
-                            null  // feedback
+                            null,  // feedback
+                            null // rules
                     ),
                     new ThoughtState(
                             1.0, // clarity: Drives are foundational truths
@@ -142,6 +144,7 @@ public class Genesis {
                         text,
                         null,
                         embedding,
+                        null,
                         null,
                         null,
                         null

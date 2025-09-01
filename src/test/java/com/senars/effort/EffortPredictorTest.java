@@ -29,7 +29,7 @@ class EffortPredictorTest {
     private Thought createTestThought(String text) {
         return new Thought(
                 UUID.randomUUID().toString(),
-                new ThoughtContent(text, null, null, null, null, null),
+                new ThoughtContent(text, null, null, null, null, null, null),
                 new ThoughtState(1.0, 0, 1.0),
                 new ThoughtMeta(ThoughtType.BELIEF, ThoughtOrigin.SYSTEM, Collections.emptyList(), Instant.now())
         );
@@ -92,7 +92,7 @@ class EffortPredictorTest {
     private Thought createSchemaThought(Object proceduralContent) {
         return new Thought(
                 UUID.randomUUID().toString(),
-                new ThoughtContent("Schema", EffortPredictor.EFFORT_MODEL_SCHEMA_NAME, null, null, proceduralContent, null),
+                new ThoughtContent("Schema", EffortPredictor.EFFORT_MODEL_SCHEMA_NAME, null, null, proceduralContent, null, null),
                 new ThoughtState(1.0, 1.0, 1.0),
                 new ThoughtMeta(ThoughtType.SCHEMA, ThoughtOrigin.SYSTEM, Collections.emptyList(), Instant.now())
         );

@@ -37,7 +37,7 @@ class AttentionTest {
     private Thought createTestThought(String id) {
         return new Thought(
                 id,
-                new ThoughtContent("test content for " + id, null, null, null, null, null),
+                new ThoughtContent("text " + id, null, null, null, null, null, null),
                 new ThoughtState(1.0, 1.0, 1.0),
                 new ThoughtMeta(ThoughtType.BELIEF, ThoughtOrigin.SYSTEM, List.of(), Instant.now())
         );

@@ -98,7 +98,7 @@ public class ConsolePerception implements Perception {
             targetId = "last_action"; // Special keyword for the cognitive processor
         }
 
-        ThoughtContent content = new ThoughtContent(targetId, null, null, null, null, null);
+        ThoughtContent content = new ThoughtContent(targetId, null, null, null, null, null, null);
         ThoughtMeta metadata = new ThoughtMeta(ThoughtType.EXPLANATION_REQUEST, ThoughtOrigin.USER, Collections.emptyList(), java.time.Instant.now());
         ThoughtState state = new ThoughtState(1.0, 100.0, 1.0); // High salience to ensure it's processed
         return new Thought(UUID.randomUUID().toString(), content, state, metadata);
@@ -127,7 +127,7 @@ public class ConsolePerception implements Perception {
 
     private Thought createThought(String text, ThoughtType type) {
         List<Double> embedding = generateEmbedding(text);
-        ThoughtContent content = new ThoughtContent(text, null, embedding, null, null, null);
+        ThoughtContent content = new ThoughtContent(text, null, embedding, null, null, null, null);
         ThoughtMeta metadata = new ThoughtMeta(type, ThoughtOrigin.USER, Collections.emptyList(), java.time.Instant.now());
         ThoughtState state = new ThoughtState(0.9, 1.0, 1.0); // High clarity/salience for user input
         return new Thought(UUID.randomUUID().toString(), content, state, metadata);
@@ -141,7 +141,7 @@ public class ConsolePerception implements Perception {
             Feedback feedback = new Feedback(score, "User console feedback.");
             ThoughtContent content = new ThoughtContent(
                     "User feedback report. Score: " + score,
-                    null, null, null, null, feedback);
+                    null, null, null, null, feedback, null);
 
             // Note: The trace for this feedback will need to be added by the component that manages the session,
             // as the perception system itself doesn't know which action this feedback is for.

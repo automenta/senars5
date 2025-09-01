@@ -34,7 +34,7 @@ class SalienceCalculatorTest {
     private Thought createTestThought(String text, List<Double> embedding, double activation, double clarity) {
         return new Thought(
                 UUID.randomUUID().toString(),
-                new ThoughtContent(text, null, embedding, null, null, null),
+                new ThoughtContent(text, null, embedding, null, null, null, null),
                 new ThoughtState(clarity, 0, activation), // Initial salience is 0, it's what we calculate
                 new ThoughtMeta(ThoughtType.BELIEF, ThoughtOrigin.SYSTEM, List.of(), Instant.now())
         );
@@ -43,7 +43,7 @@ class SalienceCalculatorTest {
     private Thought createTestGoal(String id, List<Double> embedding) {
         return new Thought(
                 id,
-                new ThoughtContent("goal", null, embedding, null, null, null),
+                new ThoughtContent("goal", null, embedding, null, null, null, null),
                 new ThoughtState(1.0, 1.0, 1.0),
                 new ThoughtMeta(ThoughtType.GOAL, ThoughtOrigin.USER, List.of(), Instant.now())
         );
@@ -52,7 +52,7 @@ class SalienceCalculatorTest {
     private Thought createTestDrive(String id, String text, List<Double> embedding) {
         return new Thought(
                 id,
-                new ThoughtContent(text, null, embedding, null, null, null),
+                new ThoughtContent(text, null, embedding, null, null, null, null),
                 new ThoughtState(1.0, 1.0, 1.0),
                 new ThoughtMeta(ThoughtType.DRIVE, ThoughtOrigin.SYSTEM, List.of(), Instant.now())
         );

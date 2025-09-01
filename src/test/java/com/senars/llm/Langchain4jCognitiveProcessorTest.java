@@ -5,6 +5,7 @@ import com.senars.core.Thought;
 import com.senars.core.ThoughtContent;
 import com.senars.core.ThoughtMeta;
 import com.senars.cycle.Cognition;
+import com.senars.cycle.Inference;
 import com.senars.systems.Memory;
 import com.senars.xai.Explain;
 import dev.langchain4j.data.message.AiMessage;
@@ -43,6 +44,8 @@ class Langchain4jCognitiveProcessorTest {
     @Mock
     private Explain mockExplain;
     @Mock
+    private Inference mockInference;
+    @Mock
     private Thought mockFocusThought;
     @Mock
     private ThoughtContent mockThoughtContent;
@@ -68,7 +71,8 @@ class Langchain4jCognitiveProcessorTest {
                 mockPromptBuilder,
                 mockOutputParser,
                 mockSessions,
-                mockExplain
+                mockExplain,
+                mockInference
         );
     }
 

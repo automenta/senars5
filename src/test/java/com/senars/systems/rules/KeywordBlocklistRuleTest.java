@@ -11,7 +11,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class KeywordBlocklistRuleTest {
 
     private Thought createActionPlan(String text) {
-        return new Thought("plan-id", new ThoughtContent(text, null, null, null, null, null),
+        return new Thought("plan-id", new ThoughtContent(text, null, null, null, null, null, null),
                 new ThoughtState(1.0, 1.0, 1.0),
                 new ThoughtMeta(ThoughtType.ACTION_PLAN, ThoughtOrigin.LLM_INFERENCE, List.of(), null));
     }
@@ -44,7 +44,7 @@ class KeywordBlocklistRuleTest {
     @Test
     void check_withNullContent_shouldApprove() {
         KeywordBlocklistRule rule = new KeywordBlocklistRule(List.of("delete"));
-        Thought plan = new Thought("id", new ThoughtContent(null, null, null, null, null, null), null, null);
+        Thought plan = new Thought("id", new ThoughtContent(null, null, null, null, null, null, null), null, null);
         Optional<String> result = rule.check(plan);
         assertTrue(result.isEmpty());
     }

@@ -68,7 +68,7 @@ class CognitiveCycleTest {
     private Thought createTestThought(ThoughtType type, double activation) {
         return new Thought(
                 UUID.randomUUID().toString(),
-                new ThoughtContent("test content for " + type, null, null, null, null, null),
+                new ThoughtContent("test content for " + type, null, null, null, null, null, null),
                 new ThoughtState(1.0, 0.0, activation), // clarity, salience (unused), activation
                 new ThoughtMeta(type, ThoughtOrigin.SYSTEM, List.of(), Instant.now())
         );
@@ -156,13 +156,13 @@ class CognitiveCycleTest {
     void step_handlesFeedbackReportAndCallsGroundingSystem() {
         Thought actionPlan = new Thought(
                 "action-1",
-                new ThoughtContent("Do something", null, null, null, null, null),
+                new ThoughtContent("Do something", null, null, null, null, null, null),
                 new ThoughtState(1.0, 1.0, 1.0),
                 new ThoughtMeta(ThoughtType.ACTION_PLAN, ThoughtOrigin.LLM_INFERENCE, List.of("goal-1"), Instant.now())
         );
         Thought feedbackReport = new Thought(
                 "feedback-1",
-                new ThoughtContent("Good job", null, null, null, null, new Feedback(0.9, "User feedback")),
+                new ThoughtContent("Good job", null, null, null, null, new Feedback(0.9, "User feedback"), null),
                 new ThoughtState(1.0, 1.0, 1.0),
                 new ThoughtMeta(ThoughtType.REPORT, ThoughtOrigin.USER, Collections.emptyList(), Instant.now())
         );

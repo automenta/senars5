@@ -24,7 +24,7 @@ class InMemoryMemoryTest {
     private Thought createTestThoughtWithEmbedding(String id, String text, List<Double> embedding, List<String> parentIds) {
         return new Thought(
                 id,
-                new ThoughtContent(text, "symbolic:" + id, embedding, null, null, null),
+                new ThoughtContent(text, "symbolic:" + id, embedding, null, null, null, null),
                 new ThoughtState(0.9, 0.8, 0.7),
                 new ThoughtMeta(ThoughtType.BELIEF, ThoughtOrigin.LLM_INFERENCE, parentIds, Instant.now())
         );

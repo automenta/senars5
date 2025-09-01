@@ -30,7 +30,7 @@ class TinkerGraphDBTest {
     private Thought createTestThought(String id, String text, List<String> parentIds) {
         return new Thought(
                 id,
-                new ThoughtContent(text, "symbolic:" + id, null, null, "procedural_content", null),
+                new ThoughtContent(text, "symbolic:" + id, null, null, "procedural_content", null, null),
                 new ThoughtState(0.9, 0.8, 0.7),
                 new ThoughtMeta(ThoughtType.BELIEF, ThoughtOrigin.LLM_INFERENCE, parentIds, Instant.now())
         );
@@ -56,7 +56,7 @@ class TinkerGraphDBTest {
 
         Thought updatedThought = new Thought(
                 id,
-                new ThoughtContent("Updated text.", "symbolic:updated", null, null, null, null),
+                new ThoughtContent("Updated text.", "symbolic:updated", null, null, null, null, null),
                 new ThoughtState(0.5, 0.5, 0.5),
                 originalThought.metadata()
         );
@@ -82,7 +82,7 @@ class TinkerGraphDBTest {
     void testFindSchemaBySymbolicName() {
         Thought schema = new Thought(
                 "schema1",
-                new ThoughtContent("A test schema", "senars:test_schema_v1", null, null, null, null),
+                new ThoughtContent("A test schema", "senars:test_schema_v1", null, null, null, null, null),
                 new ThoughtState(1.0, 1.0, 1.0),
                 new ThoughtMeta(ThoughtType.SCHEMA, ThoughtOrigin.SYSTEM, Collections.emptyList(), Instant.now())
         );

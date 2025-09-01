@@ -96,13 +96,15 @@ public class Main {
         Sessions sessions = new Sessions();
         Explain explain = new Explain(memory);
 
+        Inference inference = new Inference(memory);
         Cognition cognitiveProcessor = new Langchain4JCognition(
                 chatModel,
                 memory,
                 promptBuilder,
                 outputParser,
                 sessions,
-                explain
+                explain,
+                inference
         );
 
         // 6. The Cognitive Cycle itself

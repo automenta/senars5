@@ -35,7 +35,7 @@ class SalienceBasedSalienceAttentionTest {
     private Thought createTestThought(String id, double activation) {
         return new Thought(
                 id,
-                new ThoughtContent("Test content for " + id, null, List.of(1.0, 2.0), null, null, null),
+                new ThoughtContent("Test content for " + id, null, List.of(1.0, 2.0), null, null, null, null),
                 new ThoughtState(1.0, 0.0, activation), // clarity, salience (not used here), activation
                 new ThoughtMeta(ThoughtType.BELIEF, ThoughtOrigin.PERCEPTION, List.of(), Instant.now())
         );

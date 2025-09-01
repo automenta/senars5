@@ -7,6 +7,7 @@ import com.senars.llm.PromptBuilder;
 import com.senars.llm.StructuredOutputParser;
 import com.senars.systems.Memory;
 import com.senars.systems.immemory.InMemoryMemory;
+import com.senars.cycle.Inference;
 import com.senars.xai.Explain;
 import dev.langchain4j.model.chat.ChatLanguageModel;
 import dev.langchain4j.model.ollama.OllamaChatModel;
@@ -51,13 +52,15 @@ public class IntegrationTest {
         // 4. Instantiate the real processor
         Sessions sessions = new Sessions();
         Explain explain = new Explain(memory);
+        Inference inference = new Inference(memory);
         cognitiveProcessor = new Langchain4JCognition(
                 chatModel,
                 memory,
                 promptBuilder,
                 outputParser,
                 sessions,
-                explain
+                explain,
+                inference
         );
     }
 
@@ -69,7 +72,7 @@ public class IntegrationTest {
         // Arrange
         Thought focusThought = new Thought(
                 UUID.randomUUID().toString(),
-                new ThoughtContent("In one sentence, what is the purpose of a cognitive architecture?", null, null, null, null, null),
+                new ThoughtContent("In one sentence, what is the purpose of a cognitive architecture?", null, null, null, null, null, null),
                 new ThoughtState(1.0, 1.0, 1.0),
                 new ThoughtMeta(ThoughtType.GOAL, ThoughtOrigin.USER, Collections.emptyList(), Instant.now())
         );

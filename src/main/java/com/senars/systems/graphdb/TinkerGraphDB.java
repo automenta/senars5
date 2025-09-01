@@ -59,6 +59,7 @@ public class TinkerGraphDB implements GraphDB {
             serializeAndStore(v, "content_perceptual", thought.content().perceptual());
             serializeAndStore(v, "content_procedural", thought.content().procedural());
             serializeAndStore(v, "content_feedback", thought.content().feedback());
+            serializeAndStore(v, "content_rules", thought.content().rules());
             v.property("state_clarity", thought.state().clarity());
             v.property("state_salience", thought.state().salience());
             v.property("state_activation", thought.state().activation());
@@ -181,7 +182,8 @@ public class TinkerGraphDB implements GraphDB {
                 null,
                 deserialize(v, "content_perceptual", Object.class),
                 deserialize(v, "content_procedural", Object.class),
-                deserialize(v, "content_feedback", Feedback.class)
+                deserialize(v, "content_feedback", Feedback.class),
+                deserialize(v, "content_rules", List.class)
         );
         double clarity = v.property("state_clarity").isPresent() ? (double) v.property("state_clarity").value() : 0.0;
         double salience = v.property("state_salience").isPresent() ? (double) v.property("state_salience").value() : 0.0;

@@ -25,6 +25,11 @@
     <dependencyManagement>
         <dependencies>
             <dependency>
+                <groupId>org.apache.commons</groupId>
+                <artifactId>commons-text</artifactId>
+                <version>1.10.0</version>
+            </dependency>
+            <dependency>
                 <groupId>dev.langchain4j</groupId>
                 <artifactId>langchain4j-bom</artifactId>
                 <version>${langchain4j.version}</version>
@@ -60,7 +65,19 @@
             <version>3.7.1</version>
         </dependency>
 
+        <!-- Logic Engine -->
+        <dependency>
+            <groupId>it.unibo.alice.tuprolog</groupId>
+            <artifactId>2p-core</artifactId>
+            <version>4.1.1</version>
+        </dependency>
+
         <!-- Core Dependencies -->
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-text</artifactId>
+            <version>1.10.0</version>
+        </dependency>
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>

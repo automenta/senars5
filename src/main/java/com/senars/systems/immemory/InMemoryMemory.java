@@ -52,6 +52,7 @@ public class InMemoryMemory implements Memory {
                 null,
                 null,
                 new LinearTextEffortModel(0.01, 1.0),
+                null,
                 null
         );
 

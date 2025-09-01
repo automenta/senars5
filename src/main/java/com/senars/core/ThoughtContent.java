@@ -13,6 +13,7 @@ import java.util.List;
  * @param perceptual Raw or processed sensory data (e.g., image tensor).
  * @param procedural Definition of a procedure, like a prompt chain, code, or a model object.
  * @param feedback   Structured feedback on an action's outcome, typically for REPORT thoughts.
+ * @param rules      A list of formal logic rules (e.g., in Prolog format).
  */
 public record ThoughtContent(
         String text,
@@ -20,6 +21,7 @@ public record ThoughtContent(
         List<Double> embedding,
         Object perceptual,
         Object procedural,
-        Feedback feedback
+        Feedback feedback,
+        List<String> rules
 ) {
 }

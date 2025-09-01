@@ -14,7 +14,7 @@ import static org.mockito.Mockito.*;
 class InMemoryGovernanceLayerTest {
 
     private Thought createActionPlan(String text) {
-        return new Thought("plan-id", new ThoughtContent(text, null, null, null, null, null),
+        return new Thought("plan-id", new ThoughtContent(text, null, null, null, null, null, null),
                 new ThoughtState(1.0, 1.0, 1.0),
                 new ThoughtMeta(ThoughtType.ACTION_PLAN, ThoughtOrigin.LLM_INFERENCE, List.of(), null));
     }

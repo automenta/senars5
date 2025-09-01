@@ -155,7 +155,7 @@ public class CognitiveCycle {
                 newId,
                 new ThoughtContent(
                         "Reformulate plan " + vetoedPlan.id() + " due to safety violation: " + reason,
-                        null, null, null, null, null
+                        null, null, null, null, null, null
                 ),
                 new ThoughtState(1.0, 100.0, 1.0), // High clarity, salience, and activation
                 new ThoughtMeta(

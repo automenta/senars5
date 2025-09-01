@@ -22,7 +22,7 @@ class LangChain4jVectorStoreTest {
     private Thought createTestThoughtWithEmbedding(String id, List<Double> embedding) {
         return new Thought(
                 id,
-                new ThoughtContent("text", "symbolic", embedding, null, null, null),
+                new ThoughtContent("text", "symbolic", embedding, null, null, null, null),
                 new ThoughtState(1.0, 1.0, 1.0),
                 new ThoughtMeta(ThoughtType.BELIEF, ThoughtOrigin.USER, Collections.emptyList(), Instant.now())
         );

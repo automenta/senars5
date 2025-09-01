@@ -3,6 +3,7 @@ package com.senars.llm;
 import com.senars.core.*;
 import com.senars.cycle.Cognition;
 import com.senars.systems.Memory;
+import com.senars.cycle.Inference;
 import com.senars.xai.Explain;
 import dev.langchain4j.data.message.AiMessage;
 import dev.langchain4j.data.message.UserMessage;
@@ -25,6 +26,8 @@ public class Langchain4JCognition implements Cognition {
     private static final Logger LOGGER = LoggerFactory.getLogger(Langchain4JCognition.class);
     private static final int SIMILAR_THOUGHTS_COUNT = 5;
     private static final int SCHEMA_COUNT = 1;
+    private static final String LOGICAL_QUERY_SYMBOL = "senars:logical_query";
+
 
     private final ChatLanguageModel chatModel;
     private final Memory memory;
@@ -32,6 +35,7 @@ public class Langchain4JCognition implements Cognition {
     private final StructuredOutputParser outputParser;
     private final Sessions sessions;
     private final Explain explain;
+    private final Inference inference;
 
     /**
      * Constructs a new Langchain4jCognitiveProcessor.
@@ -42,6 +46,7 @@ public class Langchain4JCognition implements Cognition {
      * @param outputParser  The parser for interpreting LLM responses.
      * @param sessions      The session manager, used for context like the last action.
      * @param explain       The explanation engine.
+     * @param inference     The logical inference engine.
      */
     public Langchain4JCognition(
             ChatLanguageModel chat,
@@ -49,7 +54,8 @@ public class Langchain4JCognition implements Cognition {
             PromptBuilder promptBuilder,
             StructuredOutputParser outputParser,
             Sessions sessions,
-            Explain explain
+            Explain explain,
+            Inference inference
     ) {
         this.chatModel = requireNonNull(chat, "chatModel cannot be null");
         this.memory = requireNonNull(memory, "memory cannot be null");
@@ -57,11 +63,19 @@ public class Langchain4JCognition implements Cognition {
         this.outputParser = requireNonNull(outputParser, "outputParser cannot be null");
         this.sessions = requireNonNull(sessions, "sessions cannot be null");
         this.explain = requireNonNull(explain, "explain cannot be null");
+        this.inference = requireNonNull(inference, "inference cannot be null");
     }
 
     @Override
     public List<Thought> process(Thought focusThought) {
         LOGGER.info("Processing thought: {} of type {}", focusThought.id(), focusThought.metadata().type());
+
+        // Check if the thought is a logical query to be handled by the inference engine
+        if (focusThought.metadata().type() == ThoughtType.GOAL && LOGICAL_QUERY_SYMBOL.equals(focusThought.content().symbolic())) {
+            LOGGER.info("Detected logical query. Delegating to Inference engine.");
+            return inference.reason(focusThought);
+        }
+
 
         if (focusThought.metadata().type() == ThoughtType.EXPLANATION_REQUEST) {
             return handleExplanationRequest(focusThought);
@@ -150,7 +164,7 @@ public class Langchain4JCognition implements Cognition {
     }
 
     private Thought createSimpleReport(String text, String originatingRequestId) {
-        ThoughtContent content = new ThoughtContent(text, null, null, null, null, null);
+        ThoughtContent content = new ThoughtContent(text, null, null, null, null, null, null);
         ThoughtMeta meta = new ThoughtMeta(
                 ThoughtType.REPORT,
                 ThoughtOrigin.LLM_INFERENCE,

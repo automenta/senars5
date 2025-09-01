@@ -32,7 +32,7 @@ class ExplainTest {
     private Thought createTestThought(String id, String text, ThoughtType type, List<String> trace) {
         return new Thought(
                 id,
-                new ThoughtContent(text, null, null, null, null, null),
+                new ThoughtContent(text, null, null, null, null, null, null),
                 new ThoughtState(1.0, 1.0, 1.0),
                 new ThoughtMeta(type, ThoughtOrigin.USER, trace, Instant.now())
         );
