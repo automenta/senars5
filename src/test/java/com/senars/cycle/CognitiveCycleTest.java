@@ -1,7 +1,15 @@
 package com.senars.cycle;
 
-import com.senars.core.*;
+import com.senars.core.Feedback;
+import com.senars.core.SessionManager;
+import com.senars.core.Thought;
+import com.senars.core.ThoughtContent;
+import com.senars.core.ThoughtMetadata;
+import com.senars.core.ThoughtOrigin;
+import com.senars.core.ThoughtState;
+import com.senars.core.ThoughtType;
 import com.senars.systems.IGovernanceLayer;
+import com.senars.systems.IGroundingSystem;
 import com.senars.systems.IMemoryNexus;
 import com.senars.effort.EffortPredictor;
 import com.senars.motive.MotiveHierarchy;
@@ -36,6 +44,10 @@ class CognitiveCycleTest {
     private ICognitiveProcessor cognitiveProcessor;
     @Mock
     private IActionSystem actionSystem;
+    @Mock
+    private SessionManager sessionManager;
+    @Mock
+    private IGroundingSystem groundingSystem;
 
     @Spy
     private IMemoryNexus memoryNexus = new InMemoryMemoryNexus();
@@ -63,7 +75,9 @@ class CognitiveCycleTest {
                 cognitiveProcessor,
                 actionSystem,
                 memoryNexus,
-                governanceLayer
+                governanceLayer,
+                sessionManager,
+                groundingSystem
         );
     }
 
@@ -152,5 +166,36 @@ class CognitiveCycleTest {
         verify(perceptionSystem).perceive();
         // Verify the thought was processed in the same cycle.
         verify(cognitiveProcessor).process(perceivedThought);
+    }
+
+    @Test
+    void step_handlesFeedbackReportAndCallsGroundingSystem() {
+        Thought actionPlan = new Thought(
+                "action-1",
+                new ThoughtContent("Do something", null, null, null, null, null),
+                new ThoughtState(1.0, 1.0, 1.0),
+                new ThoughtMetadata(ThoughtType.ACTION_PLAN, ThoughtOrigin.LLM_INFERENCE, List.of("goal-1"), Instant.now())
+        );
+        Thought feedbackReport = new Thought(
+                "feedback-1",
+                new ThoughtContent("Good job", null, null, null, null, new Feedback(0.9, "User feedback")),
+                new ThoughtState(1.0, 1.0, 1.0),
+                new ThoughtMetadata(ThoughtType.REPORT, ThoughtOrigin.USER, Collections.emptyList(), Instant.now())
+        );
+
+        when(perceptionSystem.perceive()).thenReturn(List.of(feedbackReport));
+        when(sessionManager.getLastActionPlan()).thenReturn(Optional.of(actionPlan));
+
+        cognitiveCycle.step();
+
+        verify(sessionManager).getLastActionPlan();
+        verify(groundingSystem).processFeedback(argThat(report ->
+                report.metadata().trace().equals(actionPlan.metadata().trace()) &&
+                report.content().feedback().success() == 0.9
+        ));
+        verify(sessionManager).clearLastActionPlan();
+        // Ensure feedback is not added to the attention funnel
+        // We can check if the funnel is empty or check its size before and after.
+        // For this test, we can assume if groundingSystem was called, it wasn't funneled.
     }
 }

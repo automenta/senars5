@@ -82,13 +82,16 @@ public class Main {
         );
 
         // 6. The Cognitive Cycle itself
+        SessionManager sessionManager = new SessionManager();
         CognitiveCycle cognitiveCycle = new CognitiveCycle(
                 perceptionSystem,
                 attentionFunnel,
                 cognitiveProcessor,
                 actionSystem,
                 memoryNexus,
-                governanceLayer
+                governanceLayer,
+                sessionManager,
+                groundingSystem
         );
 
         LOGGER.info("SeNARS Cognitive System Initialized. Starting cognitive cycle.");

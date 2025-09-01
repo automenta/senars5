@@ -1,12 +1,20 @@
 package com.senars.cycle;
 
-import com.senars.core.*;
+import com.senars.core.SessionManager;
+import com.senars.core.Thought;
+import com.senars.core.ThoughtContent;
+import com.senars.core.ThoughtMetadata;
+import com.senars.core.ThoughtOrigin;
+import com.senars.core.ThoughtState;
+import com.senars.core.ThoughtType;
 import com.senars.systems.IGovernanceLayer;
+import com.senars.systems.IGroundingSystem;
 import com.senars.systems.IMemoryNexus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
@@ -27,6 +35,8 @@ public class CognitiveCycle {
     private final IActionSystem actionSystem;
     private final IMemoryNexus memoryNexus;
     private final IGovernanceLayer governanceLayer;
+    private final SessionManager sessionManager;
+    private final IGroundingSystem groundingSystem;
 
     public CognitiveCycle(
         IPerceptionSystem perceptionSystem,
@@ -34,7 +44,9 @@ public class CognitiveCycle {
         ICognitiveProcessor cognitiveProcessor,
         IActionSystem actionSystem,
         IMemoryNexus memoryNexus,
-        IGovernanceLayer governanceLayer
+        IGovernanceLayer governanceLayer,
+        SessionManager sessionManager,
+        IGroundingSystem groundingSystem
     ) {
         this.perceptionSystem = Objects.requireNonNull(perceptionSystem);
         this.attentionFunnel = Objects.requireNonNull(attentionFunnel);
@@ -42,6 +54,8 @@ public class CognitiveCycle {
         this.actionSystem = Objects.requireNonNull(actionSystem);
         this.memoryNexus = Objects.requireNonNull(memoryNexus);
         this.governanceLayer = Objects.requireNonNull(governanceLayer);
+        this.sessionManager = Objects.requireNonNull(sessionManager);
+        this.groundingSystem = Objects.requireNonNull(groundingSystem);
     }
 
     /**
@@ -54,7 +68,12 @@ public class CognitiveCycle {
             if (!perceivedThoughts.isEmpty()) {
                 LOGGER.info("Perceived {} new thoughts.", perceivedThoughts.size());
                 for (Thought thought : perceivedThoughts) {
-                    attentionFunnel.addCandidate(thought);
+                    // Check if the thought is a feedback report
+                    if (thought.metadata().type() == ThoughtType.REPORT && thought.content().feedback() != null) {
+                        processFeedbackReport(thought);
+                    } else {
+                        attentionFunnel.addCandidate(thought);
+                    }
                 }
             }
 
@@ -94,6 +113,7 @@ public class CognitiveCycle {
                     createReplanGoal(thought, vetoReason.get());
                 } else {
                     LOGGER.info("ACTION_PLAN approved. Executing...");
+                    sessionManager.setLastActionPlan(thought); // Track the action being executed
                     actionSystem.executePlan(thought);
                 }
             } catch (Exception e) {
@@ -123,5 +143,33 @@ public class CognitiveCycle {
         LOGGER.info("Created replan goal: {}", replanGoal.id());
         memoryNexus.saveThought(replanGoal);
         attentionFunnel.addCandidate(replanGoal);
+    }
+
+    private void processFeedbackReport(Thought feedbackReport) {
+        Optional<Thought> lastActionOpt = sessionManager.getLastActionPlan();
+        if (lastActionOpt.isEmpty()) {
+            LOGGER.warn("Received feedback report {} but there is no last action plan in the session to attribute it to. Ignoring.", feedbackReport.id());
+            return;
+        }
+
+        Thought lastAction = lastActionOpt.get();
+        LOGGER.info("Attributing feedback report {} to last action plan {}", feedbackReport.id(), lastAction.id());
+
+        // Create a new, enriched feedback report with the trace from the action it's for.
+        Thought enrichedReport = new Thought(
+                feedbackReport.id(),
+                feedbackReport.content(),
+                feedbackReport.state(),
+                new ThoughtMetadata(
+                        feedbackReport.metadata().type(),
+                        feedbackReport.metadata().origin(),
+                        lastAction.metadata().trace(), // The crucial link!
+                        feedbackReport.metadata().timestamp()
+                )
+        );
+
+        groundingSystem.processFeedback(enrichedReport);
+        memoryNexus.saveThought(enrichedReport); // Save the enriched report for provenance
+        sessionManager.clearLastActionPlan(); // Clear the session to prevent re-attributing feedback
     }
 }
