@@ -24,6 +24,7 @@ public class InMemoryGrounding implements Grounding {
 
     private final Memory memory;
     private final double clarityAdjustmentFactor;
+    private final double decayFactor = 0.9;
 
     public InMemoryGrounding(Memory memory) {
         this(memory, DEFAULT_CLARITY_ADJUSTMENT_FACTOR);
@@ -51,15 +52,21 @@ public class InMemoryGrounding implements Grounding {
 
         // The success metric determines the direction of the adjustment.
         // Success > 0.5 reinforces (increases clarity), < 0.5 blames (decreases clarity).
-        double adjustment = (feedback.success() - 0.5) * clarityAdjustmentFactor;
+        double initialAdjustment = (feedback.success() - 0.5) * clarityAdjustmentFactor;
 
-        LOGGER.info("Processing feedback for report {}. Adjusting clarity of {} thoughts by {}.",
-                feedbackReport.id(), traceIds.size(), adjustment);
+        LOGGER.info("Processing feedback for report {}. Adjusting clarity for {} thoughts with initial factor {} and decay {}.",
+                feedbackReport.id(), traceIds.size(), initialAdjustment, decayFactor);
 
-        for (String thoughtId : traceIds) {
+        int traceSize = traceIds.size();
+        for (int i = 0; i < traceSize; i++) {
+            String thoughtId = traceIds.get(i);
+            // The last thought in the trace is the most recent, so it gets the highest adjustment.
+            int distanceFromEnd = traceSize - 1 - i;
+            double decayedAdjustment = initialAdjustment * Math.pow(decayFactor, distanceFromEnd);
+
             memory.getThoughtById(thoughtId).ifPresent(thoughtToUpdate -> {
                 double currentClarity = thoughtToUpdate.state().clarity();
-                double newClarity = Math.max(0.0, Math.min(1.0, currentClarity + adjustment));
+                double newClarity = Math.max(0.0, Math.min(1.0, currentClarity + decayedAdjustment));
 
                 if (Math.abs(newClarity - currentClarity) > 1e-9) {
                     Thought updatedThought = new Thought(
@@ -69,8 +76,8 @@ public class InMemoryGrounding implements Grounding {
                             thoughtToUpdate.metadata()
                     );
                     memory.saveThought(updatedThought);
-                    LOGGER.debug("Updated clarity of thought {} from {} to {}",
-                            updatedThought.id(), currentClarity, newClarity);
+                    LOGGER.debug("Updated clarity of thought {} (distance from end: {}) from {} to {} (adjustment: {})",
+                            updatedThought.id(), distanceFromEnd, String.format("%.4f", currentClarity), String.format("%.4f", newClarity), String.format("%.4f", decayedAdjustment));
                 }
             });
         }

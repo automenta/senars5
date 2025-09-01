@@ -13,7 +13,12 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.*;
+
+import org.mockito.ArgumentCaptor;
+import java.util.Comparator;
 
 @ExtendWith(MockitoExtension.class)
 class InMemoryGroundingSystemTest {
@@ -25,7 +30,7 @@ class InMemoryGroundingSystemTest {
 
     @BeforeEach
     void setUp() {
-        groundingSystem = new InMemoryGrounding(memoryNexus);
+        groundingSystem = new InMemoryGrounding(memoryNexus, 0.1); // Using a known adjustment factor
     }
 
     private Thought createTestThought(String id, double clarity) {
@@ -120,5 +125,53 @@ class InMemoryGroundingSystemTest {
 
         // Assert
         verify(memoryNexus, never()).getThoughtById(any());
+    }
+
+    @Test
+    void processFeedback_withMultipleThoughtsInTrace_appliesDecayedAdjustment() {
+        // Arrange
+        Thought thought1 = createTestThought("thought1", 0.5); // least recent
+        Thought thought2 = createTestThought("thought2", 0.5);
+        Thought thought3 = createTestThought("thought3", 0.5); // most recent
+        List<String> trace = List.of("thought1", "thought2", "thought3");
+        Thought feedbackReport = createFeedbackReport(trace, 1.0); // Full success
+
+        when(memoryNexus.getThoughtById("thought1")).thenReturn(Optional.of(thought1));
+        when(memoryNexus.getThoughtById("thought2")).thenReturn(Optional.of(thought2));
+        when(memoryNexus.getThoughtById("thought3")).thenReturn(Optional.of(thought3));
+
+        ArgumentCaptor<Thought> thoughtCaptor = ArgumentCaptor.forClass(Thought.class);
+
+        // Act
+        groundingSystem.processFeedback(feedbackReport);
+
+        // Assert
+        verify(memoryNexus, times(3)).saveThought(thoughtCaptor.capture());
+
+        List<Thought> savedThoughts = thoughtCaptor.getAllValues();
+        savedThoughts.sort(Comparator.comparing(Thought::id)); // Sort by ID to ensure consistent order
+
+        Thought savedThought1 = savedThoughts.get(0);
+        Thought savedThought2 = savedThoughts.get(1);
+        Thought savedThought3 = savedThoughts.get(2);
+
+        // Expected clarity values:
+        // initial adjustment = (1.0 - 0.5) * 0.1 = 0.05
+        // thought3 (dist=0): 0.5 + 0.05 * (0.9^0) = 0.55
+        // thought2 (dist=1): 0.5 + 0.05 * (0.9^1) = 0.545
+        // thought1 (dist=2): 0.5 + 0.05 * (0.9^2) = 0.5405
+
+        assertEquals("thought1", savedThought1.id());
+        assertEquals(0.5405, savedThought1.state().clarity(), 1e-9);
+
+        assertEquals("thought2", savedThought2.id());
+        assertEquals(0.545, savedThought2.state().clarity(), 1e-9);
+
+        assertEquals("thought3", savedThought3.id());
+        assertEquals(0.55, savedThought3.state().clarity(), 1e-9);
+
+        // Also assert the order of clarity increase
+        assertTrue(savedThought3.state().clarity() > savedThought2.state().clarity());
+        assertTrue(savedThought2.state().clarity() > savedThought1.state().clarity());
     }
 }

@@ -6,8 +6,10 @@ import com.senars.salience.SalienceCalculator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.AbstractMap;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CopyOnWriteArrayList;
 
@@ -46,11 +48,13 @@ public class SalienceBasedAttention implements Attention {
 
         // Calculate salience for all candidates and find the one with the max score
         Optional<Thought> bestThought = currentCandidates.stream()
-                .peek(thought -> {
+                .map(thought -> {
                     double salience = salienceCalculator.calculate(thought, motiveHierarchy);
                     LOGGER.debug("Candidate: '{}' (ID: {}) - Calculated Salience: {}", thought.content().text(), thought.id(), String.format("%.4f", salience));
+                    return new AbstractMap.SimpleImmutableEntry<>(thought, salience);
                 })
-                .max(Comparator.comparingDouble(thought -> salienceCalculator.calculate(thought, motiveHierarchy)));
+                .max(Map.Entry.comparingByValue())
+                .map(Map.Entry::getKey);
 
         bestThought.ifPresent(thought -> {
             LOGGER.info("Selected Focus Thought: '{}' (ID: {})", thought.content().text(), thought.id());

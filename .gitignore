@@ -21,3 +21,5 @@ lerna-debug.log*
 .Trashes
 ehthumbs.db
 Thumbs.db
+
+dependency-reduced-pom.xml
