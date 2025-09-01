@@ -24,6 +24,7 @@ public class Langchain4JCognition implements Cognition {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(Langchain4JCognition.class);
     private static final int SIMILAR_THOUGHTS_COUNT = 5;
+    private static final int SCHEMA_COUNT = 1;
 
     private final ChatLanguageModel chatModel;
     private final Memory memory;
@@ -91,10 +92,16 @@ public class Langchain4JCognition implements Cognition {
         List<Thought> context = new ArrayList<>(combinedContextSet);
         LOGGER.info("Assembled a total of {} unique context thoughts.", context.size());
 
-        // For now, schema is empty as per the plan.
-        Thought schema = null;
+        // Step 2: Schema Selection
+        Thought schema = findRelevantSchema(focusThought);
+        if (schema != null) {
+            LOGGER.info("Found relevant schema: {}", schema.id());
+        } else {
+            LOGGER.info("No relevant schema found. Using fallback prompt.");
+        }
 
-        // 2. Prompt Generation
+
+        // 3. Prompt Generation
         String prompt = promptBuilder.build(schema, focusThought, context);
         LOGGER.debug("Generated prompt: {}", prompt);
 
@@ -152,5 +159,29 @@ public class Langchain4JCognition implements Cognition {
         );
         ThoughtState state = new ThoughtState(1.0, 1.0, 1.0); // Reports are high clarity
         return new Thought(UUID.randomUUID().toString(), content, state, meta);
+    }
+
+    /**
+     * Finds the most relevant schema for a given thought.
+     *
+     * @param focusThought The thought to find a schema for.
+     * @return An Optional containing the most relevant schema, or empty if none is found.
+     */
+    private Thought findRelevantSchema(Thought focusThought) {
+        if (focusThought.content().embedding() == null || focusThought.content().embedding().isEmpty()) {
+            LOGGER.debug("Focus thought has no embedding, cannot search for schema.");
+            return null;
+        }
+
+        List<Thought> schemas = memory.retrieveSimilar(
+                focusThought.content().embedding(),
+                SCHEMA_COUNT,
+                ThoughtType.SCHEMA
+        );
+
+        if (schemas.isEmpty()) {
+            return null;
+        }
+        return schemas.getFirst();
     }
 }

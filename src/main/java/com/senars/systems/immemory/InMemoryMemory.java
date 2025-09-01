@@ -107,6 +107,24 @@ public class InMemoryMemory implements Memory {
     }
 
     @Override
+    public List<Thought> retrieveSimilar(List<Double> embedding, int topK, ThoughtType type) {
+        if (embedding == null || embedding.isEmpty()) {
+            return Collections.emptyList();
+        }
+        // Fetch more candidates to account for filtering.
+        int candidatesToFetch = topK * 5;
+        List<String> similarIds = vectorStore.findSimilar(embedding, candidatesToFetch);
+
+        return similarIds.stream()
+                .map(this::getThoughtById)
+                .filter(Optional::isPresent)
+                .map(Optional::get)
+                .filter(thought -> thought.metadata().type() == type)
+                .limit(topK)
+                .collect(Collectors.toList());
+    }
+
+    @Override
     public List<Thought> getTrace(String thoughtId) {
         return graphDB.getTrace(thoughtId);
     }

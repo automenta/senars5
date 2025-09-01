@@ -46,6 +46,16 @@ public interface Memory {
     List<Thought> retrieveSimilar(List<Double> embedding, int topK);
 
     /**
+     * Performs a semantic search filtered by a specific ThoughtType.
+     *
+     * @param embedding The vector embedding to search against.
+     * @param topK      The maximum number of similar Thoughts to return.
+     * @param type      The ThoughtType to filter by.
+     * @return A list of the most similar Thoughts of the specified type.
+     */
+    List<Thought> retrieveSimilar(List<Double> embedding, int topK, com.senars.core.ThoughtType type);
+
+    /**
      * Traverses the provenance graph to retrieve the chain of Thoughts that led
      * to a specific Thought.
      *

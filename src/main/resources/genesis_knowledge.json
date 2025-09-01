@@ -15,5 +15,23 @@
       "trace": [],
       "timestamp": "2025-01-01T00:00:00Z"
     }
+  },
+  {
+    "id": "schema-reasoning-default",
+    "content": {
+      "text": "You are a core reasoning engine. Your task is to analyze a FOCUS thought in light of the provided CONTEXT and generate the next logical thought or thoughts. Your output MUST be a valid JSON array of Thought objects. Do not include any other text, just the JSON.\n\n### FOCUS THOUGHT\n{{focus}}\n\n### CONTEXT\n{{context}}\n\nBased on the focus and context, generate a new thought. This could be a new GOAL to solve a problem, a new BELIEF to update your world model, or an ACTION_PLAN to achieve a goal. Your response must be a JSON array like this:\n[\n  {\n    \"id\": \"<new_uuid>\",\n    \"content\": {\n      \"text\": \"<The content of the new thought>\",\n      \"symbolicName\": null,\n      \"objective\": null,\n      \"effortModel\": null,\n      \"feedback\": null\n    },\n    \"state\": {\n      \"clarity\": 1.0,\n      \"salience\": 100.0,\n      \"activation\": 1.0\n    },\n    \"metadata\": {\n      \"type\": \"<GOAL, BELIEF, or ACTION_PLAN>\",\n      \"origin\": \"LLM_INFERENCE\",\n      \"trace\": [\"{{focus_id}}\"],\n      \"timestamp\": \"<ISO_8601_timestamp>\"\n    }\n  }\n]",
+      "symbolicName": "senars:default_reasoning"
+    },
+    "state": {
+      "clarity": 1.0,
+      "salience": 0.0,
+      "activation": 1.0
+    },
+    "metadata": {
+      "type": "SCHEMA",
+      "origin": "SYSTEM",
+      "trace": [],
+      "timestamp": "2025-01-01T00:00:00Z"
+    }
   }
 ]
