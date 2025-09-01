@@ -3,10 +3,14 @@ package com.senars.llm;
 import com.senars.core.Thought;
 import com.senars.cycle.ICognitiveProcessor;
 import com.senars.systems.IMemoryNexus;
-import dev.langchain4j.model.chat.ChatModel;
+import dev.langchain4j.data.message.AiMessage;
+import dev.langchain4j.data.message.UserMessage;
+import dev.langchain4j.model.chat.ChatLanguageModel;
+import dev.langchain4j.model.output.Response;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentMatchers;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -20,7 +24,7 @@ import static org.junit.jupiter.api.Assertions.*;
 class Langchain4jCognitiveProcessorTest {
 
     @Mock
-    private ChatModel mockChatModel;
+    private ChatLanguageModel mockChatModel;
     @Mock
     private IMemoryNexus mockMemoryNexus;
     @Mock
@@ -48,13 +52,14 @@ class Langchain4jCognitiveProcessorTest {
     void processShouldOrchestrateCallsToCollaborators() {
         // Arrange
         String expectedPrompt = "This is a test prompt.";
-        String expectedResponse = "This is the LLM response.";
+        String expectedResponseText = "This is the LLM response.";
         List<Thought> expectedThoughts = List.of(mockResultThought);
+        Response<AiMessage> mockResponse = Response.from(AiMessage.from(expectedResponseText));
 
         when(mockFocusThought.id()).thenReturn("test-id");
         when(mockPromptBuilder.build(null, mockFocusThought, Collections.emptyList())).thenReturn(expectedPrompt);
-        when(mockChatModel.chat(expectedPrompt)).thenReturn(expectedResponse);
-        when(mockOutputParser.parse(expectedResponse)).thenReturn(expectedThoughts);
+        when(mockChatModel.generate(ArgumentMatchers.<UserMessage>any())).thenReturn(mockResponse);
+        when(mockOutputParser.parse(expectedResponseText)).thenReturn(expectedThoughts);
 
         // Act
         List<Thought> result = cognitiveProcessor.process(mockFocusThought);
@@ -65,8 +70,8 @@ class Langchain4jCognitiveProcessorTest {
 
         // Verify that the collaborators were called in the correct order with the correct parameters
         verify(mockPromptBuilder, times(1)).build(null, mockFocusThought, Collections.emptyList());
-        verify(mockChatModel, times(1)).chat(expectedPrompt);
-        verify(mockOutputParser, times(1)).parse(expectedResponse);
+        verify(mockChatModel, times(1)).generate(ArgumentMatchers.<UserMessage>any());
+        verify(mockOutputParser, times(1)).parse(expectedResponseText);
         verifyNoInteractions(mockMemoryNexus); // MemoryNexus is not used yet
     }
 }

@@ -53,4 +53,12 @@ public class AppConfig {
         String timeoutStr = properties.getProperty("llm.api.timeout", "60");
         return Integer.parseInt(timeoutStr);
     }
+
+    public String getVectorStoreFilePath() {
+        return properties.getProperty("vectorstore.filepath", "./data/vector_store.json");
+    }
+
+    public String getGraphDbFilePath() {
+        return properties.getProperty("graphdb.filepath", "./data/graph_db.json");
+    }
 }

@@ -12,12 +12,12 @@ import com.senars.salience.SalienceCalculator;
 import com.senars.systems.IGovernanceLayer;
 import com.senars.systems.IGroundingSystem;
 import com.senars.systems.IMemoryNexus;
+import com.senars.systems.PersistentMemoryNexus;
 import com.senars.systems.Rule;
 import com.senars.systems.immemory.ConsoleActionSystem;
 import com.senars.systems.immemory.ConsolePerceptionSystem;
 import com.senars.systems.immemory.InMemoryGovernanceLayer;
 import com.senars.systems.immemory.InMemoryGroundingSystem;
-import com.senars.systems.immemory.InMemoryMemoryNexus;
 import com.senars.systems.immemory.ShutdownException;
 import com.senars.systems.rules.KeywordBlocklistRule;
 import dev.langchain4j.model.embedding.AllMiniLmL6V2EmbeddingModel;
@@ -44,9 +44,14 @@ public class Main {
 
         // 1. Configuration
         AppConfig config = AppConfig.getInstance();
+        EmbeddingModel embeddingModel = new AllMiniLmL6V2EmbeddingModel();
 
         // 2. Foundational Systems
-        IMemoryNexus memoryNexus = new InMemoryMemoryNexus();
+        PersistentMemoryNexus memoryNexus = new PersistentMemoryNexus(
+                config.getGraphDbFilePath(),
+                config.getVectorStoreFilePath(),
+                embeddingModel
+        );
         List<Rule> rules = List.of(
             new KeywordBlocklistRule(List.of("delete all files", "shutdown", "rm -rf"))
         );
@@ -54,7 +59,6 @@ public class Main {
         IGroundingSystem groundingSystem = new InMemoryGroundingSystem(memoryNexus);
 
         // 3. Cognitive Cycle Components
-        EmbeddingModel embeddingModel = new AllMiniLmL6V2EmbeddingModel();
         IPerceptionSystem perceptionSystem = new ConsolePerceptionSystem(embeddingModel);
         IActionSystem actionSystem = new ConsoleActionSystem();
 
@@ -98,17 +102,21 @@ public class Main {
 
         // 7. Main Loop
         long stepCount = 0;
-        while (true) {
-            try {
-                LOGGER.info("--- Cycle Step {} ---", ++stepCount);
-                cognitiveCycle.step();
-                Thread.sleep(200); // Pause between cycles
-            } catch (ShutdownException e) {
-                LOGGER.info("Shutdown command received. Terminating SeNARS.");
-                break;
+        try {
+            while (true) {
+                try {
+                    LOGGER.info("--- Cycle Step {} ---", ++stepCount);
+                    cognitiveCycle.step();
+                    Thread.sleep(200); // Pause between cycles
+                } catch (ShutdownException e) {
+                    LOGGER.info("Shutdown command received. Terminating SeNARS.");
+                    break;
+                }
             }
+        } finally {
+            LOGGER.info("Persisting memory state...");
+            memoryNexus.persist();
+            LOGGER.info("SeNARS Cognitive System finished after {} steps.", stepCount);
         }
-
-        LOGGER.info("SeNARS Cognitive System finished after {} steps.", stepCount);
     }
 }

@@ -7,7 +7,7 @@ import com.senars.llm.PromptBuilder;
 import com.senars.llm.StructuredOutputParser;
 import com.senars.systems.IMemoryNexus;
 import com.senars.systems.immemory.InMemoryMemoryNexus;
-import dev.langchain4j.model.chat.ChatModel;
+import dev.langchain4j.model.chat.ChatLanguageModel;
 import dev.langchain4j.model.ollama.OllamaChatModel;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
@@ -36,7 +36,7 @@ public class IntegrationTest {
         AppConfig config = AppConfig.getInstance();
 
         // 2. Set up the real ChatModel
-        ChatModel chatModel = OllamaChatModel.builder()
+        ChatLanguageModel chatModel = OllamaChatModel.builder()
                 .baseUrl(config.getLlmApiUrl())
                 .modelName(config.getLlmModelName())
                 .timeout(Duration.ofSeconds(config.getLlmApiTimeout()))

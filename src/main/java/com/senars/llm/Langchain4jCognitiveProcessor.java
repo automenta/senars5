@@ -3,7 +3,10 @@ package com.senars.llm;
 import com.senars.core.Thought;
 import com.senars.cycle.ICognitiveProcessor;
 import com.senars.systems.IMemoryNexus;
-import dev.langchain4j.model.chat.ChatModel;
+import dev.langchain4j.data.message.AiMessage;
+import dev.langchain4j.data.message.UserMessage;
+import dev.langchain4j.model.chat.ChatLanguageModel;
+import dev.langchain4j.model.output.Response;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -19,7 +22,7 @@ public class Langchain4jCognitiveProcessor implements ICognitiveProcessor {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(Langchain4jCognitiveProcessor.class);
 
-    private final ChatModel chatModel;
+    private final ChatLanguageModel chatModel;
     private final IMemoryNexus memoryNexus;
     private final PromptBuilder promptBuilder;
     private final StructuredOutputParser outputParser;
@@ -33,7 +36,7 @@ public class Langchain4jCognitiveProcessor implements ICognitiveProcessor {
      * @param outputParser  The parser for interpreting LLM responses.
      */
     public Langchain4jCognitiveProcessor(
-            ChatModel chatModel,
+            ChatLanguageModel chatModel,
             IMemoryNexus memoryNexus,
             PromptBuilder promptBuilder,
             StructuredOutputParser outputParser
@@ -58,11 +61,13 @@ public class Langchain4jCognitiveProcessor implements ICognitiveProcessor {
         LOGGER.debug("Generated prompt: {}", prompt);
 
         // 2. LLM Call
-        String response = chatModel.chat(prompt);
-        LOGGER.debug("Received response: {}", response);
+        Response<AiMessage> response = chatModel.generate(UserMessage.from(prompt));
+        String responseText = response.content().text();
+        LOGGER.debug("Received response: {}", responseText);
+
 
         // 3. Output Parsing
-        List<Thought> newThoughts = outputParser.parse(response);
+        List<Thought> newThoughts = outputParser.parse(responseText);
         LOGGER.info("Generated {} new thoughts.", newThoughts.size());
 
         return newThoughts;
