@@ -13,14 +13,20 @@ import com.senars.systems.IGovernanceLayer;
 import com.senars.systems.IGroundingSystem;
 import com.senars.systems.IMemoryNexus;
 import com.senars.systems.Rule;
-import com.senars.systems.immemory.*;
+import com.senars.systems.immemory.ConsoleActionSystem;
+import com.senars.systems.immemory.ConsolePerceptionSystem;
+import com.senars.systems.immemory.InMemoryGovernanceLayer;
+import com.senars.systems.immemory.InMemoryGroundingSystem;
+import com.senars.systems.immemory.InMemoryMemoryNexus;
+import com.senars.systems.immemory.ShutdownException;
 import com.senars.systems.rules.KeywordBlocklistRule;
+import dev.langchain4j.model.embedding.AllMiniLmL6V2EmbeddingModel;
+import dev.langchain4j.model.embedding.EmbeddingModel;
 import dev.langchain4j.model.ollama.OllamaChatModel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
-import java.util.List;
 import java.util.List;
 
 /**
@@ -48,8 +54,9 @@ public class Main {
         IGroundingSystem groundingSystem = new InMemoryGroundingSystem(memoryNexus);
 
         // 3. Cognitive Cycle Components
-        IPerceptionSystem perceptionSystem = new StubPerceptionSystem();
-        IActionSystem actionSystem = new StubActionSystem();
+        EmbeddingModel embeddingModel = new AllMiniLmL6V2EmbeddingModel();
+        IPerceptionSystem perceptionSystem = new ConsolePerceptionSystem(embeddingModel);
+        IActionSystem actionSystem = new ConsoleActionSystem();
 
         // 4. Attention and Salience
         MotiveHierarchy motiveHierarchy = new MotiveHierarchy();
@@ -87,11 +94,16 @@ public class Main {
         LOGGER.info("SeNARS Cognitive System Initialized. Starting cognitive cycle.");
 
         // 7. Main Loop
-        int stepCount = 0;
-        while (stepCount < 10) { // Run for a limited number of steps for this example
-            LOGGER.info("--- Cycle Step {} ---", ++stepCount);
-            cognitiveCycle.step();
-            Thread.sleep(1000); // Pause between cycles
+        long stepCount = 0;
+        while (true) {
+            try {
+                LOGGER.info("--- Cycle Step {} ---", ++stepCount);
+                cognitiveCycle.step();
+                Thread.sleep(200); // Pause between cycles
+            } catch (ShutdownException e) {
+                LOGGER.info("Shutdown command received. Terminating SeNARS.");
+                break;
+            }
         }
 
         LOGGER.info("SeNARS Cognitive System finished after {} steps.", stepCount);
