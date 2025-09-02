@@ -5,8 +5,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.senars.config.AppConfig;
 import com.senars.core.*;
-import com.senars.cycle.Inference;
 import com.senars.db.DatabaseManager;
+import com.senars.events.EventBus;
 import com.senars.systems.Memory;
 import com.senars.systems.immemory.InMemoryMemory;
 import com.senars.xai.Explain;
@@ -28,7 +28,6 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-import com.senars.events.EventBus;
 
 public class LLMPlanningIntegrationTest {
 

@@ -2,7 +2,6 @@ package com.senars.systems.perception;
 
 import com.senars.core.*;
 import com.senars.cycle.PerceptionChannel;
-import com.senars.cycle.ShutdownException;
 import dev.langchain4j.data.embedding.Embedding;
 import dev.langchain4j.model.embedding.EmbeddingModel;
 import org.slf4j.Logger;
@@ -49,7 +48,7 @@ public class FilePerceptionChannel implements PerceptionChannel {
     }
 
     @Override
-    public List<Thought> perceive() throws ShutdownException {
+    public List<Thought> perceive() {
         List<Thought> newThoughts = new ArrayList<>();
         File[] files = directoryToMonitor.toFile().listFiles();
 

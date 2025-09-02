@@ -1,22 +1,18 @@
 package com.senars.optimizer;
 
-import com.senars.core.Thought;
-import com.senars.core.ThoughtContent;
-import com.senars.core.ThoughtMeta;
-import com.senars.core.ThoughtOrigin;
-import com.senars.core.ThoughtState;
-import com.senars.core.ThoughtType;
+import com.senars.core.*;
 import com.senars.effort.EffortRecord;
 import com.senars.effort.EffortTracker;
 import com.senars.events.EventBus;
 import com.senars.systems.Memory;
+import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.time.Instant;
-import java.util.Optional;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -25,11 +21,10 @@ import java.util.UUID;
  */
 public class EffortModelOptimizer {
 
+    public static final String REWRITE_EFFORT_MODEL_SYMBOLIC = "senars:rewrite_effort_model_schema";
     private static final Logger LOGGER = LoggerFactory.getLogger(EffortModelOptimizer.class);
     private static final int MIN_RECORDS_FOR_ANALYSIS = 20;
     private static final double ERROR_THRESHOLD = 0.5; // Trigger if average error is > 50%
-    public static final String REWRITE_EFFORT_MODEL_SYMBOLIC = "senars:rewrite_effort_model_schema";
-
     private final Memory memory;
     private final EventBus eventBus;
 
@@ -85,9 +80,24 @@ public class EffortModelOptimizer {
         Thought effortModelSchema = effortModelOpt.get();
 
         // 2. Create the goal text
+        var content = getContent(records, error, effortModelSchema);
+
+        ThoughtMeta meta = new ThoughtMeta(
+                ThoughtType.GOAL,
+                ThoughtOrigin.SYSTEM,
+                List.of(effortModelSchema.id()), // Trace back to the old model
+                Instant.now()
+        );
+        ThoughtState state = new ThoughtState(1.0, 120.0, 1.0); // High salience
+
+        return new Thought(UUID.randomUUID().toString(), content, state, meta);
+    }
+
+    @NotNull
+    private ThoughtContent getContent(List<EffortRecord> records, double error, Thought effortModelSchema) {
         String goalText = String.format(
                 "The effort prediction model '%s' is performing poorly with an average error of %.2f%%. " +
-                "Analyze its procedural content and the %d recent performance records to generate a new, more accurate model.",
+                        "Analyze its procedural content and the %d recent performance records to generate a new, more accurate model.",
                 effortModelSchema.content().text(),
                 error * 100,
                 records.size()
@@ -102,15 +112,6 @@ public class EffortModelOptimizer {
                 effortModelSchema.content().procedural(), // Pass the old model's content
                 null, null
         );
-
-        ThoughtMeta meta = new ThoughtMeta(
-                ThoughtType.GOAL,
-                ThoughtOrigin.SYSTEM,
-                List.of(effortModelSchema.id()), // Trace back to the old model
-                Instant.now()
-        );
-        ThoughtState state = new ThoughtState(1.0, 120.0, 1.0); // High salience
-
-        return new Thought(UUID.randomUUID().toString(), content, state, meta);
+        return content;
     }
 }

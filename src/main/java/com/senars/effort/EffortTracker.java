@@ -1,8 +1,6 @@
 package com.senars.effort;
 
-import com.senars.core.Thought;
 import com.senars.events.Events;
-import com.senars.events.EventSubscriber;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -23,18 +21,6 @@ public class EffortTracker {
     private final ConcurrentHashMap<String, TrackingInfo> inProgress = new ConcurrentHashMap<>();
     private final Queue<EffortRecord> effortRecords = new ConcurrentLinkedQueue<>();
     private final EffortPredictor effortPredictor;
-
-    private static class TrackingInfo {
-        final long startTime;
-        final double predictedEffort;
-        final int textLength;
-
-        TrackingInfo(long startTime, double predictedEffort, int textLength) {
-            this.startTime = startTime;
-            this.predictedEffort = predictedEffort;
-            this.textLength = textLength;
-        }
-    }
 
     public EffortTracker(EffortPredictor effortPredictor) {
         this.effortPredictor = effortPredictor;
@@ -75,5 +61,17 @@ public class EffortTracker {
             records.add(effortRecords.poll());
         }
         return records;
+    }
+
+    private static class TrackingInfo {
+        final long startTime;
+        final double predictedEffort;
+        final int textLength;
+
+        TrackingInfo(long startTime, double predictedEffort, int textLength) {
+            this.startTime = startTime;
+            this.predictedEffort = predictedEffort;
+            this.textLength = textLength;
+        }
     }
 }

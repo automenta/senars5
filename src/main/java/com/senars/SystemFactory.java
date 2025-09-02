@@ -23,13 +23,16 @@ import com.senars.systems.Governor;
 import com.senars.systems.Grounding;
 import com.senars.systems.Memory;
 import com.senars.systems.Rule;
-import com.senars.systems.immemory.*;
+import com.senars.systems.immemory.ConsolePerception;
+import com.senars.systems.immemory.InMemoryGovernor;
+import com.senars.systems.immemory.InMemoryGrounding;
+import com.senars.systems.immemory.InMemoryMemory;
 import com.senars.systems.perception.FilePerceptionChannel;
 import com.senars.systems.rules.KeywordBlocklistRule;
 import com.senars.systems.rules.PreventDeprecatedSchemaUseRule;
 import com.senars.tools.*;
-import com.senars.xai.XaiReportGenerator;
 import com.senars.xai.Explain;
+import com.senars.xai.XaiReportGenerator;
 import dev.langchain4j.model.chat.ChatLanguageModel;
 import dev.langchain4j.model.embedding.AllMiniLmL6V2EmbeddingModel;
 import dev.langchain4j.model.embedding.EmbeddingModel;
@@ -53,10 +56,9 @@ public class SystemFactory {
     // Public fields for components that might be needed by the Main loop (e.g., for shutdown)
     public final Memory memory;
     public final EventBus eventBus;
-
-    private final CognitiveCycle cognitiveCycle;
     public final SchemaOptimizer schemaOptimizer; // Made public for test access
     public final LogicEngine logicEngine; // Made public for test access
+    private final CognitiveCycle cognitiveCycle;
 
     public SystemFactory() {
         this(OllamaChatModel.builder()

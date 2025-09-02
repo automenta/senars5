@@ -43,7 +43,8 @@ public class StructuredOutputParser {
             // Heuristic: if it looks like an array, parse it as a list.
             if (trimmedResponse.startsWith("[") && trimmedResponse.endsWith("]")) {
                 LOGGER.debug("Attempting to parse response as a JSON array of Thoughts.");
-                return objectMapper.readValue(trimmedResponse, new TypeReference<>() {});
+                return objectMapper.readValue(trimmedResponse, new TypeReference<>() {
+                });
             } else {
                 // Otherwise, assume it's a single thought object.
                 LOGGER.debug("Attempting to parse response as a single JSON Thought.");

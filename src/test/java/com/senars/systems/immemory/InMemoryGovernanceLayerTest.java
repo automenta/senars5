@@ -13,7 +13,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.util.List;
 import java.util.Optional;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -21,10 +22,9 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class InMemoryGovernanceLayerTest {
 
+    private static final String FAKE_CONSTITUTION = "Be nice.";
     @Mock
     private ChatLanguageModel vettingModel;
-
-    private static final String FAKE_CONSTITUTION = "Be nice.";
 
     private Thought createActionPlan(String text) {
         return new Thought("plan-id", new ThoughtContent(text, null, null, null, null, null, null),

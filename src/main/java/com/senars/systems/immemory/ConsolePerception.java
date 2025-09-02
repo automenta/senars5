@@ -29,7 +29,7 @@ public class ConsolePerception implements PerceptionChannel {
     }
 
     @Override
-    public List<Thought> perceive() throws ShutdownException {
+    public List<Thought> perceive() {
         List<Thought> newThoughts = new ArrayList<>();
 
         // Poll for console input (non-blocking)

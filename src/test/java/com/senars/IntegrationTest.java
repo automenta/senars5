@@ -2,12 +2,11 @@ package com.senars;
 
 import com.senars.config.AppConfig;
 import com.senars.core.*;
-import com.senars.cycle.Inference;
 import com.senars.db.DatabaseManager;
+import com.senars.events.EventBus;
 import com.senars.lm.Langchain4JCognition;
 import com.senars.lm.PromptBuilder;
 import com.senars.lm.StructuredOutputParser;
-import com.senars.events.EventBus;
 import com.senars.lm.ToolKit;
 import com.senars.systems.Memory;
 import com.senars.systems.immemory.InMemoryMemory;

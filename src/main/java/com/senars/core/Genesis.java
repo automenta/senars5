@@ -38,7 +38,7 @@ public class Genesis {
     public static List<Thought> loadKnowledgeFromFile(String resourcePath, EmbeddingModel embeddingModel) {
         try (InputStream inputStream = Genesis.class.getClassLoader().getResourceAsStream(resourcePath)) {
             if (inputStream == null) {
-                LOGGER.error("Genesis resource file not found: {}", resourcePath);
+                fileNotFound(resourcePath);
                 return Collections.emptyList();
             }
 
@@ -81,6 +81,10 @@ public class Genesis {
         }
     }
 
+    private static void fileNotFound(String resourcePath) {
+        LOGGER.error("Genesis resource file not found: {}", resourcePath);
+    }
+
     /**
      * Loads initial schema Thoughts from a JSON resource file.
      * After loading, it generates and sets the embedding for each thought.
@@ -102,7 +106,7 @@ public class Genesis {
         String resourcePath = "constitution.txt";
         try (InputStream inputStream = Genesis.class.getClassLoader().getResourceAsStream(resourcePath)) {
             if (inputStream == null) {
-                LOGGER.error("Genesis resource file not found: {}", resourcePath);
+                fileNotFound(resourcePath);
                 throw new IllegalStateException("Constitution file not found at " + resourcePath);
             }
             return new String(inputStream.readAllBytes(), StandardCharsets.UTF_8);

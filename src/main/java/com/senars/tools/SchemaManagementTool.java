@@ -1,11 +1,6 @@
 package com.senars.tools;
 
-import com.senars.core.Thought;
-import com.senars.core.ThoughtContent;
-import com.senars.core.ThoughtMeta;
-import com.senars.core.ThoughtOrigin;
-import com.senars.core.ThoughtState;
-import com.senars.core.ThoughtType;
+import com.senars.core.*;
 import com.senars.events.EventBus;
 import com.senars.events.Events;
 import com.senars.logic.LogicEngine;

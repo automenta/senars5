@@ -1,7 +1,5 @@
 package com.senars.effort;
 
-import com.senars.core.Thought;
-
 /**
  * A record to store the data for a single thought processing event.
  *

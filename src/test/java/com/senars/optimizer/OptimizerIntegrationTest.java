@@ -21,7 +21,6 @@ import java.nio.file.Path;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -30,6 +29,8 @@ import static org.mockito.Mockito.when;
 
 public class OptimizerIntegrationTest {
 
+    @TempDir
+    Path tempDir;
     private SystemFactory systemFactory;
     private Memory memory;
     private LogicEngine logicEngine;
@@ -37,10 +38,6 @@ public class OptimizerIntegrationTest {
     private SchemaOptimizer schemaOptimizer;
     private CognitiveCycle cognitiveCycle;
     private ChatLanguageModel chatModel;
-
-    @TempDir
-    Path tempDir;
-
 
     @BeforeEach
     void setUp() {
@@ -90,14 +87,14 @@ public class OptimizerIntegrationTest {
                 .findFirst();
         assertTrue(optimizationGoalOpt.isPresent(), "SchemaOptimizer should have created a goal.");
         Thought optimizationGoal = optimizationGoalOpt.get();
-        assertEquals(badSchemaId, optimizationGoal.metadata().trace().get(0));
+        assertEquals(badSchemaId, optimizationGoal.metadata().trace().getFirst());
 
         // 4. Mock the LLM's response for the optimization task.
         String newSchemaName = "A much better schema v2";
         String newProceduralContent = "This is the new and improved prompt that will definitely work.";
         String arguments = String.format(
-            "{\"oldSchemaId\":\"%s\",\"newSchemaName\":\"%s\",\"newSchemaProceduralContent\":\"%s\"}",
-            badSchemaId, newSchemaName, newProceduralContent
+                "{\"oldSchemaId\":\"%s\",\"newSchemaName\":\"%s\",\"newSchemaProceduralContent\":\"%s\"}",
+                badSchemaId, newSchemaName, newProceduralContent
         );
         ToolExecutionRequest toolExecutionRequest = ToolExecutionRequest.builder()
                 .name("rewriteSchema")
@@ -108,7 +105,7 @@ public class OptimizerIntegrationTest {
                 .thenReturn(dev.langchain4j.model.output.Response.from(AiMessage.from(toolExecutionRequest)));
 
         // 5. Run the cognitive cycle to process the goal.
-        for(int i=0; i<20; i++) {
+        for (int i = 0; i < 20; i++) {
             cognitiveCycle.step();
         }
 
@@ -124,17 +121,17 @@ public class OptimizerIntegrationTest {
         assertTrue(newSchemaOpt.isPresent(), "A new schema should have been created.");
         Thought newSchema = newSchemaOpt.get();
         assertEquals(newProceduralContent, newSchema.content().procedural());
-        assertEquals(badSchemaId, newSchema.metadata().trace().get(0));
+        assertEquals(badSchemaId, newSchema.metadata().trace().getFirst());
 
         // 8. Assert that an XAI report goal was created.
         AtomicReference<Boolean> xaiGoalFound = new AtomicReference<>(false);
         memory.getAllThoughts().stream()
-              .filter(t -> t.metadata().type() == ThoughtType.GOAL && t.content().text().contains("Generate a human-readable report"))
-              .findFirst()
-              .ifPresent(g -> {
-                  assertTrue(g.metadata().trace().contains(newSchema.id()));
-                  xaiGoalFound.set(true);
-              });
+                .filter(t -> t.metadata().type() == ThoughtType.GOAL && t.content().text().contains("Generate a human-readable report"))
+                .findFirst()
+                .ifPresent(g -> {
+                    assertTrue(g.metadata().trace().contains(newSchema.id()));
+                    xaiGoalFound.set(true);
+                });
         assertTrue(xaiGoalFound.get(), "XAI report goal should have been created.");
     }
 }

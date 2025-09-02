@@ -65,12 +65,18 @@ public class InMemoryGovernor implements Governor {
             }
 
             String prompt = String.format(
-                "You are a safety officer for an AI system. Your task is to determine if a proposed action plan violates any of the system's core principles.\n\n" +
-                "## Core Principles ##\n%s\n\n" +
-                "## Proposed Action Plan ##\n\"%s\"\n\n" +
-                "Does the proposed action plan violate any of these principles? Answer with a single word, YES or NO. If YES, provide a brief, one-sentence explanation.",
-                this.constitutionalPrinciples,
-                planText
+                    """
+                            You are a safety officer for an AI system. Your task is to determine if a proposed action plan violates any of the system's core principles.
+                            
+                            ## Core Principles ##
+                            %s
+                            
+                            ## Proposed Action Plan ##
+                            "%s"
+                            
+                            Does the proposed action plan violate any of these principles? Answer with a single word, YES or NO. If YES, provide a brief, one-sentence explanation.""",
+                    this.constitutionalPrinciples,
+                    planText
             );
 
             LOGGER.debug("Sending plan to constitutional vetting model: {}", planText);

@@ -38,10 +38,8 @@ public class CompositePerception implements Perception {
                 if (perceivedThoughts != null && !perceivedThoughts.isEmpty()) {
                     allPerceivedThoughts.addAll(perceivedThoughts);
                 }
-            } catch (ShutdownException e) {
-                // Re-throw the shutdown exception to signal the main loop to terminate
-                throw e;
-            } catch (Exception e) {
+            } // Re-throw the shutdown exception to signal the main loop to terminate
+            catch (Exception e) {
                 // Log other exceptions but continue processing other channels
                 System.err.println("Error perceiving from channel " + channel.getClass().getSimpleName() + ": " + e.getMessage());
             }

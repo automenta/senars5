@@ -32,7 +32,8 @@ public class DefaultToolExecutor implements ToolExecutor {
                 if (method.getName().equals(toolExecutionRequest.name())) {
                     try {
                         LOGGER.debug("Found matching method: {}.{}", tool.getClass().getSimpleName(), method.getName());
-                        Type type = new TypeToken<Map<String, Object>>() {}.getType();
+                        Type type = new TypeToken<Map<String, Object>>() {
+                        }.getType();
                         Map<String, Object> arguments = gson.fromJson(toolExecutionRequest.arguments(), type);
                         LOGGER.debug("Parsed arguments: {}", arguments);
 
@@ -59,7 +60,7 @@ public class DefaultToolExecutor implements ToolExecutor {
                         Object result = method.invoke(tool, args);
                         return result.toString();
                     } catch (Exception e) {
-                        LOGGER.error("Error executing tool " + toolExecutionRequest.name(), e);
+                        LOGGER.error("Error executing tool {}", toolExecutionRequest.name(), e);
                         throw new RuntimeException(e);
                     }
                 }

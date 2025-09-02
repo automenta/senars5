@@ -44,7 +44,8 @@ public class ToolKit {
     public ToolExecutionRequest parse(String llmResponse) {
         try {
             if (llmResponse != null && llmResponse.trim().startsWith("{")) {
-                Map<String, Object> map = gson.fromJson(llmResponse, new com.google.gson.reflect.TypeToken<Map<String, Object>>() {}.getType());
+                Map<String, Object> map = gson.fromJson(llmResponse, new com.google.gson.reflect.TypeToken<Map<String, Object>>() {
+                }.getType());
 
                 if (map.containsKey("name") && map.containsKey("arguments")) {
                     String name = (String) map.get("name");

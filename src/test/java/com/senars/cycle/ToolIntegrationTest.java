@@ -1,18 +1,11 @@
 package com.senars.cycle;
 
-import com.senars.core.ActionStatus;
-import com.senars.core.Feedback;
-import com.senars.core.Thought;
-import com.senars.core.ThoughtContent;
-import com.senars.core.ThoughtMeta;
-import com.senars.core.ThoughtOrigin;
-import com.senars.core.ThoughtState;
-import com.senars.core.ThoughtType;
+import com.senars.core.*;
 import com.senars.lm.Langchain4JCognition;
 import com.senars.lm.ToolKit;
 import com.senars.logic.LogicEngine;
-import com.senars.tools.LogicalInferenceTool;
 import com.senars.systems.Memory;
+import com.senars.tools.LogicalInferenceTool;
 import dev.langchain4j.agent.tool.ToolExecutionRequest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -25,21 +18,25 @@ import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.spy;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 public class ToolIntegrationTest {
 
-    @Mock private Memory memory;
-    @Mock private dev.langchain4j.model.chat.ChatLanguageModel chatModel;
-    @Mock private com.senars.lm.PromptBuilder promptBuilder;
-    @Mock private com.senars.lm.StructuredOutputParser outputParser;
-    @Mock private com.senars.xai.Explain explain;
-    @Mock private com.senars.events.EventBus eventBus;
+    @Mock
+    private Memory memory;
+    @Mock
+    private dev.langchain4j.model.chat.ChatLanguageModel chatModel;
+    @Mock
+    private com.senars.lm.PromptBuilder promptBuilder;
+    @Mock
+    private com.senars.lm.StructuredOutputParser outputParser;
+    @Mock
+    private com.senars.xai.Explain explain;
+    @Mock
+    private com.senars.events.EventBus eventBus;
 
 
     private ToolKit toolKit;
@@ -161,7 +158,7 @@ public class ToolIntegrationTest {
 
         // Assert
         // 1. Verify that the findRelevantSchema method was called and returned our recovery schema.
-        verify((Langchain4JCognition)cognition).findRelevantSchema(failureGoal);
+        verify((Langchain4JCognition) cognition).findRelevantSchema(failureGoal);
 
         // 2. Assert that the result is a single new thought.
         assertEquals(1, newThoughts.size());

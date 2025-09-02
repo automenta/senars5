@@ -1,15 +1,9 @@
 package com.senars.lm;
 
 import com.google.gson.Gson;
-import com.senars.core.Genesis;
-import com.senars.core.Thought;
-import com.senars.effort.LinearTextEffortModel;
-import com.senars.core.ThoughtOrigin;
-import com.senars.core.ThoughtType;
-import com.senars.core.ThoughtContent;
-import com.senars.core.ThoughtMeta;
-import com.senars.core.ThoughtState;
+import com.senars.core.*;
 import com.senars.cycle.Cognition;
+import com.senars.effort.LinearTextEffortModel;
 import com.senars.events.EventBus;
 import com.senars.events.Events;
 import com.senars.optimizer.EffortModelOptimizer;
@@ -167,8 +161,8 @@ public class Langchain4JCognition implements Cognition {
         // The parser returns a single REPORT thought on failure.
         // If we get a report, but the schema wasn't for reporting, something went wrong.
         boolean parseFailed = newThoughts.size() == 1 &&
-                              newThoughts.getFirst().metadata().type() == ThoughtType.REPORT &&
-                              (schema == null || !"senars:schema:direct_reasoning".equals(schema.content().symbolic()));
+                newThoughts.getFirst().metadata().type() == ThoughtType.REPORT &&
+                (schema == null || !"senars:schema:direct_reasoning".equals(schema.content().symbolic()));
 
         if (parseFailed) {
             LOGGER.warn("Parsing response failed or produced an unexpected report. Creating a replan goal.");

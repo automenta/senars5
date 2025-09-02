@@ -4,10 +4,9 @@ import com.senars.core.ActionStatus;
 import com.senars.core.Feedback;
 import com.senars.core.Thought;
 import com.senars.lm.ToolKit;
+import dev.langchain4j.agent.tool.ToolExecutionRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import dev.langchain4j.agent.tool.ToolExecutionRequest;
 
 /**
  * An action system that executes tool calls defined in an ACTION.

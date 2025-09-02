@@ -26,7 +26,7 @@ public class SearchTools {
     public String search(String query) {
         LOGGER.info("Performing web search for query: {}", query);
         try {
-            String encodedQuery = URLEncoder.encode(query, StandardCharsets.UTF_8.toString());
+            String encodedQuery = URLEncoder.encode(query, StandardCharsets.UTF_8);
             Document doc = Jsoup.connect(DUCKDUCKGO_SEARCH_URL + encodedQuery)
                     .userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/107.0.0.0 Safari/537.36")
                     .get();
