@@ -43,20 +43,31 @@ public class ToolKit {
      */
     public ToolExecutionRequest parse(String llmResponse) {
         try {
-            // This is a simplified, stubbed parser. A more robust implementation would be needed for production.
-            if (llmResponse.trim().startsWith("{") && llmResponse.contains("\"name\"") && llmResponse.contains("\"arguments\"")) {
-                Map<String, Object> map = gson.fromJson(llmResponse, Map.class);
-                String name = (String) map.get("name");
-                Map<String, Object> arguments = (Map<String, Object>) map.get("arguments");
-                // Note: The ID of the request is not available in this simplified parsing.
-                return ToolExecutionRequest.builder()
-                        .name(name)
-                        .arguments(gson.toJson(arguments))
-                        .build();
+            if (llmResponse != null && llmResponse.trim().startsWith("{")) {
+                Map<String, Object> map = gson.fromJson(llmResponse, new com.google.gson.reflect.TypeToken<Map<String, Object>>() {}.getType());
+
+                if (map.containsKey("name") && map.containsKey("arguments")) {
+                    String name = (String) map.get("name");
+                    Object argsObject = map.get("arguments");
+
+                    String argumentsJson;
+                    if (argsObject instanceof String) {
+                        // If arguments is already a string, use it directly.
+                        argumentsJson = (String) argsObject;
+                    } else {
+                        // Otherwise, serialize the map/object to a JSON string.
+                        argumentsJson = gson.toJson(argsObject);
+                    }
+
+                    return ToolExecutionRequest.builder()
+                            .name(name)
+                            .arguments(argumentsJson)
+                            .build();
+                }
             }
             return null;
         } catch (Exception e) {
-            // The response was not a valid tool execution request JSON
+            LOGGER.warn("Failed to parse tool execution request from text: {}", llmResponse, e);
             return null;
         }
     }

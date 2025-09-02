@@ -45,7 +45,6 @@ public class LLMPlanningIntegrationTest {
         dbManager = new DatabaseManager(dbFile);
         memory = new InMemoryMemory(AppConfig.getInstance(), dbManager);
         chatModel = mock(ChatLanguageModel.class);
-        Sessions sessions = mock(Sessions.class);
         Explain explain = mock(Explain.class);
         ToolKit toolKit = mock(ToolKit.class);
 
@@ -54,15 +53,12 @@ public class LLMPlanningIntegrationTest {
         loadSchema("parsing-schema.json");
 
 
-        Inference inference = new Inference(memory);
         cognition = new Langchain4JCognition(
                 chatModel,
                 memory,
                 new PromptBuilder(),
                 new StructuredOutputParser(),
-                sessions,
                 explain,
-                inference,
                 toolKit
         );
     }

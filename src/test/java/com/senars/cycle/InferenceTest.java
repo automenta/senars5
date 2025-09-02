@@ -58,7 +58,7 @@ class InferenceTest {
     }
 
     @Test
-    void reason_withSimpleFactQuery_shouldReturnOneBelief() {
+    void executeQuery_withSimpleFactQuery_shouldReturnSuccess() {
         // Arrange
         Thought fact = createBelief("father(darth_vader, luke).");
         when(memory.getAllThoughts()).thenReturn(List.of(fact));
@@ -72,7 +72,7 @@ class InferenceTest {
     }
 
     @Test
-    void reason_withVariableQuery_shouldReturnCorrectBelief() {
+    void executeQuery_withVariableQuery_shouldReturnBinding() {
         // Arrange
         Thought fact = createBelief("father(darth_vader, luke).");
         when(memory.getAllThoughts()).thenReturn(List.of(fact));
@@ -86,7 +86,7 @@ class InferenceTest {
     }
 
     @Test
-    void reason_withRuleAndFact_shouldInferNewBelief() {
+    void executeQuery_withRuleAndFact_shouldInferNewBelief() {
         // Arrange
         Thought fact1 = createBelief("father(darth_vader, luke).");
         Thought fact2 = createBelief("father(darth_vader, leia).");
@@ -102,7 +102,7 @@ class InferenceTest {
     }
 
     @Test
-    void reason_withQueryReturningMultipleSolutions_shouldReturnMultipleBeliefs() {
+    void executeQuery_withMultipleSolutions_shouldReturnAll() {
         // Arrange
         Thought fact1 = createBelief("child(luke, darth_vader).");
         Thought fact2 = createBelief("child(leia, darth_vader).");
@@ -118,7 +118,7 @@ class InferenceTest {
     }
 
     @Test
-    void reason_withNoMatchingFacts_shouldReturnEmptyList() {
+    void executeQuery_withNoMatchingFacts_shouldReturnError() {
         // Arrange
         Thought fact = createBelief("father(darth_vader, luke).");
         when(memory.getAllThoughts()).thenReturn(List.of(fact));
@@ -132,15 +132,15 @@ class InferenceTest {
     }
 
     @Test
-    void reason_withEmptyTheory_shouldReturnEmptyList() {
+    void executeQuery_withEmptyTheory_shouldReturnError() {
         // Arrange
         when(memory.getAllThoughts()).thenReturn(Collections.emptyList());
-        Thought query = createQueryGoal("anything(X).");
+        String query = "anything(X).";
 
         // Act
-        List<Thought> results = inference.reason(query);
+        String result = inference.executeQuery(query);
 
         // Assert
-        assertTrue(results.isEmpty());
+        assertEquals("Error: The knowledge base is empty. No facts or rules are available.", result);
     }
 }

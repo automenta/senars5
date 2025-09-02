@@ -37,7 +37,6 @@ public class ToolIntegrationTest {
     @Mock private dev.langchain4j.model.chat.ChatLanguageModel chatModel;
     @Mock private com.senars.lm.PromptBuilder promptBuilder;
     @Mock private com.senars.lm.StructuredOutputParser outputParser;
-    @Mock private com.senars.core.Sessions sessions;
     @Mock private com.senars.xai.Explain explain;
 
 
@@ -51,7 +50,7 @@ public class ToolIntegrationTest {
         logicalInferenceTool = new LogicalInferenceTool(memory);
         toolKit = new ToolKit(logicalInferenceTool); // In a real scenario, more tools would be here.
         toolUsingAction = new ToolUsingAction(toolKit);
-        cognition = spy(new Langchain4JCognition(chatModel, memory, promptBuilder, outputParser, sessions, explain, toolKit));
+        cognition = spy(new Langchain4JCognition(chatModel, memory, promptBuilder, outputParser, explain, toolKit));
     }
 
     private Thought createActionPlan(String toolRequestJson) {
@@ -144,6 +143,9 @@ public class ToolIntegrationTest {
         Thought recoverySchema = com.senars.core.Genesis.createFailureRecoverySchema(new dev.langchain4j.model.embedding.AllMiniLmL6V2EmbeddingModel());
         when(memory.findSchemaBySymbolicName(com.senars.core.Genesis.FAILURE_RECOVERY_SCHEMA_SYMBOL))
                 .thenReturn(java.util.Optional.of(recoverySchema));
+
+        // Arrange: Mock the prompt builder to return a valid prompt
+        when(promptBuilder.build(any(), any(), any(), any())).thenReturn("test prompt");
 
         // Arrange: Mock the LLM to return a new action plan (e.g., to use a search tool)
         String newActionJson = "{\"name\":\"search\",\"arguments\":{\"query\":\"who is luke's father\"}}";

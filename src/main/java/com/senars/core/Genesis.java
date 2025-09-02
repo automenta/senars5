@@ -102,37 +102,15 @@ public class Genesis {
      */
     public static List<Thought> createGenesisDrives(EmbeddingModel embeddingModel) {
         List<Thought> drives = new ArrayList<>();
-
         for (Drive driveEnum : Drive.values()) {
             String text = getDriveText(driveEnum);
-            List<Double> embedding = new ArrayList<>();
-            for (float f : embeddingModel.embed(text).content().vector()) {
-                embedding.add((double) f);
-            }
-
-
-            Thought driveThought = new Thought(
+            Thought driveThought = createThought(
                     "drive-" + driveEnum.name().toLowerCase(),
-                    new ThoughtContent(
-                            text,
-                            null, // symbolic
-                            embedding,
-                            null, // perceptual
-                            null, // procedural
-                            null,  // feedback
-                            null // rules
-                    ),
-                    new ThoughtState(
-                            1.0, // clarity: Drives are foundational truths
-                            0.0, // salience: To be calculated by the funnel
-                            1.0  // activation: Drives are always active
-                    ),
-                    new ThoughtMeta(
-                            ThoughtType.DRIVE, // Drives are a distinct type of thought
-                            ThoughtOrigin.SYSTEM,
-                            List.of(), // No trace for genesis thoughts
-                            Instant.now()
-                    )
+                    text,
+                    null,
+                    ThoughtType.DRIVE,
+                    0.0, // Salience to be calculated by the funnel
+                    embeddingModel
             );
             drives.add(driveThought);
         }
@@ -147,34 +125,7 @@ public class Genesis {
      */
     public static Thought createPrimeAmbition(EmbeddingModel embeddingModel) {
         String text = "My primary ambition is to understand my own architecture, purpose, and capabilities based on my foundational knowledge.";
-        List<Double> embedding = new ArrayList<>();
-        for (float f : embeddingModel.embed(text).content().vector()) {
-            embedding.add((double) f);
-        }
-
-        return new Thought(
-                "ambition-genesis-1",
-                new ThoughtContent(
-                        text,
-                        null,
-                        embedding,
-                        null,
-                        null,
-                        null,
-                        null
-                ),
-                new ThoughtState(
-                        1.0, // clarity
-                        0.0, // salience
-                        1.0  // activation
-                ),
-                new ThoughtMeta(
-                        ThoughtType.GOAL,
-                        ThoughtOrigin.SYSTEM,
-                        List.of(),
-                        Instant.now()
-                )
-        );
+        return createThought("ambition-genesis-1", text, null, ThoughtType.GOAL, 0.0, embeddingModel);
     }
 
     /**
@@ -185,27 +136,7 @@ public class Genesis {
      */
     public static Thought createLogicalActionSchema(EmbeddingModel embeddingModel) {
         String text = "The user's goal can be answered using formal logic. Formulate a precise Prolog query to answer the goal and create a plan to execute it with the `logical_inference.executeQuery` tool.";
-        List<Double> embedding = new ArrayList<>();
-        for (float f : embeddingModel.embed(text).content().vector()) {
-            embedding.add((double) f);
-        }
-
-        return new Thought(
-                "schema-logical-action-1",
-                new ThoughtContent(
-                        text,
-                        LOGICAL_ACTION_SCHEMA_SYMBOL,
-                        embedding,
-                        null, null, null, null
-                ),
-                new ThoughtState(1.0, 1.0, 1.0),
-                new ThoughtMeta(
-                        ThoughtType.SCHEMA,
-                        ThoughtOrigin.SYSTEM,
-                        List.of(),
-                        Instant.now()
-                )
-        );
+        return createThought("schema-logical-action-1", text, LOGICAL_ACTION_SCHEMA_SYMBOL, ThoughtType.SCHEMA, 1.0, embeddingModel);
     }
 
     /**
@@ -216,27 +147,7 @@ public class Genesis {
      */
     public static Thought createFailureRecoverySchema(EmbeddingModel embeddingModel) {
         String text = "A tool execution has failed. The current focus describes the tool and the error. Analyze this failure and formulate a new plan to achieve the original objective. Consider using alternative tools or methods. If the failure was due to missing information, create a plan to find that information.";
-        List<Double> embedding = new ArrayList<>();
-        for (float f : embeddingModel.embed(text).content().vector()) {
-            embedding.add((double) f);
-        }
-
-        return new Thought(
-                "schema-failure-recovery-1",
-                new ThoughtContent(
-                        text,
-                        FAILURE_RECOVERY_SCHEMA_SYMBOL,
-                        embedding,
-                        null, null, null, null
-                ),
-                new ThoughtState(1.0, 1.0, 1.0),
-                new ThoughtMeta(
-                        ThoughtType.SCHEMA,
-                        ThoughtOrigin.SYSTEM,
-                        List.of(),
-                        Instant.now()
-                )
-        );
+        return createThought("schema-failure-recovery-1", text, FAILURE_RECOVERY_SCHEMA_SYMBOL, ThoughtType.SCHEMA, 1.0, embeddingModel);
     }
 
     private static String getDriveText(Drive drive) {
@@ -253,6 +164,29 @@ public class Genesis {
         };
     }
 
+    private static Thought createThought(
+            String id,
+            String text,
+            String symbolic,
+            ThoughtType type,
+            double initialSalience,
+            EmbeddingModel embeddingModel
+    ) {
+        List<Double> embedding = new ArrayList<>();
+        if (text != null && !text.isBlank() && embeddingModel != null) {
+            for (float f : embeddingModel.embed(text).content().vector()) {
+                embedding.add((double) f);
+            }
+        }
+
+        return new Thought(
+                id,
+                new ThoughtContent(text, symbolic, embedding, null, null, null, null),
+                new ThoughtState(1.0, initialSalience, 1.0),
+                new ThoughtMeta(type, ThoughtOrigin.SYSTEM, List.of(), Instant.now())
+        );
+    }
+
     /**
      * Creates the initial research goal for demonstration purposes.
      *
@@ -261,33 +195,6 @@ public class Genesis {
      */
     public static Thought createResearchGoal(EmbeddingModel embeddingModel) {
         String text = "Provide a summary of the latest announcements on the official OpenAI blog.";
-        List<Double> embedding = new ArrayList<>();
-        for (float f : embeddingModel.embed(text).content().vector()) {
-            embedding.add((double) f);
-        }
-
-        return new Thought(
-                "goal-genesis-research-1",
-                new ThoughtContent(
-                        text,
-                        null,
-                        embedding,
-                        null,
-                        null,
-                        null,
-                        null
-                ),
-                new ThoughtState(
-                        1.0, // clarity
-                        100.0, // high initial salience to kick things off
-                        1.0  // activation
-                ),
-                new ThoughtMeta(
-                        ThoughtType.GOAL,
-                        ThoughtOrigin.SYSTEM,
-                        List.of(),
-                        Instant.now()
-                )
-        );
+        return createThought("goal-genesis-research-1", text, null, ThoughtType.GOAL, 100.0, embeddingModel);
     }
 }

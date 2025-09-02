@@ -40,11 +40,7 @@ class Langchain4jCognitiveProcessorTest {
     @Mock
     private StructuredOutputParser mockOutputParser;
     @Mock
-    private Sessions mockSessions;
-    @Mock
     private Explain mockExplain;
-    @Mock
-    private Inference mockInference;
     @Mock
     private ToolKit mockToolKit;
     @Mock
@@ -74,9 +70,7 @@ class Langchain4jCognitiveProcessorTest {
                 mockMemory,
                 mockPromptBuilder,
                 mockOutputParser,
-                mockSessions,
                 mockExplain,
-                mockInference,
                 mockToolKit
         );
     }

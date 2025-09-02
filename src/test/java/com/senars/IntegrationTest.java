@@ -54,17 +54,13 @@ public class IntegrationTest {
         ToolKit toolKit = new ToolKit();
 
         // 4. Instantiate the real processor
-        Sessions sessions = new Sessions();
         Explain explain = new Explain(memory);
-        Inference inference = new Inference(memory);
         cognitiveProcessor = new Langchain4JCognition(
                 chatModel,
                 memory,
                 promptBuilder,
                 outputParser,
-                sessions,
                 explain,
-                inference,
                 toolKit
         );
     }

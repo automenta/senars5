@@ -67,47 +67,27 @@ public class CognitiveCycle {
     public void step() {
         try {
             cycleCount++;
-
-            // 1. Run Schema Optimizer periodically
-            if (cycleCount % OPTIMIZER_RUN_INTERVAL == 0) {
-                runSchemaOptimizer();
-            }
-
-            // 2. Grounding Stage: Process feedback from previous actions
+            runOptimizer();
             processActionFeedback();
+            runPerception();
 
-            // 3. Perception Stage
-            List<Thought> perceivedThoughts = perception.perceive();
-            if (!perceivedThoughts.isEmpty()) {
-                LOGGER.info("Perceived {} new thoughts from external sources.", perceivedThoughts.size());
-                perceivedThoughts.forEach(this::handleNewThought);
-            }
-
-            // 4. Prioritization Stage
             Optional<Thought> focusThoughtOpt = attention.selectFocusThought();
-
             if (focusThoughtOpt.isEmpty()) {
                 LOGGER.debug("No focus thought. System is idle.");
                 return;
             }
 
-            Thought focusThought = focusThoughtOpt.get();
+            Thought focusThought = detectAndHandleCognitiveLoop(focusThoughtOpt.get())
+                    .orElse(focusThoughtOpt.get());
+
             LOGGER.info("Focusing on thought: {} - {}", focusThought.metadata().type(), focusThought.id());
 
-            // 5. Meta-Cognition Stage: Check for loops and intervene if necessary
-            focusThought = detectAndHandleCognitiveLoop(focusThought).orElse(focusThought);
 
-
-            // 6. Processing Stage
             List<Thought> newThoughts = cognition.process(focusThought);
+            newThoughts.forEach(this::handleNewThought);
 
-            for (Thought newThought : newThoughts) {
-                handleNewThought(newThought);
-            }
         } catch (Exception e) {
             LOGGER.error("An unexpected error occurred during the cognitive cycle.", e);
-            // In a more advanced implementation, this could trigger a system-level
-            // goal to diagnose the failure. For now, we log and continue.
         }
     }
 
@@ -199,13 +179,21 @@ public class CognitiveCycle {
         handleNewThought(replanGoal); // Use handleNewThought to ensure it's saved and added to attention
     }
 
-    private void runSchemaOptimizer() {
-        LOGGER.info("Cognitive cycle {} reached. Running schema optimizer.", cycleCount);
-        List<Thought> optimizationGoals = schemaOptimizer.run();
-        if (!optimizationGoals.isEmpty()) {
-            LOGGER.info("Schema optimizer generated {} new goal(s).", optimizationGoals.size());
-            for (Thought goal : optimizationGoals) {
-                handleNewThought(goal);
+    private void runPerception() {
+        List<Thought> perceivedThoughts = perception.perceive();
+        if (!perceivedThoughts.isEmpty()) {
+            LOGGER.info("Perceived {} new thoughts from external sources.", perceivedThoughts.size());
+            perceivedThoughts.forEach(this::handleNewThought);
+        }
+    }
+
+    private void runOptimizer() {
+        if (cycleCount % OPTIMIZER_RUN_INTERVAL == 0) {
+            LOGGER.info("Cognitive cycle {} reached. Running schema optimizer.", cycleCount);
+            List<Thought> optimizationGoals = schemaOptimizer.run();
+            if (!optimizationGoals.isEmpty()) {
+                LOGGER.info("Schema optimizer generated {} new goal(s).", optimizationGoals.size());
+                optimizationGoals.forEach(this::handleNewThought);
             }
         }
     }
