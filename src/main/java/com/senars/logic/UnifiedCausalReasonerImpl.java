@@ -57,57 +57,28 @@ public class UnifiedCausalReasonerImpl implements UnifiedCausalReasoner {
         }
     }
 
-    /**
-     * Performs backward reasoning to diagnose root causes of outcomes.
-     * This is the diagnostic engine that traces backward through the causal graph.
-     *
-     * @param focusThought The thought to start reasoning from (typically a REPORT)
-     * @param options      Additional options for the reasoning process
-     * @return A list of thoughts representing the diagnostic analysis
-     */
-    private List<Thought> performBackwardReasoning(Thought focusThought, ReasoningOptions options) {
-        eventBus.publish(new Events.CognitionStartEvent(focusThought));
-        try {
-            LOGGER.info("Processing thought: {} of type {} using UCR backward reasoning",
-                    focusThought.id(), focusThought.metadata().type());
-
-            // 1. Trace backward through causal links to find root causes
-            List<Thought> rootCauses = traceRootCauses(focusThought);
-            if (rootCauses.isEmpty()) {
-                LOGGER.warn("UCR backward reasoning found no root causes for thought {}", focusThought.id());
-                return Collections.emptyList();
-            }
-            LOGGER.info("Identified {} potential root causes.", rootCauses.size());
-
-            // 2. Generate remediation plans for each root cause
-            List<Thought> remediationPlans = new ArrayList<>();
-            for (Thought rootCause : rootCauses) {
-                List<Thought> plans = generateRemediationPlan(rootCause);
-                remediationPlans.addAll(plans);
-            }
-
-            // 3. Create a diagnostic report
-            Thought diagnosticReport = createDiagnosticReport(focusThought, rootCauses, remediationPlans);
-            
-            List<Thought> result = new ArrayList<>();
-            result.add(diagnosticReport);
-            result.addAll(remediationPlans);
-            
-            return result;
-
-        } catch (Exception e) {
-            LOGGER.error("Error during UCR backward reasoning for thought: {}", focusThought.id(), e);
-            eventBus.publish(new Events.CognitionErrorEvent(focusThought, e));
-            return Collections.emptyList();
-        } finally {
-            eventBus.publish(new Events.CognitionEndEvent(focusThought));
-        }
-    }
-
     @Override
     public List<Thought> simulate(Thought startingThought, ReasoningOptions options) {
         // Perform simulation using the same forward reasoning logic but in simulation mode
         return performForwardReasoning(startingThought, new ReasoningOptions(true, options.getMaxDepth()));
+    }
+
+    @Override
+    public void processFeedback(Feedback feedback) {
+        LOGGER.info("Processing feedback for tool '{}'", feedback.toolName());
+        
+        // Adjust clarity of thoughts in the trace based on feedback
+        List<String> traceIds = feedback.actionPlan().metadata().trace();
+        if (traceIds != null && !traceIds.isEmpty()) {
+            boolean isFailure = feedback.status() == ActionStatus.FAILURE;
+            double adjustment = isFailure ? -this.blameFactor : this.reinforcementFactor;
+            adjustClarityInTrace(traceIds, adjustment, 0);
+        }
+        
+        // If this is a failure, create a goal to investigate and resolve it
+        if (feedback.status() == ActionStatus.FAILURE) {
+            createAndPublishFailureGoal(feedback);
+        }
     }
 
     /**
@@ -166,6 +137,39 @@ public class UnifiedCausalReasonerImpl implements UnifiedCausalReasoner {
 
         } catch (Exception e) {
             LOGGER.error("Error during UCR forward reasoning for thought: {}", focusThought.id(), e);
+            eventBus.publish(new Events.CognitionErrorEvent(focusThought, e));
+            return Collections.emptyList();
+        } finally {
+            eventBus.publish(new Events.CognitionEndEvent(focusThought));
+        }
+    }
+
+    /**
+     * Performs backward reasoning to diagnose root causes of outcomes.
+     * This is the diagnostic engine that traces backward through the causal graph.
+     *
+     * @param focusThought The thought to start reasoning from (typically a REPORT)
+     * @param options      Additional options for the reasoning process
+     * @return A list of thoughts representing the diagnostic analysis
+     */
+    private List<Thought> performBackwardReasoning(Thought focusThought, ReasoningOptions options) {
+        eventBus.publish(new Events.CognitionStartEvent(focusThought));
+        try {
+            LOGGER.info("Processing thought: {} of type {} using UCR backward reasoning",
+                    focusThought.id(), focusThought.metadata().type());
+
+            // For REPORT thoughts (outcomes), perform root cause analysis
+            if (focusThought.metadata().type() == ThoughtType.REPORT) {
+                return performRootCauseAnalysis(focusThought, options);
+            }
+            
+            // For other types, we might want to analyze why this thought exists
+            // For now, we'll just return an empty list
+            LOGGER.warn("Backward reasoning not implemented for thought type: {}", focusThought.metadata().type());
+            return Collections.emptyList();
+
+        } catch (Exception e) {
+            LOGGER.error("Error during UCR backward reasoning for thought: {}", focusThought.id(), e);
             eventBus.publish(new Events.CognitionErrorEvent(focusThought, e));
             return Collections.emptyList();
         } finally {
@@ -353,177 +357,6 @@ public class UnifiedCausalReasonerImpl implements UnifiedCausalReasoner {
         return issues;
     }
 
-    /**
-     * Traces backward through the causal graph to identify root causes.
-     *
-     * @param outcomeThought The outcome to trace backward from
-     * @return A list of root cause thoughts
-     */
-    private List<Thought> traceRootCauses(Thought outcomeThought) {
-        List<Thought> rootCauses = new ArrayList<>();
-        Set<String> visited = new HashSet<>();
-        Queue<Thought> queue = new LinkedList<>();
-        
-        queue.add(outcomeThought);
-        visited.add(outcomeThought.id());
-        
-        // BFS traversal backward through causal links
-        while (!queue.isEmpty()) {
-            Thought currentThought = queue.poll();
-            
-            // Get incoming causal links (what caused this thought)
-            Set<CausalLink> incomingLinks = memory.getCausalLinksTo(currentThought.id());
-            
-            if (incomingLinks.isEmpty()) {
-                // This is a root cause (no incoming links)
-                rootCauses.add(currentThought);
-            } else {
-                // Follow the causal links backward
-                for (CausalLink link : incomingLinks) {
-                    memory.getThoughtById(link.sourceThoughtId()).ifPresent(sourceThought -> {
-                        if (!visited.contains(sourceThought.id())) {
-                            visited.add(sourceThought.id());
-                            queue.add(sourceThought);
-                        }
-                    });
-                }
-            }
-        }
-        
-        return rootCauses;
-    }
-
-    /**
-     * Generates a remediation plan for a root cause.
-     *
-     * @param rootCause The root cause to generate a plan for
-     * @return A list of thoughts representing the remediation plan
-     */
-    private List<Thought> generateRemediationPlan(Thought rootCause) {
-        String prompt = String.format(
-                """
-                Given the identified root cause: '%s'
-                
-                Generate 2 potential remediation steps to address this root cause. The output must be a valid JSON array of strings.
-                
-                Example:
-                ["Step 1 text...", "Step 2 text..."]
-                """,
-                rootCause.content().text()
-        );
-
-        String response = chatModel.generate(UserMessage.from(prompt)).content().text();
-
-        List<Thought> remediationThoughts = new ArrayList<>();
-        try {
-            // A simple regex to find strings within a JSON array.
-            // It handles escaped quotes but is not a full JSON parser.
-            Pattern pattern = Pattern.compile("\"(.*?)(?<!\\\\)\"");
-            Matcher matcher = pattern.matcher(response);
-
-            while (matcher.find()) {
-                String remediationText = matcher.group(1);
-
-                ThoughtContent content = new ThoughtContent(
-                        remediationText,
-                        "ucr:remediation",
-                        null, null, null, null, null
-                );
-
-                Set<CausalLink> causalLinks = Set.of(
-                        new CausalLink(rootCause.id(), UUID.randomUUID().toString(), CausalRelationType.DIRECT_CAUSATION)
-                );
-
-                ThoughtMeta meta = new ThoughtMeta(
-                        ThoughtType.ACTION,
-                        ThoughtOrigin.UCR_BACKWARD,
-                        List.of(rootCause.id()),
-                        causalLinks,
-                        Instant.now()
-                );
-
-                ThoughtState state = new ThoughtState(1.0, 1.0, 1.0);
-                Thought remediationPlan = new Thought(UUID.randomUUID().toString(), content, state, meta);
-                remediationThoughts.add(remediationPlan);
-            }
-        } catch (Exception e) {
-            LOGGER.error("Failed to parse remediation plans from LLM response: {}", response, e);
-            return Collections.emptyList();
-        }
-
-        return remediationThoughts;
-    }
-
-    /**
-     * Creates a diagnostic report summarizing the analysis.
-     *
-     * @param outcomeThought The original outcome thought
-     * @param rootCauses The identified root causes
-     * @param remediationPlans The proposed remediation plans
-     * @return A diagnostic report thought
-     */
-    private Thought createDiagnosticReport(Thought outcomeThought, List<Thought> rootCauses, List<Thought> remediationPlans) {
-        StringBuilder reportText = new StringBuilder();
-        reportText.append("Diagnostic Analysis Report\n");
-        reportText.append("========================\n\n");
-        reportText.append("Outcome: ").append(outcomeThought.content().text()).append("\n\n");
-        reportText.append("Root Causes Identified:\n");
-        for (int i = 0; i < rootCauses.size(); i++) {
-            reportText.append((i + 1)).append(". ").append(rootCauses.get(i).content().text()).append("\n");
-        }
-        reportText.append("\nProposed Remediation Plans:\n");
-        for (int i = 0; i < remediationPlans.size(); i++) {
-            reportText.append((i + 1)).append(". ").append(remediationPlans.get(i).content().text()).append("\n");
-        }
-
-        ThoughtContent content = new ThoughtContent(
-                reportText.toString(),
-                "ucr:diagnostic_report",
-                null, null, null, null, null
-        );
-
-        // Link to the original outcome
-        Set<CausalLink> causalLinks = Set.of(
-                new CausalLink(outcomeThought.id(), UUID.randomUUID().toString(), CausalRelationType.LOGICAL_INFERENCE)
-        );
-
-        ThoughtMeta meta = new ThoughtMeta(
-                ThoughtType.REPORT,
-                ThoughtOrigin.UCR_BACKWARD,
-                List.of(outcomeThought.id()),
-                causalLinks,
-                Instant.now()
-        );
-
-        ThoughtState state = new ThoughtState(1.0, 1.0, 1.0);
-        return new Thought(UUID.randomUUID().toString(), content, state, meta);
-    }
-
-    private List<Thought> performBackwardReasoning(Thought focusThought, ReasoningOptions options) {
-        eventBus.publish(new Events.CognitionStartEvent(focusThought));
-        try {
-            LOGGER.info("Processing thought: {} of type {} using UCR backward reasoning",
-                    focusThought.id(), focusThought.metadata().type());
-
-            // For REPORT thoughts (outcomes), perform root cause analysis
-            if (focusThought.metadata().type() == ThoughtType.REPORT) {
-                return performRootCauseAnalysis(focusThought, options);
-            }
-            
-            // For other types, we might want to analyze why this thought exists
-            // For now, we'll just return an empty list
-            LOGGER.warn("Backward reasoning not implemented for thought type: {}", focusThought.metadata().type());
-            return Collections.emptyList();
-
-        } catch (Exception e) {
-            LOGGER.error("Error during UCR backward reasoning for thought: {}", focusThought.id(), e);
-            eventBus.publish(new Events.CognitionErrorEvent(focusThought, e));
-            return Collections.emptyList();
-        } finally {
-            eventBus.publish(new Events.CognitionEndEvent(focusThought));
-        }
-    }
-    
     /**
      * Performs root cause analysis on a REPORT thought to identify the root causes
      * of the outcome described in the report.

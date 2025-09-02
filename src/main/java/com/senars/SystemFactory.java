@@ -13,6 +13,9 @@ import com.senars.events.LoggingEventSubscriber;
 import com.senars.explain.CausalExplanationGenerator;
 import com.senars.explain.Explain;
 import com.senars.explain.ExplanationGenerator;
+import com.senars.explanation.ExplanationService;
+import com.senars.expansion.AutonomousCapabilityExpansion;
+import com.senars.health.SystemHealthMonitor;
 import com.senars.lm.PromptBuilder;
 import com.senars.lm.ToolKit;
 import com.senars.logic.LogicEngine;
@@ -66,6 +69,9 @@ public class SystemFactory {
     private final CognitiveCycle cognitiveCycle;
     public final GovernanceService governance; // Made public for access to the new governance service
     public final AttentionService attentionService; // Made public for access to the new attention service
+    public final SystemHealthMonitor healthMonitor; // Made public for access to the new health monitor
+    public final ExplanationService explanationService; // Made public for access to the new explanation service
+    public final AutonomousCapabilityExpansion capabilityExpansion; // Made public for access to the new capability expansion
 
     public SystemFactory() {
         this(OllamaChatModel.builder()
@@ -197,6 +203,16 @@ public class SystemFactory {
         GoalGraph goalGraph = new GoalGraph(dbManager);
         GoalOrientedPlanner goalOrientedPlanner = new GoalOrientedPlanner(goalGraph, ucr);
 
+        // 8. Phase 4 Components
+        // Create the System Health Monitor
+        this.healthMonitor = new SystemHealthMonitor(memory, ucr, eventBus);
+        
+        // Create the Explanation Service
+        this.explanationService = new ExplanationService(memory, ucr, eventBus, chatModel);
+        
+        // Create the Autonomous Capability Expansion
+        this.capabilityExpansion = new AutonomousCapabilityExpansion(memory, ucr, eventBus, chatModel, explanationService, healthMonitor);
+
         this.cognitiveCycle = new CognitiveCycle(
                 perception,
                 attention,
@@ -214,7 +230,7 @@ public class SystemFactory {
                 goalOrientedPlanner
         );
 
-        // 8. Event Bus Subscriptions
+        // 9. Event Bus Subscriptions
         PromptBuilder promptBuilder = new PromptBuilder();
         ExplanationGenerator explanationGenerator = new ExplanationGenerator(eventBus);
         CausalExplanationGenerator causalExplanationGenerator = new CausalExplanationGenerator(eventBus, memory, ucr);
@@ -224,6 +240,15 @@ public class SystemFactory {
         eventBus.subscribe(Events.CognitionStartEvent.class, effortTracker::onCognitionStart);
         eventBus.subscribe(Events.CognitionEndEvent.class, effortTracker::onCognitionEnd);
         eventBus.subscribe(Events.SchemaOptimizedEvent.class, explanationGenerator::onEvent);
+        
+        // Subscribe to problem reports from the health monitor
+        eventBus.subscribe(Events.NewThoughtCreatedEvent.class, event -> {
+            if (event.thought().metadata().type() == com.senars.core.ThoughtType.REPORT && 
+                event.thought().content().symbolic() != null && 
+                event.thought().content().symbolic().contains("health_monitor")) {
+                capabilityExpansion.processSystemicProblem(event.thought());
+            }
+        });
     }
 
     public CognitiveCycle getCognitiveCycle() {

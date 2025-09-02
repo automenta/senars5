@@ -4,6 +4,7 @@ import com.senars.core.Thought;
 import com.senars.core.ThoughtType;
 import com.senars.logic.UnifiedCausalReasoner;
 import com.senars.systems.Governor;
+import com.senars.systems.Rule;
 import com.senars.systems.rules.KeywordBlocklistRule;
 import com.senars.systems.rules.PreventDeprecatedSchemaUseRule;
 import org.slf4j.Logger;
@@ -21,7 +22,7 @@ import java.util.Optional;
 public class GovernanceService implements Governor {
     private static final Logger LOGGER = LoggerFactory.getLogger(GovernanceService.class);
     
-    private final List<Governor> rules = new ArrayList<>();
+    private final List<Rule> rules = new ArrayList<>();
     private final UnifiedCausalReasoner ucr;
     
     public GovernanceService(UnifiedCausalReasoner ucr) {
@@ -45,7 +46,7 @@ public class GovernanceService implements Governor {
         LOGGER.info("Reviewing action plan: {}", actionPlan.id());
         
         // First, check against all registered rules
-        for (Governor rule : rules) {
+        for (Rule rule : rules) {
             Optional<String> vetoReason = rule.check(actionPlan);
             if (vetoReason.isPresent()) {
                 LOGGER.warn("Action plan {} vetoed by rule: {}", actionPlan.id(), vetoReason.get());
@@ -89,7 +90,7 @@ public class GovernanceService implements Governor {
     /**
      * Adds a new rule to the governance system.
      */
-    public void addRule(Governor rule) {
+    public void addRule(Rule rule) {
         this.rules.add(rule);
     }
 }

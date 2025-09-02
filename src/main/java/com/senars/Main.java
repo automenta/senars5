@@ -20,6 +20,10 @@ public class Main {
         SystemFactory factory = new SystemFactory();
         CognitiveCycle cognitiveCycle = factory.getCognitiveCycle();
 
+        // Start the System Health Monitor
+        factory.healthMonitor.startMonitoring();
+        LOGGER.info("System Health Monitor started.");
+
         LOGGER.info("SeNARS Cognitive System Initialized. Starting cognitive cycle.");
 
         long stepCount = 0;
@@ -35,6 +39,9 @@ public class Main {
                 }
             }
         } finally {
+            LOGGER.info("Stopping System Health Monitor...");
+            factory.healthMonitor.stopMonitoring();
+            
             LOGGER.info("Persisting memory state...");
             factory.memory.persist();
             factory.eventBus.shutdown();
