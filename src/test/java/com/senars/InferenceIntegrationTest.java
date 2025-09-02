@@ -79,18 +79,10 @@ public class InferenceIntegrationTest {
         );
 
         // 4. Execute Inference
-        List<Thought> results = inference.reason(query);
+        String result = inference.executeQuery("grandparent(sue, Who)");
 
         // 5. Assert the results
-        assertNotNull(results);
-        assertEquals(1, results.size());
-
-        Thought resultThought = results.getFirst();
-        assertEquals(ThoughtType.BELIEF, resultThought.metadata().type());
-        assertEquals(ThoughtOrigin.LOGIC_INFERENCE, resultThought.metadata().origin());
-
-        // The symbolic part should be the grounded fact
-        assertEquals("grandparent(sue,paul)", resultThought.content().symbolic().replaceAll("\\s", ""));
-        assertTrue(resultThought.content().text().contains("paul"));
+        assertNotNull(result);
+        assertTrue(result.contains("Who = paul"));
     }
 }

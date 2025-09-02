@@ -146,7 +146,6 @@ public class Main {
 
         PromptBuilder promptBuilder = new PromptBuilder();
         StructuredOutputParser outputParser = new StructuredOutputParser();
-        Sessions sessions = new Sessions();
         Explain explain = new Explain(memory);
 
         Cognition cognitiveProcessor = new Langchain4JCognition(
@@ -154,7 +153,6 @@ public class Main {
                 memory,
                 promptBuilder,
                 outputParser,
-                sessions,
                 explain,
                 toolKit
         );
@@ -168,7 +166,6 @@ public class Main {
                 action,
                 memory,
                 governance,
-                sessions,
                 grounding,
                 feedbackQueue,
                 schemaOptimizer,

@@ -29,7 +29,6 @@ public class CognitiveCycle {
     private final Action action;
     private final Memory memory;
     private final Governor governor;
-    private final Sessions sessions;
     private final Grounding grounding;
     private final ActionFeedbackQueue feedbackQueue;
     private final SchemaOptimizer schemaOptimizer;
@@ -45,7 +44,6 @@ public class CognitiveCycle {
             Action action,
             Memory memory,
             Governor governor,
-            Sessions sessions,
             Grounding grounding,
             ActionFeedbackQueue feedbackQueue,
             SchemaOptimizer schemaOptimizer,
@@ -57,7 +55,6 @@ public class CognitiveCycle {
         this.action = Objects.requireNonNull(action);
         this.memory = Objects.requireNonNull(memory);
         this.governor = Objects.requireNonNull(governor);
-        this.sessions = Objects.requireNonNull(sessions);
         this.grounding = Objects.requireNonNull(grounding);
         this.feedbackQueue = Objects.requireNonNull(feedbackQueue);
         this.schemaOptimizer = Objects.requireNonNull(schemaOptimizer);

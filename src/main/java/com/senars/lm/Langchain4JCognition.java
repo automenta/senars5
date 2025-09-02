@@ -5,6 +5,9 @@ import com.senars.core.Genesis;
 import com.senars.core.Thought;
 import com.senars.core.ThoughtOrigin;
 import com.senars.core.ThoughtType;
+import com.senars.core.ThoughtContent;
+import com.senars.core.ThoughtMeta;
+import com.senars.core.ThoughtState;
 import com.senars.cycle.Cognition;
 import com.senars.optimizer.SchemaOptimizer;
 import com.senars.systems.Memory;
@@ -43,10 +46,10 @@ public class Langchain4JCognition implements Cognition {
     private final Memory memory;
     private final PromptBuilder promptBuilder;
     private final StructuredOutputParser outputParser;
-    private final Sessions sessions;
     private final Explain explain;
     private final ToolKit toolKit;
     private final Gson gson = new Gson();
+    private Thought lastActionPlan = null;
 
     /**
      * Constructs a new Langchain4jCognitiveProcessor.
@@ -64,7 +67,6 @@ public class Langchain4JCognition implements Cognition {
             Memory memory,
             PromptBuilder promptBuilder,
             StructuredOutputParser outputParser,
-            Sessions sessions,
             Explain explain,
             ToolKit toolKit
     ) {
@@ -72,7 +74,6 @@ public class Langchain4JCognition implements Cognition {
         this.memory = requireNonNull(memory, "memory cannot be null");
         this.promptBuilder = requireNonNull(promptBuilder, "promptBuilder cannot be null");
         this.outputParser = requireNonNull(outputParser, "outputParser cannot be null");
-        this.sessions = requireNonNull(sessions, "sessions cannot be null");
         this.explain = requireNonNull(explain, "explain cannot be null");
         this.toolKit = requireNonNull(toolKit, "toolKit cannot be null");
     }
@@ -204,6 +205,7 @@ public class Langchain4JCognition implements Cognition {
         );
         ThoughtState state = new ThoughtState(1.0, 1.0, 1.0);
         Thought actionPlan = new Thought(UUID.randomUUID().toString(), content, state, meta);
+        this.lastActionPlan = actionPlan;
         return List.of(actionPlan);
     }
 
@@ -255,7 +257,7 @@ public class Langchain4JCognition implements Cognition {
         Optional<Thought> targetThoughtOpt;
 
         if ("last_action".equals(targetId)) {
-            targetThoughtOpt = sessions.getLastActionPlan();
+            targetThoughtOpt = Optional.ofNullable(this.lastActionPlan);
             if (targetThoughtOpt.isEmpty()) {
                 return List.of(createSimpleReport("No last action has been recorded to explain.", explanationRequest.id()));
             }

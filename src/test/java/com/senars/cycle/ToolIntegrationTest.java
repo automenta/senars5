@@ -8,6 +8,7 @@ import com.senars.core.ThoughtMeta;
 import com.senars.core.ThoughtOrigin;
 import com.senars.core.ThoughtState;
 import com.senars.core.ThoughtType;
+import com.senars.lm.Langchain4JCognition;
 import com.senars.lm.ToolKit;
 import com.senars.tools.LogicalInferenceTool;
 import com.senars.systems.Memory;

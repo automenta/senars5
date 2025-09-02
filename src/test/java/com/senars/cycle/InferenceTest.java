@@ -62,17 +62,13 @@ class InferenceTest {
         // Arrange
         Thought fact = createBelief("father(darth_vader, luke).");
         when(memory.getAllThoughts()).thenReturn(List.of(fact));
-        Thought query = createQueryGoal("father(darth_vader, luke).");
+        String query = "father(darth_vader, luke).";
 
         // Act
-        List<Thought> results = inference.reason(query);
+        String result = inference.executeQuery(query);
 
         // Assert
-        assertEquals(1, results.size());
-        Thought resultThought = results.getFirst();
-        assertEquals(ThoughtType.BELIEF, resultThought.metadata().type());
-        assertEquals("father(darth_vader, luke)", resultThought.content().symbolic());
-        assertTrue(resultThought.content().text().contains("Fact is true"));
+        assertEquals("Fact is true.", result);
     }
 
     @Test
@@ -80,17 +76,13 @@ class InferenceTest {
         // Arrange
         Thought fact = createBelief("father(darth_vader, luke).");
         when(memory.getAllThoughts()).thenReturn(List.of(fact));
-        Thought query = createQueryGoal("father(Who, luke).");
+        String query = "father(Who, luke).";
 
         // Act
-        List<Thought> results = inference.reason(query);
+        String result = inference.executeQuery(query);
 
         // Assert
-        assertEquals(1, results.size());
-        Thought resultThought = results.getFirst();
-        assertEquals(ThoughtType.BELIEF, resultThought.metadata().type());
-        assertEquals("father(darth_vader, luke)", resultThought.content().symbolic());
-        assertEquals("Inferred: Who = darth_vader", resultThought.content().text());
+        assertEquals("Who = darth_vader", result);
     }
 
     @Test
@@ -100,16 +92,13 @@ class InferenceTest {
         Thought fact2 = createBelief("father(darth_vader, leia).");
         Thought rule = createRuleSchema(List.of("sibling(X, Y) :- father(Z, X), father(Z, Y), X \\== Y."));
         when(memory.getAllThoughts()).thenReturn(List.of(fact1, fact2, rule));
-        Thought query = createQueryGoal("sibling(luke, Who).");
+        String query = "sibling(luke, Who).";
 
         // Act
-        List<Thought> results = inference.reason(query);
+        String result = inference.executeQuery(query);
 
         // Assert
-        assertEquals(1, results.size());
-        Thought resultThought = results.getFirst();
-        assertEquals("sibling(luke, leia)", resultThought.content().symbolic());
-        assertEquals("Inferred: Who = leia", resultThought.content().text());
+        assertEquals("Who = leia", result);
     }
 
     @Test
@@ -118,15 +107,14 @@ class InferenceTest {
         Thought fact1 = createBelief("child(luke, darth_vader).");
         Thought fact2 = createBelief("child(leia, darth_vader).");
         when(memory.getAllThoughts()).thenReturn(List.of(fact1, fact2));
-        Thought query = createQueryGoal("child(Who, darth_vader).");
+        String query = "child(Who, darth_vader).";
 
         // Act
-        List<Thought> results = inference.reason(query);
+        String result = inference.executeQuery(query);
 
         // Assert
-        assertEquals(2, results.size());
-        assertTrue(results.stream().anyMatch(t -> t.content().symbolic().equals("child(luke, darth_vader)")));
-        assertTrue(results.stream().anyMatch(t -> t.content().symbolic().equals("child(leia, darth_vader)")));
+        assertTrue(result.contains("Who = luke"));
+        assertTrue(result.contains("Who = leia"));
     }
 
     @Test
@@ -134,13 +122,13 @@ class InferenceTest {
         // Arrange
         Thought fact = createBelief("father(darth_vader, luke).");
         when(memory.getAllThoughts()).thenReturn(List.of(fact));
-        Thought query = createQueryGoal("mother(Who, luke).");
+        String query = "mother(Who, luke).";
 
         // Act
-        List<Thought> results = inference.reason(query);
+        String result = inference.executeQuery(query);
 
         // Assert
-        assertTrue(results.isEmpty());
+        assertEquals("Error: Query yielded no solutions.", result);
     }
 
     @Test

@@ -33,17 +33,13 @@ class Langchain4JCognitionIntegrationTest {
     private Langchain4JCognition cognition;
 
     @Mock
-    private Sessions sessions;
-    @Mock
     private com.senars.xai.Explain explain;
-    @Mock
-    private com.senars.cycle.Inference inference;
 
 
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
-        cognition = new Langchain4JCognition(chatModel, memory, promptBuilder, outputParser, sessions, explain, inference, toolKit);
+        cognition = new Langchain4JCognition(chatModel, memory, promptBuilder, outputParser, explain, toolKit);
     }
 
     @Test

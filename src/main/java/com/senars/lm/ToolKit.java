@@ -25,7 +25,7 @@ public class ToolKit {
 
     public ToolKit(Object... tools) {
         this.tools = Arrays.asList(tools);
-        this.toolExecutor = new ToolExecutor(this.tools);
+        this.toolExecutor = new DefaultToolExecutor(this.tools);
     }
 
     /**
@@ -69,7 +69,7 @@ public class ToolKit {
     public String execute(ToolExecutionRequest toolExecutionRequest) {
         LOGGER.info("Executing tool: {}", toolExecutionRequest.name());
         try {
-            return toolExecutor.execute(toolExecutionRequest);
+            return toolExecutor.execute(toolExecutionRequest, this);
         } catch (Exception e) {
             LOGGER.error("Error executing tool: {}", toolExecutionRequest.name(), e);
             return "Error: " + e.getMessage();

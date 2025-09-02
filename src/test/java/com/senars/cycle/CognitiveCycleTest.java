@@ -37,8 +37,6 @@ class CognitiveCycleTest {
     @Mock
     private Action actionSystem;
     @Mock
-    private Sessions sessions;
-    @Mock
     private Grounding groundingSystem;
     @Mock
     private EventBus eventBus;
@@ -66,7 +64,6 @@ class CognitiveCycleTest {
                 actionSystem,
                 memory,
                 governor,
-                sessions,
                 groundingSystem,
                 feedbackQueue,
                 schemaOptimizer,
