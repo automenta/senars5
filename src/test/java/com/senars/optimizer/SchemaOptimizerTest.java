@@ -60,11 +60,14 @@ class SchemaOptimizerTest {
             allThoughts.add(createBelief("belief" + i, "schema1", 1.0));
         }
 
-        when(memory.getAllThoughts()).thenReturn(allThoughts);
-        when(memory.getThoughtById("schema1")).thenReturn(Optional.of(schema));
-
         // Act
-        List<Thought> goals = schemaOptimizer.run(memory);
+        for (Thought thought : allThoughts) {
+            if (thought.metadata().type() == ThoughtType.BELIEF) {
+                Feedback feedback = new Feedback(thought.state().clarity() > 0.5 ? ActionStatus.SUCCESS : ActionStatus.FAILURE, "test.tool", "test", 2500L, thought);
+                schemaOptimizer.onActionExecuted(new Events.ActionExecutedEvent(feedback));
+            }
+        }
+        List<Thought> goals = schemaOptimizer.run();
 
         // Assert
         assertEquals(1, goals.size(), "Should generate one optimization goal.");
@@ -91,10 +94,8 @@ class SchemaOptimizerTest {
             allThoughts.add(createBelief("belief" + i, "schema1", 0.9));
         }
 
-        when(memory.getAllThoughts()).thenReturn(allThoughts);
-
         // Act
-        List<Thought> goals = schemaOptimizer.run(memory);
+        List<Thought> goals = schemaOptimizer.run();
 
         // Assert
         assertTrue(goals.isEmpty(), "Should not generate a goal for a well-performing schema.");
@@ -113,10 +114,8 @@ class SchemaOptimizerTest {
             allThoughts.add(createBelief("belief" + i, "schema1", 0.1));
         }
 
-        when(memory.getAllThoughts()).thenReturn(allThoughts);
-
         // Act
-        List<Thought> goals = schemaOptimizer.run(memory);
+        List<Thought> goals = schemaOptimizer.run();
 
         // Assert
         assertTrue(goals.isEmpty(), "Should not generate a goal for a schema used too few times.");

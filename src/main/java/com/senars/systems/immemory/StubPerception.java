@@ -19,12 +19,9 @@ public class StubPerception implements Perception {
     private static final Logger LOGGER = LoggerFactory.getLogger(StubPerception.class);
 
     @Override
-    public List<Thought> perceive(ActionFeedbackQueue feedbackQueue) {
-        List<Thought> thoughts = new ArrayList<>();
-        Thought feedback;
-        while ((feedback = feedbackQueue.poll()) != null) {
-            thoughts.add(feedback);
-        }
-        return thoughts;
+    public List<Thought> perceive() {
+        // This is a stub and does not perceive anything from the external world.
+        // The feedback queue is now handled directly within the CognitiveCycle.
+        return Collections.emptyList();
     }
 }

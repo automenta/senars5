@@ -2,8 +2,11 @@ package com.senars.systems.immemory;
 
 import com.senars.core.*;
 import com.senars.systems.Memory;
+import com.senars.config.AppConfig;
+import com.senars.db.DatabaseManager;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 
 import java.time.Instant;
 import java.util.Collections;
@@ -11,6 +14,10 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 class InMemoryMemoryTest {
 
@@ -18,7 +25,10 @@ class InMemoryMemoryTest {
 
     @BeforeEach
     void setUp() {
-        memory = new InMemoryMemory();
+        AppConfig mockConfig = mock(AppConfig.class);
+        // Use a real DatabaseManager with an in-memory DB for this test
+        DatabaseManager dbManager = new DatabaseManager(null); // Passing null for in-memory
+        memory = new InMemoryMemory(mockConfig, dbManager);
     }
 
     private Thought createTestThoughtWithEmbedding(String id, String text, List<Double> embedding, List<String> parentIds) {

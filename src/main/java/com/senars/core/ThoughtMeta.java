@@ -1,5 +1,6 @@
 package com.senars.core;
 
+import java.io.Serializable;
 import java.time.Instant;
 import java.util.List;
 
@@ -16,5 +17,5 @@ public record ThoughtMeta(
         ThoughtOrigin origin,
         List<String> trace,
         Instant timestamp
-) {
+) implements Serializable {
 }

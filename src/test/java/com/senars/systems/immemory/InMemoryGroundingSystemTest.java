@@ -46,26 +46,26 @@ class InMemoryGroundingSystemTest {
         );
     }
 
-    private Thought createFeedbackReport(List<String> trace, double success) {
-        Feedback feedback = new Feedback(success, "test feedback");
-        return new Thought(
-                "feedback-report",
-                new ThoughtContent("report", null, null, null, null, feedback, null),
+    private Feedback createFeedback(List<String> trace, ActionStatus status) {
+        Thought actionPlan = new Thought(
+                "action-1",
+                new ThoughtContent("text", null, null, null, null, null, null),
                 new ThoughtState(1.0, 1.0, 1.0),
-                new ThoughtMeta(ThoughtType.REPORT, ThoughtOrigin.SYSTEM, trace, Instant.now())
+                new ThoughtMeta(ThoughtType.ACTION_PLAN, ThoughtOrigin.LLM_INFERENCE, trace, Instant.now())
         );
+        return new Feedback(status, "test.tool", "test observation", 100L, actionPlan);
     }
 
     @Test
     void processFeedback_withPositiveFeedback_increasesClarity() {
         // Arrange
         Thought thought1 = createTestThought("thought1", 0.5);
-        Thought feedbackReport = createFeedbackReport(List.of("thought1"), 1.0); // 1.0 is success
+        Feedback feedback = createFeedback(List.of(thought1.id()), ActionStatus.SUCCESS);
 
         when(memory.getThoughtById("thought1")).thenReturn(Optional.of(thought1));
 
         // Act
-        grounding.processFeedback(feedbackReport);
+        grounding.processFeedback(feedback);
 
         // Assert
         verify(memory).saveThought(argThat(thought -> thought.id().equals("thought1") && thought.state().clarity() > 0.5));
@@ -75,60 +75,36 @@ class InMemoryGroundingSystemTest {
     void processFeedback_withNegativeFeedback_decreasesClarity() {
         // Arrange
         Thought thought1 = createTestThought("thought1", 0.5);
-        Thought feedbackReport = createFeedbackReport(List.of("thought1"), 0.0); // 0.0 is failure
+        Feedback feedback = createFeedback(List.of("thought1"), ActionStatus.FAILURE);
 
         when(memory.getThoughtById("thought1")).thenReturn(Optional.of(thought1));
 
         // Act
-        grounding.processFeedback(feedbackReport);
+        grounding.processFeedback(feedback);
 
         // Assert
         verify(memory).saveThought(argThat(thought -> thought.id().equals("thought1") && thought.state().clarity() < 0.5));
     }
 
-    @Test
-    void processFeedback_withNeutralFeedback_doesNotChangeClarity() {
-        // Arrange
-        Thought thought1 = createTestThought("thought1", 0.5);
-        Thought feedbackReport = createFeedbackReport(List.of("thought1"), 0.5); // 0.5 is neutral
-
-        when(memory.getThoughtById("thought1")).thenReturn(Optional.of(thought1));
-
-        // Act
-        grounding.processFeedback(feedbackReport);
-
-        // Assert
-        verify(memory, never()).saveThought(any());
-    }
 
     @Test
     void processFeedback_withEmptyTrace_doesNothing() {
         // Arrange
-        Thought feedbackReport = createFeedbackReport(Collections.emptyList(), 1.0);
+        Thought thoughtWithEmptyTrace = new Thought(
+                "id",
+                new ThoughtContent("text", null, null, null, null, null, null),
+                new ThoughtState(1.0, 1.0, 1.0),
+                new ThoughtMeta(ThoughtType.BELIEF, ThoughtOrigin.LLM_INFERENCE, Collections.emptyList(), Instant.now())
+        );
+        Feedback feedback = createFeedback(Collections.emptyList(), ActionStatus.SUCCESS);
+
 
         // Act
-        grounding.processFeedback(feedbackReport);
+        grounding.processFeedback(feedback);
 
         // Assert
         verify(memory, never()).getThoughtById(any());
         verify(memory, never()).saveThought(any());
-    }
-
-    @Test
-    void processFeedback_withNullFeedback_doesNothing() {
-        // Arrange
-        Thought feedbackReport = new Thought(
-                "report",
-                new ThoughtContent(null, null, null, null, null, null, null), // Null feedback
-                new ThoughtState(1.0, 1.0, 1.0),
-                new ThoughtMeta(ThoughtType.REPORT, ThoughtOrigin.SYSTEM, List.of("id1"), Instant.now())
-        );
-
-        // Act
-        grounding.processFeedback(feedbackReport);
-
-        // Assert
-        verify(memory, never()).getThoughtById(any());
     }
 
     @Test
@@ -138,8 +114,13 @@ class InMemoryGroundingSystemTest {
         Thought thought1 = createTestThought("thought1", 0.5); // least recent
         Thought thought2 = createTestThought("thought2", 0.5);
         Thought thought3 = createTestThought("thought3", 0.5); // most recent
-        List<String> trace = List.of("thought1", "thought2", "thought3");
-        Thought feedbackReport = createFeedbackReport(trace, 1.0); // Full success
+        Thought actionPlan = new Thought(
+                "action-1",
+                new ThoughtContent("text", null, null, null, null, null, null),
+                new ThoughtState(1.0, 1.0, 1.0),
+                new ThoughtMeta(ThoughtType.ACTION_PLAN, ThoughtOrigin.LLM_INFERENCE, List.of("thought1", "thought2", "thought3"), Instant.now())
+        );
+        Feedback feedback = createFeedback(actionPlan, ActionStatus.SUCCESS);
 
         when(memory.getThoughtById("thought1")).thenReturn(Optional.of(thought1));
         when(memory.getThoughtById("thought2")).thenReturn(Optional.of(thought2));
@@ -148,7 +129,7 @@ class InMemoryGroundingSystemTest {
         ArgumentCaptor<Thought> thoughtCaptor = ArgumentCaptor.forClass(Thought.class);
 
         // Act
-        grounding.processFeedback(feedbackReport);
+        grounding.processFeedback(feedback);
 
         // Assert
         verify(memory, times(3)).saveThought(thoughtCaptor.capture());
@@ -190,11 +171,11 @@ class InMemoryGroundingSystemTest {
 
         // Act for success
         when(memory.getThoughtById("success_thought")).thenReturn(Optional.of(successThought));
-        grounding.processFeedback(createFeedbackReport(List.of("success_thought"), 1.0));
+        grounding.processFeedback(createFeedback(List.of(successThought.id()), ActionStatus.SUCCESS));
 
         // Act for failure
         when(memory.getThoughtById("failure_thought")).thenReturn(Optional.of(failureThought));
-        grounding.processFeedback(createFeedbackReport(List.of("failure_thought"), 0.0));
+        grounding.processFeedback(createFeedback(List.of(failureThought.id()), ActionStatus.FAILURE));
 
         // Assert
         verify(memory, times(2)).saveThought(thoughtCaptor.capture());

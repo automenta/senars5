@@ -109,7 +109,7 @@ class Langchain4jCognitiveProcessorTest {
         assertNotNull(result);
         assertEquals(List.of(mockResultThought), result);
         verify(mockMemory).retrieveSimilar(embedding, 1, com.senars.core.ThoughtType.SCHEMA);
-        verify(mockPromptBuilder).build(eq(mockSchemaThought), eq(mockFocusThought), anyList());
+        verify(mockPromptBuilder).build(eq(mockSchemaThought), eq(mockFocusThought), anyList(), anyList());
     }
 
     @Test
@@ -133,7 +133,7 @@ class Langchain4jCognitiveProcessorTest {
         assertNotNull(result);
         assertEquals(List.of(mockResultThought), result);
         verify(mockMemory).retrieveSimilar(embedding, 1, com.senars.core.ThoughtType.SCHEMA);
-        verify(mockPromptBuilder).build(isNull(), eq(mockFocusThought), anyList());
+        verify(mockPromptBuilder).build(isNull(), eq(mockFocusThought), anyList(), anyList());
     }
 
 
@@ -181,7 +181,7 @@ class Langchain4jCognitiveProcessorTest {
         // Verify that the collaborators were called in the correct order with the correct parameters
         verify(mockMemory).getTrace(focusThoughtId);
         verify(mockMemory).retrieveSimilar(focusThoughtEmbedding, 5);
-        verify(mockPromptBuilder).build(isNull(), eq(mockFocusThought), anyList());
+        verify(mockPromptBuilder).build(isNull(), eq(mockFocusThought), anyList(), anyList());
         verify(mockChatModel).generate(ArgumentMatchers.<UserMessage>any());
         verify(mockOutputParser).parse(expectedResponseText);
     }

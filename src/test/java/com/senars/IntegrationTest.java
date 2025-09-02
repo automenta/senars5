@@ -6,8 +6,10 @@ import com.senars.llm.Langchain4JCognition;
 import com.senars.llm.PromptBuilder;
 import com.senars.llm.StructuredOutputParser;
 import com.senars.systems.Memory;
-import com.senars.systems.immemory.InMemoryMemory;
 import com.senars.cycle.Inference;
+import com.senars.db.DatabaseManager;
+import com.senars.llm.ToolKit;
+import com.senars.systems.immemory.InMemoryMemory;
 import com.senars.xai.Explain;
 import dev.langchain4j.model.chat.ChatLanguageModel;
 import dev.langchain4j.model.ollama.OllamaChatModel;
@@ -45,9 +47,11 @@ public class IntegrationTest {
                 .build();
 
         // 3. Set up real dependencies
-        Memory memory = new InMemoryMemory();
+        DatabaseManager dbManager = new DatabaseManager(java.nio.file.Path.of("./target/test-db"));
+        Memory memory = new InMemoryMemory(config, dbManager);
         PromptBuilder promptBuilder = new PromptBuilder();
         StructuredOutputParser outputParser = new StructuredOutputParser();
+        ToolKit toolKit = new ToolKit();
 
         // 4. Instantiate the real processor
         Sessions sessions = new Sessions();
@@ -60,7 +64,8 @@ public class IntegrationTest {
                 outputParser,
                 sessions,
                 explain,
-                inference
+                inference,
+                toolKit
         );
     }
 

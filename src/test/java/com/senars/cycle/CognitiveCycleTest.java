@@ -173,24 +173,13 @@ class CognitiveCycleTest {
                 new ThoughtState(1.0, 1.0, 1.0),
                 new ThoughtMeta(ThoughtType.ACTION_PLAN, ThoughtOrigin.LLM_INFERENCE, List.of("goal-1"), Instant.now())
         );
-        Thought feedbackReport = new Thought(
-                "feedback-1",
-                new ThoughtContent("Good job", null, null, null, null, new Feedback(0.9, "User feedback"), null),
-                new ThoughtState(1.0, 1.0, 1.0),
-                new ThoughtMeta(ThoughtType.REPORT, ThoughtOrigin.USER, Collections.emptyList(), Instant.now())
-        );
+        Feedback feedback = new Feedback(ActionStatus.SUCCESS, "test.tool", "Good job", 100L, actionPlan);
 
-        when(perceptionSystem.perceive()).thenReturn(List.of(feedbackReport));
-        when(sessions.getLastActionPlan()).thenReturn(Optional.of(actionPlan));
+        when(feedbackQueue.poll()).thenReturn(feedback);
 
         cognitiveCycle.step();
 
-        verify(sessions).getLastActionPlan();
-        verify(groundingSystem).processFeedback(argThat(report ->
-                report.metadata().trace().equals(actionPlan.metadata().trace()) &&
-                        report.content().feedback().success() == 0.9
-        ));
-        verify(sessions).clearLastActionPlan();
+        verify(groundingSystem).processFeedback(feedback);
         // Ensure feedback is not added to the attention funnel
         // We can check if the funnel is empty or check its size before and after.
         // For this test, we can assume if groundingSystem was called, it wasn't funneled.

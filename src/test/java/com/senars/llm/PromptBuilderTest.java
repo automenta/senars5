@@ -31,10 +31,12 @@ class PromptBuilderTest {
         );
 
         // Act
-        String prompt = promptBuilder.build(null, focusThought, Collections.emptyList());
+        String prompt = promptBuilder.build(null, focusThought, Collections.emptyList(), Collections.emptyList());
 
         // Assert
-        String expectedPrompt = "Based on the following thought, what should be the next step? Thought: This is a test thought.";
+        String expectedPrompt = "You are a helpful reasoning engine. Your goal is to decide the next best step.\n\n" +
+                "The current focus is a BELIEF with the content: 'This is a test thought.'.\n" +
+                "What is the next logical step or action?";
         assertEquals(expectedPrompt, prompt);
     }
 
@@ -71,10 +73,15 @@ class PromptBuilderTest {
         );
 
         // Act
-        String prompt = promptBuilder.build(schema, focusThought, context);
+        String prompt = promptBuilder.build(schema, focusThought, context, Collections.emptyList());
 
         // Assert
-        String expectedPrompt = "Analyze the following. Main subject: The topic is AI.. Supporting data: - AI is advancing quickly.\n- There are many new models.\n.";
+        String expectedPrompt = "Analyze the following. Main subject: {{focus}}. Supporting data: {{context}}.\n\n" +
+                "Here is some context from previous thoughts:\n" +
+                "- [BELIEF] AI is advancing quickly.\n" +
+                "- [BELIEF] There are many new models.\n\n" +
+                "The current focus is a GOAL with the content: 'The topic is AI.'.\n" +
+                "What is the next logical step or action?";
         assertEquals(expectedPrompt, prompt);
     }
 }

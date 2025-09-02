@@ -3,7 +3,8 @@ package com.senars.systems.immemory;
 import com.senars.core.Thought;
 import com.senars.core.ThoughtType;
 import com.senars.cycle.Action;
-import com.senars.cycle.ActionFeedbackQueue;
+import com.senars.core.ActionStatus;
+import com.senars.core.Feedback;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -16,17 +17,19 @@ public class ConsoleAction implements Action {
     private static final Logger LOGGER = LoggerFactory.getLogger(ConsoleAction.class);
 
     @Override
-    public void executePlan(Thought actionPlan, ActionFeedbackQueue feedbackQueue) {
+    public Feedback executePlan(Thought actionPlan) {
+        long startTime = System.currentTimeMillis();
+
         if (actionPlan == null || actionPlan.metadata().type() != ThoughtType.ACTION_PLAN) {
             LOGGER.warn("Attempted to execute a thought that was not an ACTION_PLAN. Thought ID: {}", actionPlan != null ? actionPlan.id() : "null");
-            return;
+            return new Feedback(ActionStatus.FAILURE, "internal", "Invalid action plan thought", 0, actionPlan);
         }
 
         String planText = actionPlan.content().text();
 
         System.out.println(); // Add a blank line for readability
         System.out.println("========================================");
-        System.out.println("🤖 EXECUTING ACTION PLAN");
+        System.out.println("🤖 CONSOLE ACTION");
         System.out.println("----------------------------------------");
         if (planText == null || planText.isBlank()) {
             System.out.println("(Action plan has no textual content)");
@@ -37,7 +40,10 @@ public class ConsoleAction implements Action {
         System.out.println("========================================");
         System.out.println();
 
-        // Prompt the user for feedback. The perception system will be responsible for reading this input in a subsequent cycle.
-        System.out.print("> Please provide feedback for this action (e.g., 'feedback: 0.9' for success, 'feedback: 0.2' for failure): ");
+        // In this simple console action, we assume success and provide a default observation.
+        // A more sophisticated implementation would interact with the user to get feedback.
+        String observation = "Console action executed. User has been notified.";
+        long executionTime = System.currentTimeMillis() - startTime;
+        return new Feedback(ActionStatus.SUCCESS, "console.notify", observation, executionTime, actionPlan);
     }
 }
