@@ -1,8 +1,5 @@
 package com.senars.optimizer;
 
-import java.util.ArrayList;
-import java.util.List;
-
 /**
  * Tracks performance metrics for a schema.
  * This class is not thread-safe and should be synchronized externally if needed.

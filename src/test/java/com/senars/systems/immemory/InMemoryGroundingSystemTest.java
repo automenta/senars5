@@ -15,7 +15,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -55,7 +55,7 @@ class InMemoryGroundingSystemTest {
                 "action-1",
                 new ThoughtContent("action text", null, null, null, null, null, null),
                 new ThoughtState(1.0, 1.0, 1.0),
-                new ThoughtMeta(ThoughtType.ACTION_PLAN, ThoughtOrigin.LLM_INFERENCE, List.of(goal.id(), schema.id()), Instant.now())
+                new ThoughtMeta(ThoughtType.ACTION, ThoughtOrigin.LLM_INFERENCE, List.of(goal.id(), schema.id()), Instant.now())
         );
         Feedback feedback = createFeedback(actionPlan);
 

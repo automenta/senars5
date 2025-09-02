@@ -102,13 +102,12 @@ public class SalienceCalculator {
             } else if (ENRICH_KNOWLEDGE_DRIVE_ID.equals(drive.id())) {
                 // This drive adds a bonus to thoughts that have text but are missing an embedding.
                 boolean needsEmbedding = thought.content().text() != null &&
-                                         !thought.content().text().isEmpty() &&
-                                         (thought.content().embedding() == null || thought.content().embedding().isEmpty());
+                        !thought.content().text().isEmpty() &&
+                        (thought.content().embedding() == null || thought.content().embedding().isEmpty());
                 if (needsEmbedding) {
                     totalDriveBonus += ENRICHMENT_BONUS;
                 }
-            }
-            else {
+            } else {
                 // For all other drives, the bonus is based on semantic similarity.
                 List<Double> thoughtEmbedding = thought.content().embedding();
                 List<Double> driveEmbedding = drive.content().embedding();

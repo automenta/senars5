@@ -41,7 +41,7 @@ class ExplainTest {
     @Test
     void testGetTrace_Success() {
         Thought thought1 = createTestThought("id1", "Goal: A", ThoughtType.GOAL, Collections.emptyList());
-        Thought thought2 = createTestThought("id2", "Action: B", ThoughtType.ACTION_PLAN, List.of("id1"));
+        Thought thought2 = createTestThought("id2", "Action: B", ThoughtType.ACTION, List.of("id1"));
 
         when(memory.getThoughtById("id1")).thenReturn(Optional.of(thought1));
 
@@ -63,7 +63,7 @@ class ExplainTest {
     @Test
     void testFormatTrace_Success() {
         Thought thought1 = createTestThought("id1", "This is a goal.", ThoughtType.GOAL, Collections.emptyList());
-        Thought thought2 = createTestThought("id2", "This is an action.", ThoughtType.ACTION_PLAN, List.of("id1"));
+        Thought thought2 = createTestThought("id2", "This is an action.", ThoughtType.ACTION, List.of("id1"));
 
         String formatted = explain.formatTrace(List.of(thought1), thought2);
 

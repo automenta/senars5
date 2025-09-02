@@ -1,15 +1,14 @@
-package com.senars.llm;
+package com.senars.lm;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.senars.config.AppConfig;
 import com.senars.core.*;
+import com.senars.cycle.Inference;
 import com.senars.db.DatabaseManager;
 import com.senars.systems.Memory;
 import com.senars.systems.immemory.InMemoryMemory;
-import com.senars.core.Sessions;
-import com.senars.cycle.Inference;
 import com.senars.xai.Explain;
 import dev.langchain4j.data.message.AiMessage;
 import dev.langchain4j.model.chat.ChatLanguageModel;
@@ -18,14 +17,12 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
-import org.mockito.ArgumentCaptor;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Path;
 import java.time.Instant;
 import java.util.List;
-import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -34,14 +31,13 @@ import static org.mockito.Mockito.when;
 
 public class LLMPlanningIntegrationTest {
 
+    private final ObjectMapper objectMapper = new ObjectMapper().registerModule(new JavaTimeModule());
+    @TempDir
+    Path tempDir;
     private Memory memory;
     private ChatLanguageModel chatModel;
     private Langchain4JCognition cognition;
     private DatabaseManager dbManager;
-    private final ObjectMapper objectMapper = new ObjectMapper().registerModule(new JavaTimeModule());
-
-    @TempDir
-    Path tempDir;
 
     @BeforeEach
     void setUp() throws IOException {
@@ -74,7 +70,8 @@ public class LLMPlanningIntegrationTest {
     private void loadSchema(String schemaName) throws IOException {
         try (InputStream schemaStream = getClass().getClassLoader().getResourceAsStream(schemaName)) {
             assertNotNull(schemaStream, schemaName + " not found in resources");
-            List<Thought> schemas = objectMapper.readValue(schemaStream, new TypeReference<List<Thought>>() {});
+            List<Thought> schemas = objectMapper.readValue(schemaStream, new TypeReference<>() {
+            });
             for (Thought schema : schemas) {
                 memory.saveThought(schema);
             }
@@ -87,7 +84,7 @@ public class LLMPlanningIntegrationTest {
     }
 
     @Test
-    void testGoalDecompositionIntoActionPlans() throws IOException {
+    void testGoalDecompositionIntoActionPlans() {
         // 1. Define the high-level GOAL
         Thought goal = new Thought(
                 "goal-123",
@@ -104,19 +101,19 @@ public class LLMPlanningIntegrationTest {
                     "id": "action-1",
                     "content": { "text": "Boil water." },
                     "state": { "clarity": 1.0, "salience": 100.0, "activation": 1.0 },
-                    "metadata": { "type": "ACTION_PLAN", "origin": "LLM_INFERENCE", "trace": ["goal-123"] }
+                    "metadata": { "type": "ACTION", "origin": "LLM_INFERENCE", "trace": ["goal-123"] }
                   },
                   {
                     "id": "action-2",
                     "content": { "text": "Get a cup and a tea bag." },
                     "state": { "clarity": 1.0, "salience": 100.0, "activation": 1.0 },
-                    "metadata": { "type": "ACTION_PLAN", "origin": "LLM_INFERENCE", "trace": ["goal-123"] }
+                    "metadata": { "type": "ACTION", "origin": "LLM_INFERENCE", "trace": ["goal-123"] }
                   },
                   {
                     "id": "action-3",
                     "content": { "text": "Pour water into the cup with the tea bag." },
                     "state": { "clarity": 1.0, "salience": 100.0, "activation": 1.0 },
-                    "metadata": { "type": "ACTION_PLAN", "origin": "LLM_INFERENCE", "trace": ["goal-123"] }
+                    "metadata": { "type": "ACTION", "origin": "LLM_INFERENCE", "trace": ["goal-123"] }
                   }
                 ]""";
 
@@ -146,8 +143,8 @@ public class LLMPlanningIntegrationTest {
         assertEquals(3, finalResult.size(), "Should produce three action plan steps.");
 
         // Check the type of each thought
-        assertTrue(finalResult.stream().allMatch(t -> t.metadata().type() == ThoughtType.ACTION_PLAN),
-                "All resulting thoughts should be of type ACTION_PLAN.");
+        assertTrue(finalResult.stream().allMatch(t -> t.metadata().type() == ThoughtType.ACTION),
+                "All resulting thoughts should be of type ACTION.");
 
         // Check the content of each thought
         assertEquals("Boil water.", finalResult.get(0).content().text());
@@ -155,6 +152,6 @@ public class LLMPlanningIntegrationTest {
         assertEquals("Pour water into the cup with the tea bag.", finalResult.get(2).content().text());
 
         // Check that the trace is correct
-        assertEquals("goal-123", finalResult.get(0).metadata().trace().get(0));
+        assertEquals("goal-123", finalResult.get(0).metadata().trace().getFirst());
     }
 }

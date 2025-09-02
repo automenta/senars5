@@ -5,14 +5,16 @@ import com.senars.core.*;
 import com.senars.db.DatabaseManager;
 import com.senars.effort.EffortPredictor;
 import com.senars.effort.LinearTextEffortModel;
-import com.senars.systems.*;
+import com.senars.systems.GraphDB;
+import com.senars.systems.Memory;
+import com.senars.systems.ScoredThought;
+import com.senars.systems.VectorStore;
 import com.senars.systems.graphdb.MapDBGraphStore;
 import com.senars.systems.vectorstore.DefaultVectorStore;
 import com.senars.systems.vectorstore.ScoredId;
 
 import java.util.Collections;
 import java.util.List;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;

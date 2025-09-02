@@ -8,11 +8,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Scanner;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -104,7 +100,7 @@ public class ConsolePerception implements PerceptionChannel {
         }
 
         ThoughtContent content = new ThoughtContent(targetId, null, null, null, null, null, null);
-        ThoughtMeta metadata = new ThoughtMeta(ThoughtType.EXPLANATION_REQUEST, ThoughtOrigin.USER, Collections.emptyList(), java.time.Instant.now());
+        ThoughtMeta metadata = new ThoughtMeta(ThoughtType.EXPLAIN, ThoughtOrigin.USER, Collections.emptyList(), java.time.Instant.now());
         ThoughtState state = new ThoughtState(1.0, 100.0, 1.0); // High salience to ensure it's processed
         return new Thought(UUID.randomUUID().toString(), content, state, metadata);
     }

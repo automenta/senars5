@@ -1,11 +1,11 @@
 package com.senars;
 
+import com.senars.config.AppConfig;
 import com.senars.core.*;
 import com.senars.cycle.Inference;
+import com.senars.db.DatabaseManager;
 import com.senars.systems.Memory;
 import com.senars.systems.immemory.InMemoryMemory;
-import com.senars.config.AppConfig;
-import com.senars.db.DatabaseManager;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -20,12 +20,11 @@ import static org.junit.jupiter.api.Assertions.*;
 
 public class InferenceIntegrationTest {
 
+    @TempDir
+    Path tempDir;
     private Memory memory;
     private Inference inference;
     private DatabaseManager dbManager;
-
-    @TempDir
-    Path tempDir;
 
     @BeforeEach
     void setUp() {
@@ -86,12 +85,12 @@ public class InferenceIntegrationTest {
         assertNotNull(results);
         assertEquals(1, results.size());
 
-        Thought resultThought = results.get(0);
+        Thought resultThought = results.getFirst();
         assertEquals(ThoughtType.BELIEF, resultThought.metadata().type());
         assertEquals(ThoughtOrigin.LOGIC_INFERENCE, resultThought.metadata().origin());
 
         // The symbolic part should be the grounded fact
-        assertEquals("grandparent(sue,paul)", resultThought.content().symbolic().replaceAll("\\s",""));
+        assertEquals("grandparent(sue,paul)", resultThought.content().symbolic().replaceAll("\\s", ""));
         assertTrue(resultThought.content().text().contains("paul"));
     }
 }

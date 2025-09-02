@@ -1,4 +1,4 @@
-package com.senars.llm;
+package com.senars.lm;
 
 import com.senars.core.*;
 import org.junit.jupiter.api.BeforeEach;
@@ -34,9 +34,11 @@ class PromptBuilderTest {
         String prompt = promptBuilder.build(null, focusThought, Collections.emptyList(), Collections.emptyList());
 
         // Assert
-        String expectedPrompt = "You are a helpful reasoning engine. Your goal is to decide the next best step.\n\n" +
-                "The current focus is a BELIEF with the content: 'This is a test thought.'.\n" +
-                "What is the next logical step or action?";
+        String expectedPrompt = """
+                You are a helpful reasoning engine. Your goal is to decide the next best step.
+                
+                The current focus is a BELIEF with the content: 'This is a test thought.'.
+                What is the next logical step or action?""";
         assertEquals(expectedPrompt, prompt);
     }
 
@@ -76,12 +78,15 @@ class PromptBuilderTest {
         String prompt = promptBuilder.build(schema, focusThought, context, Collections.emptyList());
 
         // Assert
-        String expectedPrompt = "Analyze the following. Main subject: {{focus}}. Supporting data: {{context}}.\n\n" +
-                "Here is some context from previous thoughts:\n" +
-                "- [BELIEF] AI is advancing quickly.\n" +
-                "- [BELIEF] There are many new models.\n\n" +
-                "The current focus is a GOAL with the content: 'The topic is AI.'.\n" +
-                "What is the next logical step or action?";
+        String expectedPrompt = """
+                Analyze the following. Main subject: {{focus}}. Supporting data: {{context}}.
+                
+                Here is some context from previous thoughts:
+                - [BELIEF] AI is advancing quickly.
+                - [BELIEF] There are many new models.
+                
+                The current focus is a GOAL with the content: 'The topic is AI.'.
+                What is the next logical step or action?""";
         assertEquals(expectedPrompt, prompt);
     }
 }

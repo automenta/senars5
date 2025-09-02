@@ -1,12 +1,11 @@
 package com.senars.systems.immemory;
 
-import com.senars.core.*;
-import com.senars.systems.Memory;
 import com.senars.config.AppConfig;
+import com.senars.core.*;
 import com.senars.db.DatabaseManager;
+import com.senars.systems.Memory;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
 
 import java.time.Instant;
 import java.util.Collections;
@@ -14,10 +13,7 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 class InMemoryMemoryTest {
 

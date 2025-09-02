@@ -1,4 +1,4 @@
-package com.senars.llm;
+package com.senars.lm;
 
 import com.senars.core.*;
 import com.senars.systems.Memory;

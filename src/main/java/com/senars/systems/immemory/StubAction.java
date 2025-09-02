@@ -1,9 +1,9 @@
 package com.senars.systems.immemory;
 
-import com.senars.core.Thought;
-import com.senars.cycle.Action;
 import com.senars.core.ActionStatus;
 import com.senars.core.Feedback;
+import com.senars.core.Thought;
+import com.senars.cycle.Action;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

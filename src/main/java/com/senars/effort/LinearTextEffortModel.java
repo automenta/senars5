@@ -13,7 +13,8 @@ import java.io.Serializable;
  * @param coefficient The multiplier for the text length.
  * @param intercept   A constant value added to the result.
  */
-public record LinearTextEffortModel(double coefficient, double intercept) implements IEffortPredictionModel, Serializable {
+public record LinearTextEffortModel(double coefficient,
+                                    double intercept) implements IEffortPredictionModel, Serializable {
 
     /**
      * A default model to use when no specific model is configured.

@@ -28,11 +28,11 @@ public class Sessions {
      * This is typically called by the cognitive cycle after an action plan has been
      * approved and is about to be executed.
      *
-     * @param actionPlan The ACTION_PLAN thought that was executed.
+     * @param actionPlan The ACTION thought that was executed.
      */
     public void setLastActionPlan(Thought actionPlan) {
-        if (actionPlan != null && actionPlan.metadata().type() != ThoughtType.ACTION_PLAN) {
-            throw new IllegalArgumentException("Only ACTION_PLAN thoughts can be set as the last action plan.");
+        if (actionPlan != null && actionPlan.metadata().type() != ThoughtType.ACTION) {
+            throw new IllegalArgumentException("Only ACTION thoughts can be set as the last action plan.");
         }
         this.lastActionPlan.set(actionPlan);
     }

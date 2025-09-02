@@ -17,7 +17,7 @@ public interface Cognition {
      *
      * @param focusThought The Thought to be processed.
      * @return A list of new Thoughts generated as a result of the processing.
-     *         This can include BELIEFs, GOALs, ACTION_PLANs, etc.
+     *         This can include BELIEFs, GOALs, ACTIONs, etc.
      */
     List<Thought> process(Thought focusThought);
 }

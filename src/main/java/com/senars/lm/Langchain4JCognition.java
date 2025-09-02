@@ -1,27 +1,21 @@
-package com.senars.llm;
+package com.senars.lm;
 
+import com.google.gson.Gson;
 import com.senars.core.*;
 import com.senars.cycle.Cognition;
-import com.senars.systems.Memory;
 import com.senars.cycle.Inference;
+import com.senars.optimizer.SchemaOptimizer;
+import com.senars.systems.Memory;
 import com.senars.systems.ScoredThought;
 import com.senars.xai.Explain;
 import dev.langchain4j.agent.tool.ToolExecutionRequest;
 import dev.langchain4j.agent.tool.ToolSpecification;
-import com.google.gson.Gson;
 import dev.langchain4j.data.message.AiMessage;
 import dev.langchain4j.data.message.UserMessage;
 import dev.langchain4j.model.chat.ChatLanguageModel;
 import dev.langchain4j.model.output.Response;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.time.Instant;
-import java.util.*;
-
-import com.senars.optimizer.SchemaOptimizer;
-import dev.langchain4j.data.message.ChatMessage;
-import dev.langchain4j.data.message.SystemMessage;
 
 import java.time.Instant;
 import java.util.*;
@@ -100,7 +94,7 @@ public class Langchain4JCognition implements Cognition {
             return handleSchemaRewriteGoal(focusThought);
         }
 
-        if (focusThought.metadata().type() == ThoughtType.EXPLANATION_REQUEST) {
+        if (focusThought.metadata().type() == ThoughtType.EXPLAIN) {
             return handleExplanationRequest(focusThought);
         }
 
@@ -211,7 +205,7 @@ public class Langchain4JCognition implements Cognition {
         }
 
         ThoughtMeta meta = new ThoughtMeta(
-                ThoughtType.ACTION_PLAN,
+                ThoughtType.ACTION,
                 ThoughtOrigin.LLM_INFERENCE,
                 trace, // Trace back to the focus thought AND the schema used
                 Instant.now()
@@ -356,10 +350,11 @@ public class Langchain4JCognition implements Cognition {
                         scoredSchema.score() * scoredSchema.thought().state().clarity()));
 
         if (bestSchema.isPresent()) {
+            var b = bestSchema.get();
             LOGGER.info("Selected schema {} with combined score of {}.",
-                    bestSchema.get().thought().id(),
-                    bestSchema.get().score() * bestSchema.get().thought().state().clarity());
-            return bestSchema.get().thought();
+                    b.thought().id(),
+                    b.score() * b.thought().state().clarity());
+            return b.thought();
         }
 
         return null;

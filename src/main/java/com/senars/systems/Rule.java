@@ -13,7 +13,7 @@ public interface Rule {
     /**
      * Checks if a given action plan violates this rule.
      *
-     * @param actionPlan The ACTION_PLAN Thought to check.
+     * @param actionPlan The ACTION Thought to check.
      * @return An Optional containing a reason for the veto if the rule is violated,
      *         or an empty Optional if the plan is compliant.
      */

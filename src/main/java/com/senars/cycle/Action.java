@@ -5,7 +5,7 @@ import com.senars.core.Thought;
 
 /**
  * Interface for the Action System, which is responsible for translating an
- * approved ACTION_PLAN Thought into operations in the external world.
+ * approved ACTION Thought into operations in the external world.
  */
 public interface Action {
 
@@ -17,7 +17,7 @@ public interface Action {
      * are returned in a structured Feedback object for the Grounding system
      * to process.
      *
-     * @param actionPlan The approved ACTION_PLAN Thought to execute.
+     * @param actionPlan The approved ACTION Thought to execute.
      * @return A Feedback object containing the outcome of the action.
      */
     Feedback executePlan(Thought actionPlan);

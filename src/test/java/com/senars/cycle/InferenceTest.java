@@ -13,7 +13,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -68,7 +69,7 @@ class InferenceTest {
 
         // Assert
         assertEquals(1, results.size());
-        Thought resultThought = results.get(0);
+        Thought resultThought = results.getFirst();
         assertEquals(ThoughtType.BELIEF, resultThought.metadata().type());
         assertEquals("father(darth_vader, luke)", resultThought.content().symbolic());
         assertTrue(resultThought.content().text().contains("Fact is true"));
@@ -86,7 +87,7 @@ class InferenceTest {
 
         // Assert
         assertEquals(1, results.size());
-        Thought resultThought = results.get(0);
+        Thought resultThought = results.getFirst();
         assertEquals(ThoughtType.BELIEF, resultThought.metadata().type());
         assertEquals("father(darth_vader, luke)", resultThought.content().symbolic());
         assertEquals("Inferred: Who = darth_vader", resultThought.content().text());
@@ -106,7 +107,7 @@ class InferenceTest {
 
         // Assert
         assertEquals(1, results.size());
-        Thought resultThought = results.get(0);
+        Thought resultThought = results.getFirst();
         assertEquals("sibling(luke, leia)", resultThought.content().symbolic());
         assertEquals("Inferred: Who = leia", resultThought.content().text());
     }

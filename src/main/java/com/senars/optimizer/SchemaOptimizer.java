@@ -8,20 +8,21 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.time.Instant;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.stream.Collectors;
 
 /**
  * Analyzes the performance of schemas and generates goals to optimize them based on execution time.
  */
 public class SchemaOptimizer {
 
+    public static final String REWRITE_SCHEMA_SYMBOLIC = "senars:rewrite_schema";
     private static final Logger LOGGER = LoggerFactory.getLogger(SchemaOptimizer.class);
     private static final int MIN_SAMPLES_THRESHOLD = 10;
     private static final long EXECUTION_TIME_THRESHOLD_MS = 1500;
-    public static final String REWRITE_SCHEMA_SYMBOLIC = "senars:rewrite_schema";
-
     private final Memory memory;
     private final EventBus eventBus;
     private final Map<String, SchemaPerformanceTracker> schemaPerformanceData = new ConcurrentHashMap<>();

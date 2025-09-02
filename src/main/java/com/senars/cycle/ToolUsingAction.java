@@ -3,17 +3,12 @@ package com.senars.cycle;
 import com.senars.core.ActionStatus;
 import com.senars.core.Feedback;
 import com.senars.core.Thought;
-import com.senars.llm.ToolKit;
-import com.senars.core.ActionStatus;
-import com.senars.core.Feedback;
-import com.senars.core.Thought;
-import com.senars.llm.ToolKit;
-import dev.langchain4j.agent.tool.ToolExecutionRequest;
+import com.senars.lm.ToolKit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * An action system that executes tool calls defined in an ACTION_PLAN.
+ * An action system that executes tool calls defined in an ACTION.
  * NOTE: This is a temporary stub implementation to get the system to compile.
  */
 public class ToolUsingAction implements Action {

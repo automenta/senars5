@@ -1,10 +1,10 @@
 package com.senars.systems.immemory;
 
+import com.senars.core.ActionStatus;
+import com.senars.core.Feedback;
 import com.senars.core.Thought;
 import com.senars.core.ThoughtType;
 import com.senars.cycle.Action;
-import com.senars.core.ActionStatus;
-import com.senars.core.Feedback;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -20,8 +20,8 @@ public class ConsoleAction implements Action {
     public Feedback executePlan(Thought actionPlan) {
         long startTime = System.currentTimeMillis();
 
-        if (actionPlan == null || actionPlan.metadata().type() != ThoughtType.ACTION_PLAN) {
-            LOGGER.warn("Attempted to execute a thought that was not an ACTION_PLAN. Thought ID: {}", actionPlan != null ? actionPlan.id() : "null");
+        if (actionPlan == null || actionPlan.metadata().type() != ThoughtType.ACTION) {
+            LOGGER.warn("Attempted to execute a thought that was not an ACTION. Thought ID: {}", actionPlan != null ? actionPlan.id() : "null");
             return new Feedback(ActionStatus.FAILURE, "internal", "Invalid action plan thought", 0, actionPlan);
         }
 
@@ -33,7 +33,7 @@ public class ConsoleAction implements Action {
         System.out.println("----------------------------------------");
         if (planText == null || planText.isBlank()) {
             System.out.println("(Action plan has no textual content)");
-            LOGGER.warn("Executed an ACTION_PLAN with no text content. Thought ID: {}", actionPlan.id());
+            LOGGER.warn("Executed an ACTION with no text content. Thought ID: {}", actionPlan.id());
         } else {
             System.out.println(planText);
         }

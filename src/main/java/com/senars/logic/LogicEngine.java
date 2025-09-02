@@ -1,6 +1,9 @@
 package com.senars.logic;
 
-import alice.tuprolog.*;
+import alice.tuprolog.Prolog;
+import alice.tuprolog.SolveInfo;
+import alice.tuprolog.Theory;
+import alice.tuprolog.Var;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -13,13 +16,12 @@ import java.util.Map;
  */
 public class LogicEngine {
 
-    private final Prolog engine;
+    private final Prolog prolog;
 
     public LogicEngine(String theory) {
-        this.engine = new Prolog();
+        this.prolog = new Prolog();
         try {
-            Theory t = new Theory(theory);
-            engine.setTheory(t);
+            prolog.setTheory(new Theory(theory));
         } catch (Exception e) { // Catching generic Exception to be refined later
             throw new RuntimeException("Invalid Prolog theory", e);
         }
@@ -28,15 +30,15 @@ public class LogicEngine {
     public List<Map<String, String>> solve(String query) {
         List<Map<String, String>> solutions = new ArrayList<>();
         try {
-            SolveInfo info = engine.solve(query);
+            SolveInfo info = prolog.solve(query);
             while (info.isSuccess()) {
                 Map<String, String> solution = new HashMap<>();
                 for (Var var : info.getBindingVars()) {
                     solution.put(var.getName(), var.getTerm().toString());
                 }
                 solutions.add(solution);
-                if (engine.hasOpenAlternatives()) {
-                    info = engine.solveNext();
+                if (prolog.hasOpenAlternatives()) {
+                    info = prolog.solveNext();
                 } else {
                     break;
                 }

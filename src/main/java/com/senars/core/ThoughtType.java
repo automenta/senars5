@@ -4,9 +4,9 @@ public enum ThoughtType {
     BELIEF,
     GOAL,
     SCHEMA,
-    ACTION_PLAN,
+    ACTION,
     REPORT,
     QUESTION,
-    EXPLANATION_REQUEST,
+    EXPLAIN,
     DRIVE
 }

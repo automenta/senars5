@@ -11,7 +11,7 @@ import java.io.Serializable;
  * @param toolName The name of the tool that was executed.
  * @param output The raw string output from the tool.
  * @param executionTimeMs The duration of the tool execution in milliseconds.
- * @param actionPlan The original ACTION_PLAN Thought that was executed. This contains the provenance trace.
+ * @param actionPlan The original ACTION Thought that was executed. This contains the provenance trace.
  */
 public record Feedback(
         ActionStatus status,

@@ -18,11 +18,10 @@ import static org.mockito.Mockito.when;
 class SalienceCalculatorTest {
 
     private static final double DELTA = 1e-9;
+    private static final String REDUCE_UNCERTAINTY_DRIVE_ID = "drive-reduceuncertainty";
     private SalienceCalculator calculator;
     private MotiveHierarchy motiveHierarchy;
     private EffortPredictor mockEffortPredictor;
-    private static final String REDUCE_UNCERTAINTY_DRIVE_ID = "drive-reduceuncertainty";
-
 
     @BeforeEach
     void setUp() {

@@ -2,18 +2,17 @@ package com.senars.cycle;
 
 import com.senars.core.*;
 import com.senars.effort.EffortPredictor;
+import com.senars.events.EventBus;
 import com.senars.motive.MotiveHierarchy;
+import com.senars.optimizer.SchemaOptimizer;
 import com.senars.salience.SalienceCalculator;
 import com.senars.systems.Governor;
 import com.senars.systems.Grounding;
 import com.senars.systems.Memory;
-import com.senars.systems.immemory.InMemoryGovernor;
-import com.senars.systems.immemory.InMemoryMemory;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
-import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.Instant;
@@ -23,9 +22,6 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static org.mockito.Mockito.*;
-
-import com.senars.events.EventBus;
-import com.senars.optimizer.SchemaOptimizer;
 
 @ExtendWith(MockitoExtension.class)
 class CognitiveCycleTest {
@@ -110,18 +106,18 @@ class CognitiveCycleTest {
     @Test
     void step_handlesActionPlanApprovalAndExecution() {
         Thought goal = createTestThought(ThoughtType.GOAL, 1.0);
-        Thought actionPlan = createTestThought(ThoughtType.ACTION_PLAN, 0.9);
+        Thought actionPlan = createTestThought(ThoughtType.ACTION, 0.9);
 
         attentionFunnel.addCandidate(goal);
         when(cognitiveProcessor.process(goal)).thenReturn(List.of(actionPlan));
 
-        cognitiveCycle.step(); // First step processes the GOAL and produces the ACTION_PLAN
+        cognitiveCycle.step(); // First step processes the GOAL and produces the ACTION
 
         // The action plan is saved to memory and added to the funnel
         verify(memory).saveThought(actionPlan);
 
         // Now the action plan should be the most salient thing
-        cognitiveCycle.step(); // Second step should process the ACTION_PLAN
+        cognitiveCycle.step(); // Second step should process the ACTION
 
         verify(governor).reviewPlan(actionPlan);
         verify(actionSystem).executePlan(actionPlan);
@@ -130,15 +126,15 @@ class CognitiveCycleTest {
     @Test
     void step_handlesActionPlanVetoAndCreatesReplanGoal() {
         Thought goal = createTestThought(ThoughtType.GOAL, 1.0);
-        Thought actionPlan = createTestThought(ThoughtType.ACTION_PLAN, 0.9);
+        Thought actionPlan = createTestThought(ThoughtType.ACTION, 0.9);
         String vetoReason = "This is unsafe!";
 
         attentionFunnel.addCandidate(goal);
         when(cognitiveProcessor.process(goal)).thenReturn(List.of(actionPlan));
         when(governor.reviewPlan(actionPlan)).thenReturn(Optional.of(vetoReason));
 
-        cognitiveCycle.step(); // Process GOAL, create ACTION_PLAN
-        cognitiveCycle.step(); // Process ACTION_PLAN, get vetoed
+        cognitiveCycle.step(); // Process GOAL, create ACTION
+        cognitiveCycle.step(); // Process ACTION, get vetoed
 
         verify(governor).reviewPlan(actionPlan);
         verify(actionSystem, never()).executePlan(actionPlan);
@@ -171,7 +167,7 @@ class CognitiveCycleTest {
                 "action-1",
                 new ThoughtContent("Do something", null, null, null, null, null, null),
                 new ThoughtState(1.0, 1.0, 1.0),
-                new ThoughtMeta(ThoughtType.ACTION_PLAN, ThoughtOrigin.LLM_INFERENCE, List.of("goal-1"), Instant.now())
+                new ThoughtMeta(ThoughtType.ACTION, ThoughtOrigin.LLM_INFERENCE, List.of("goal-1"), Instant.now())
         );
         Feedback feedback = new Feedback(ActionStatus.SUCCESS, "test.tool", "Good job", 100L, actionPlan);
 

@@ -1,6 +1,5 @@
-package com.senars.llm;
+package com.senars.lm;
 
-import com.senars.core.Thought;
 import com.google.gson.Gson;
 import com.senars.core.Thought;
 import dev.langchain4j.agent.tool.ToolSpecification;
@@ -61,7 +60,7 @@ public class PromptBuilder {
 
         // 4. Add the Focus Thought
         prompt.append("The current focus is a ").append(focusThought.metadata().type()).append(" with the content: '")
-              .append(focusThought.content().text()).append("'.\n");
+                .append(focusThought.content().text()).append("'.\n");
         prompt.append("What is the next logical step or action?");
 
         return prompt.toString();

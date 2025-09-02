@@ -1,13 +1,13 @@
 package com.senars.cycle;
 
 import com.senars.core.*;
+import com.senars.events.EventBus;
 import com.senars.motive.MotiveHierarchy;
 import com.senars.salience.SalienceCalculator;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
-import com.senars.events.EventBus;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.Instant;

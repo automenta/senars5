@@ -1,12 +1,10 @@
 package com.senars.systems.immemory;
 
 import com.senars.core.Thought;
-import com.senars.cycle.ActionFeedbackQueue;
 import com.senars.cycle.Perception;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 

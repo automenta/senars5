@@ -9,10 +9,7 @@ import dev.langchain4j.store.embedding.RelevanceScore;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.List;
-import java.util.Map;
-import java.util.PriorityQueue;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.ConcurrentMap;
 import java.util.stream.Collectors;
 
@@ -71,7 +68,7 @@ public class MapDBEmbeddingStore implements EmbeddingStore<TextSegment> {
         // Use a min-heap to keep track of the top N most relevant entries.
         PriorityQueue<EmbeddingMatch<TextSegment>> queue = new PriorityQueue<>(
                 maxResults,
-                (a, b) -> Double.compare(a.score(), b.score()) // Min-heap compares scores directly
+                Comparator.comparingDouble(EmbeddingMatch::score) // Min-heap compares scores directly
         );
 
         for (Map.Entry<String, float[]> entry : embeddings.entrySet()) {

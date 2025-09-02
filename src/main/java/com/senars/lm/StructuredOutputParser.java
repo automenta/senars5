@@ -1,4 +1,4 @@
-package com.senars.llm;
+package com.senars.lm;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -40,7 +40,8 @@ public class StructuredOutputParser {
         try {
             // We expect the LLM to return a JSON array of Thought objects.
             // Using TypeReference allows Jackson to correctly deserialize the generic List<Thought>.
-            return objectMapper.readValue(llmResponse, new TypeReference<List<Thought>>() {});
+            return objectMapper.readValue(llmResponse, new TypeReference<>() {
+            });
         } catch (IOException e) {
             LOGGER.warn("Failed to parse LLM response as JSON array. Falling back to simple report. Error: {}", e.getMessage());
             // Fallback for non-JSON or malformed responses

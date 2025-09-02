@@ -1,4 +1,4 @@
-package com.senars.llm;
+package com.senars.lm;
 
 import com.senars.core.Thought;
 import com.senars.core.ThoughtOrigin;
@@ -100,7 +100,7 @@ class StructuredOutputParserTest {
         assertEquals(2, thoughts.size());
 
         // Verify first thought
-        Thought first = thoughts.get(0);
+        Thought first = thoughts.getFirst();
         assertEquals("thought-1", first.id());
         assertEquals("First thought text.", first.content().text());
         assertEquals("symbol-1", first.content().symbolic());

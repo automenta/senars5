@@ -3,7 +3,6 @@ package com.senars.systems;
 import com.senars.core.*;
 import com.senars.db.DatabaseManager;
 import com.senars.systems.graphdb.MapDBGraphStore;
-import com.senars.systems.graphdb.MapDBGraphStore;
 import com.senars.systems.vectorstore.DefaultVectorStore;
 import com.senars.systems.vectorstore.ScoredId;
 import org.junit.jupiter.api.AfterEach;

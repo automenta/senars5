@@ -11,12 +11,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 
 /**
  * The core orchestrator of the SeNARS cognitive architecture.
@@ -25,7 +20,9 @@ import java.util.UUID;
 public class CognitiveCycle {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(CognitiveCycle.class);
-
+    private static final long OPTIMIZER_RUN_INTERVAL = 50;
+    private static final int FOCUS_HISTORY_WINDOW = 10;
+    private static final double FOCUS_HISTORY_REPETITION_THRESHOLD = 0.3; // If 30% of recent thoughts are the same, we might be looping
     private final Perception perception;
     private final Attention attention;
     private final Cognition cognition;
@@ -37,11 +34,8 @@ public class CognitiveCycle {
     private final ActionFeedbackQueue feedbackQueue;
     private final SchemaOptimizer schemaOptimizer;
     private final EventBus eventBus;
-    private long cycleCount = 0;
-    private static final long OPTIMIZER_RUN_INTERVAL = 50;
-    private static final int FOCUS_HISTORY_WINDOW = 10;
-    private static final double FOCUS_HISTORY_REPETITION_THRESHOLD = 0.3; // If 30% of recent thoughts are the same, we might be looping
     private final List<String> focusHistory = new ArrayList<>();
+    private long cycleCount = 0;
 
 
     public CognitiveCycle(
@@ -125,7 +119,7 @@ public class CognitiveCycle {
         memory.saveThought(thought);
         eventBus.publish(new Events.NewThoughtCreatedEvent(thought));
 
-        if (thought.metadata().type() == ThoughtType.ACTION_PLAN) {
+        if (thought.metadata().type() == ThoughtType.ACTION) {
             handleActionPlan(thought);
         } else {
             // Check if this is a report generated from an explanation request
@@ -145,11 +139,11 @@ public class CognitiveCycle {
             Optional<String> vetoReason = governor.reviewPlan(thought);
             if (vetoReason.isPresent()) {
                 String reason = vetoReason.get();
-                LOGGER.warn("ACTION_PLAN vetoed: {}", reason);
+                LOGGER.warn("ACTION vetoed: {}", reason);
                 eventBus.publish(new Events.ActionPlanVetoedEvent(thought, reason));
                 createReplanGoal(thought, reason);
             } else {
-                LOGGER.info("ACTION_PLAN approved. Executing...");
+                LOGGER.info("ACTION approved. Executing...");
                 eventBus.publish(new Events.ActionPlanApprovedEvent(thought));
                 Feedback feedback = action.executePlan(thought);
                 feedbackQueue.add(feedback);
@@ -174,7 +168,7 @@ public class CognitiveCycle {
         }
         // Check if the report traces back to an explanation request
         return memory.getThoughtById(trace.getFirst())
-                .map(originatingThought -> originatingThought.metadata().type() == ThoughtType.EXPLANATION_REQUEST);
+                .map(originatingThought -> originatingThought.metadata().type() == ThoughtType.EXPLAIN);
     }
 
     private void printExplanation(Thought report) {
@@ -233,7 +227,7 @@ public class CognitiveCycle {
         // Add current thought to history and maintain window size
         focusHistory.add(currentFocus.id());
         if (focusHistory.size() > FOCUS_HISTORY_WINDOW) {
-            focusHistory.remove(0);
+            focusHistory.removeFirst();
         }
 
         if (focusHistory.size() < FOCUS_HISTORY_WINDOW) {

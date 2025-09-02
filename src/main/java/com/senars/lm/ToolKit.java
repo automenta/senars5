@@ -1,7 +1,6 @@
-package com.senars.llm;
+package com.senars.lm;
 
 import com.google.gson.Gson;
-import com.senars.tools.*;
 import dev.langchain4j.agent.tool.ToolExecutionRequest;
 import dev.langchain4j.agent.tool.ToolSpecification;
 import dev.langchain4j.agent.tool.ToolSpecifications;
@@ -57,11 +56,4 @@ public class ToolKit {
         }
     }
 
-    /**
-     * Provides access to the tool instances.
-     * @return A list of tool instances.
-     */
-    public List<Object> getTools() {
-        return tools;
-    }
 }

@@ -2,13 +2,13 @@ package com.senars;
 
 import com.senars.config.AppConfig;
 import com.senars.core.*;
-import com.senars.llm.Langchain4JCognition;
-import com.senars.llm.PromptBuilder;
-import com.senars.llm.StructuredOutputParser;
-import com.senars.systems.Memory;
 import com.senars.cycle.Inference;
 import com.senars.db.DatabaseManager;
-import com.senars.llm.ToolKit;
+import com.senars.lm.Langchain4JCognition;
+import com.senars.lm.PromptBuilder;
+import com.senars.lm.StructuredOutputParser;
+import com.senars.lm.ToolKit;
+import com.senars.systems.Memory;
 import com.senars.systems.immemory.InMemoryMemory;
 import com.senars.xai.Explain;
 import dev.langchain4j.model.chat.ChatLanguageModel;

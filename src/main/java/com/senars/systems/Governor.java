@@ -11,10 +11,10 @@ import java.util.Optional;
 public interface Governor {
 
     /**
-     * Reviews an ACTION_PLAN Thought to determine if it complies with the system's
+     * Reviews an ACTION Thought to determine if it complies with the system's
      * safety and ethical guidelines.
      *
-     * @param actionPlan A Thought of type ACTION_PLAN.
+     * @param actionPlan A Thought of type ACTION.
      * @return An Optional containing a reason for the veto if the plan is rejected,
      *         or an empty Optional if the plan is approved.
      */
