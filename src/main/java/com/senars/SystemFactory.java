@@ -116,6 +116,7 @@ public class SystemFactory {
         List<Thought> embeddingSchemas = Genesis.loadSchemasFromFile("embedding-generation-schema.json", embeddingModel);
         List<Thought> optimizationSchemas = Genesis.loadSchemasFromFile("schema_optimizer_schema.json", embeddingModel);
         optimizationSchemas.addAll(Genesis.loadSchemasFromFile("effort_model_optimizer_schema.json", embeddingModel));
+        List<Thought> metaCognitionSchemas = Genesis.loadSchemasFromFile("meta-cognition-schemas.json", embeddingModel);
         Thought logicalActionSchema = Genesis.createLogicalActionSchema(embeddingModel);
         Thought failureRecoverySchema = Genesis.createFailureRecoverySchema(embeddingModel);
 
@@ -125,9 +126,10 @@ public class SystemFactory {
         reasoningSchemas.forEach(memory::saveThought);
         embeddingSchemas.forEach(memory::saveThought);
         optimizationSchemas.forEach(memory::saveThought);
+        metaCognitionSchemas.forEach(memory::saveThought);
         memory.saveThought(logicalActionSchema);
         memory.saveThought(failureRecoverySchema);
-        LOGGER.info("Loaded {} Genesis Drives, {} Beliefs, and {} Schemas into Memory Nexus.", genesisDrives.size(), genesisBeliefs.size(), genesisSchemas.size() + reasoningSchemas.size() + embeddingSchemas.size() + optimizationSchemas.size() + 2);
+        LOGGER.info("Loaded {} Genesis Drives, {} Beliefs, and {} Schemas into Memory Nexus.", genesisDrives.size(), genesisBeliefs.size(), genesisSchemas.size() + reasoningSchemas.size() + embeddingSchemas.size() + optimizationSchemas.size() + metaCognitionSchemas.size() + 2);
 
         // 4. Cognitive Cycle Components
         Inference inference = new Inference(memory, logicEngine);

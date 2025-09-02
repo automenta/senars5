@@ -12,6 +12,8 @@ import com.senars.systems.Memory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.time.Instant;
 import java.util.*;
 
@@ -96,16 +98,48 @@ public class CognitiveCycle {
         } catch (ShutdownException e) {
             throw e; // Propagate shutdown exception to the main loop
         } catch (Exception e) {
-            LOGGER.error("An unexpected error occurred during the cognitive cycle.", e);
-            // In a more robust system, this might trigger a meta-cognitive goal to analyze the failure.
+            LOGGER.error("An unexpected error occurred during the cognitive cycle. Creating a meta-goal to analyze it.", e);
+            handleSystemError(e);
         }
     }
 
+    private void handleSystemError(Exception e) {
+        StringWriter sw = new StringWriter();
+        e.printStackTrace(new PrintWriter(sw));
+        String stackTrace = sw.toString();
+
+        String errorDetails = String.format("Error: %s\nStackTrace (first 500 chars):\n%s", e.getMessage(), stackTrace.substring(0, Math.min(500, stackTrace.length())));
+
+        String goalText = "A critical system error occurred. Analyze the following error details and formulate a recovery plan. " + errorDetails;
+
+        Thought errorGoal = new Thought(
+                UUID.randomUUID().toString(),
+                new ThoughtContent(goalText, "system_error_analysis", null, null, null, null, null),
+                new ThoughtState(1.0, 999.0, 1.0), // Max salience to ensure it's handled next
+                new ThoughtMeta(
+                        ThoughtType.GOAL,
+                        ThoughtOrigin.SYSTEM,
+                        Collections.emptyList(),
+                        Instant.now()
+                )
+        );
+        handleNewThought(errorGoal);
+    }
+
     private void handleNewThought(Thought thought) {
+        processThought(thought);
+        eventBus.publish(new Events.NewThoughtCreatedEvent(thought));
+    }
+
+    /**
+     * The core logic for processing a new thought, without publishing an event.
+     * This method is called by the event handler to prevent recursion.
+     * @param thought The thought to process.
+     */
+    private void processThought(Thought thought) {
         var type = thought.metadata().type();
         LOGGER.info("New thought generated: {} - {}", type, thought.id());
         memory.saveThought(thought);
-        eventBus.publish(new Events.NewThoughtCreatedEvent(thought));
 
         if (type == ThoughtType.ACTION) {
             handleActionPlan(thought);
@@ -160,12 +194,26 @@ public class CognitiveCycle {
     }
 
     private void printExplanation(Thought report) {
+        String border = "=======================================================================";
+        String header = "🤖 S E N A R S :   E X P L A N A T I O N";
         System.out.println();
-        System.out.println("========================================");
-        System.out.println("🤖 EXPLANATION");
-        System.out.println("----------------------------------------");
-        System.out.println(report.content().text());
-        System.out.println("========================================");
+        System.out.println(border);
+        System.out.println(header);
+        System.out.println(border);
+        System.out.println();
+        // Simple word wrap for the explanation text
+        String[] words = report.content().text().split(" ");
+        StringBuilder line = new StringBuilder();
+        for (String word : words) {
+            if (line.length() + word.length() + 1 > border.length()) {
+                System.out.println(line);
+                line = new StringBuilder();
+            }
+            line.append(word).append(" ");
+        }
+        System.out.println(line); // Print the last line
+        System.out.println();
+        System.out.println(border);
         System.out.println();
         System.out.print("> "); // Re-print the prompt
     }
@@ -221,11 +269,13 @@ public class CognitiveCycle {
     /**
      * Handles NewThoughtCreatedEvent from the event bus.
      * This is used for thoughts created outside the main cognition flow, e.g., by the Grounding system.
+     * This method calls processThought directly to avoid a recursive event loop.
      * @param event The event containing the new thought.
      */
     public void onNewThoughtCreated(Events.NewThoughtCreatedEvent event) {
         LOGGER.debug("Received NewThoughtCreatedEvent for thought {}", event.thought().id());
-        handleNewThought(event.thought());
+        // Call processThought directly to avoid re-publishing the event and causing an infinite loop.
+        processThought(event.thought());
     }
 
     private Optional<Thought> detectAndHandleCognitiveLoop(Thought currentFocus) {
@@ -247,7 +297,7 @@ public class CognitiveCycle {
             LOGGER.warn("Cognitive loop/stall detected! Repetition rate: {}%. Intervening.", String.format("%.0f", repetitionRate * 100));
 
             // Create a meta-cognition goal to break the loop
-            Thought metaGoal = createMetaCognitionGoal();
+            Thought metaGoal = createMetaCognitionGoal(focusHistory);
             handleNewThought(metaGoal); // Save and add to attention
             LOGGER.info("Overriding focus to meta-cognition goal {}", metaGoal.id());
             return Optional.of(metaGoal); // Override the current focus thought
@@ -256,9 +306,14 @@ public class CognitiveCycle {
         return Optional.empty();
     }
 
-    private Thought createMetaCognitionGoal() {
-        String goalText = "A schema for analyzing the current cognitive state when stalled or in a loop and formulating a new plan.";
-        ThoughtContent content = new ThoughtContent(goalText, null, null, null, null, null, null);
+    private Thought createMetaCognitionGoal(List<String> focusHistory) {
+        String history = String.join(", ", focusHistory);
+        String goalText = String.format(
+                "The system seems to be in a cognitive loop or stall. Analyze the recent focus history and formulate a new plan to break the loop. History: [%s]",
+                history
+        );
+
+        ThoughtContent content = new ThoughtContent(goalText, "system_unstuck", null, null, null, null, null);
         ThoughtMeta meta = new ThoughtMeta(
                 ThoughtType.GOAL,
                 ThoughtOrigin.SYSTEM,
