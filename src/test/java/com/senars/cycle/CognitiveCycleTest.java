@@ -55,7 +55,7 @@ class CognitiveCycleTest {
         var motiveHierarchy = new MotiveHierarchy();
         var effortPredictor = new EffortPredictor(memory); // Pass the memory nexus mock
         var salienceCalculator = new SalienceCalculator(effortPredictor);
-        attentionFunnel = new SalienceBasedAttention(salienceCalculator, motiveHierarchy, eventBus);
+        attentionFunnel = new SalienceAttention(salienceCalculator, motiveHierarchy, eventBus);
 
         cognitiveCycle = new CognitiveCycle(
                 perceptionSystem,

@@ -134,7 +134,7 @@ public class Main {
 
         EffortPredictor effortPredictor = new EffortPredictor(memory);
         SalienceCalculator salienceCalculator = new SalienceCalculator(effortPredictor);
-        Attention attention = new SalienceBasedAttention(salienceCalculator, motives, eventBus);
+        Attention attention = new SalienceAttention(salienceCalculator, motives, eventBus);
         attention.addCandidate(researchGoal); // Ensure the new goal is considered on the first cycle
 
         // 5. LLM-based Cognitive Processor

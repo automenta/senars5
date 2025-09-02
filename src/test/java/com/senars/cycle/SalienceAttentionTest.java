@@ -18,7 +18,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
-class SalienceBasedSalienceAttentionTest {
+class SalienceAttentionTest {
 
     @Mock
     private SalienceCalculator salienceCalculator;
@@ -29,11 +29,11 @@ class SalienceBasedSalienceAttentionTest {
     @Mock
     private EventBus eventBus;
 
-    private SalienceBasedAttention attentionFunnel;
+    private SalienceAttention attentionFunnel;
 
     @BeforeEach
     void setUp() {
-        attentionFunnel = new SalienceBasedAttention(salienceCalculator, motiveHierarchy, eventBus);
+        attentionFunnel = new SalienceAttention(salienceCalculator, motiveHierarchy, eventBus);
     }
 
     private Thought createTestThought(String id, double activation) {
