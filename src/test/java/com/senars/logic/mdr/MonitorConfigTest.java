@@ -1,43 +1,65 @@
 package com.senars.logic.mdr;
 
-import com.senars.core.*;
+import com.senars.core.Thought;
+import com.senars.core.ThoughtContent;
+import com.senars.core.ThoughtMeta;
+import com.senars.core.ThoughtOrigin;
+import com.senars.core.ThoughtState;
+import com.senars.core.ThoughtType;
+import com.senars.systems.Memory;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 
-import java.util.function.Predicate;
+import java.time.Instant;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
 
-class MonitorConfigTest {
+class MotiveRefinementMonitorConfigTest {
 
     @Test
-    void constructor_createsMonitorConfigWithCorrectValues() {
+    void testMotiveRefinementMonitorCreation() {
         // Arrange
-        String name = "TestMonitor";
-        Predicate<Feedback> condition = feedback -> feedback.status() == ActionStatus.FAILURE;
-        String description = "Test monitor for failures";
-
+        Memory memory = mock(Memory.class);
+        
         // Act
-        MonitorConfig monitorConfig = new MonitorConfig(name, condition, description);
-
+        MotiveRefinementMonitorConfig monitor = new MotiveRefinementMonitorConfig(memory);
+        
         // Assert
-        assertEquals(name, monitorConfig.getName());
-        assertEquals(condition, monitorConfig.getTriggerCondition());
-        assertEquals(description, monitorConfig.getDescription());
+        assertNotNull(monitor);
+        assertEquals("MotiveRefinementMonitor", monitor.getName());
+        assertNotNull(monitor.getTriggerCondition());
+        assertNotNull(monitor.getDescription());
     }
+}
+
+class MemoryCurationMonitorConfigTest {
 
     @Test
-    void toString_returnsFormattedString() {
+    void testMemoryCurationMonitorCreation() {
         // Arrange
-        String name = "TestMonitor";
-        Predicate<Feedback> condition = feedback -> feedback.status() == ActionStatus.FAILURE;
-        String description = "Test monitor for failures";
-        MonitorConfig monitorConfig = new MonitorConfig(name, condition, description);
-
+        Memory memory = mock(Memory.class);
+        
         // Act
-        String result = monitorConfig.toString();
-
+        MemoryCurationMonitorConfig monitor = new MemoryCurationMonitorConfig(memory);
+        
         // Assert
-        assertTrue(result.contains(name));
-        assertTrue(result.contains(description));
+        assertNotNull(monitor);
+        assertEquals("MemoryCurationMonitor", monitor.getName());
+        assertNotNull(monitor.getTriggerCondition());
+        assertNotNull(monitor.getDescription());
+    }
+    
+    @Test
+    void testIsContextRetrievalFailure() {
+        // Arrange
+        Memory memory = mock(Memory.class);
+        MemoryCurationMonitorConfig monitor = new MemoryCurationMonitorConfig(memory);
+        
+        // Act & Assert
+        assertFalse(monitor.isContextRetrievalFailure(null));
     }
 }

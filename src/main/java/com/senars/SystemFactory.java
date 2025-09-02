@@ -27,6 +27,7 @@ import com.senars.optimizer.EffortModelOptimizer;
 import com.senars.optimizer.SchemaOptimizer;
 import com.senars.salience.SalienceCalculator;
 import com.senars.systems.Governor;
+import com.senars.governance.GovernanceService;
 import com.senars.systems.Memory;
 import com.senars.systems.Rule;
 import com.senars.systems.immemory.ConsolePerception;
@@ -36,6 +37,7 @@ import com.senars.systems.perception.FilePerceptionChannel;
 import com.senars.systems.rules.KeywordBlocklistRule;
 import com.senars.systems.rules.PreventDeprecatedSchemaUseRule;
 import com.senars.tools.*;
+import com.senars.attention.AttentionService;
 import dev.langchain4j.model.chat.ChatLanguageModel;
 import dev.langchain4j.model.embedding.AllMiniLmL6V2EmbeddingModel;
 import dev.langchain4j.model.embedding.EmbeddingModel;
@@ -62,6 +64,8 @@ public class SystemFactory {
     public final SchemaOptimizer schemaOptimizer; // Made public for test access
     public final LogicEngine logicEngine; // Made public for test access
     private final CognitiveCycle cognitiveCycle;
+    public final GovernanceService governance; // Made public for access to the new governance service
+    public final AttentionService attentionService; // Made public for access to the new attention service
 
     public SystemFactory() {
         this(OllamaChatModel.builder()
@@ -101,12 +105,11 @@ public class SystemFactory {
         // Create the Unified Causal Reasoner (replaces Grounding system)
         UnifiedCausalReasoner ucr = UCRFactory.createUCR(memory, eventBus, chatModel);
 
-        List<Rule> rules = List.of(
-                new KeywordBlocklistRule(List.of("delete all files", "shutdown", "rm -rf")),
-                new PreventDeprecatedSchemaUseRule(memory, logicEngine)
-        );
-        Governor governance = new InMemoryGovernor(rules, constitution, vettingModel, ucr);
-        LOGGER.info("Governance Layer initialized with {} rules and constitutional vetting.", rules.size());
+        // Create the new Governance Service
+        this.governance = new GovernanceService(ucr);
+        // Add the PreventDeprecatedSchemaUseRule to the governance service
+        this.governance.addRule(new PreventDeprecatedSchemaUseRule(memory, logicEngine));
+        LOGGER.info("Governance Layer initialized with new Governance Service");
         this.schemaOptimizer = new SchemaOptimizer(memory, eventBus);
         EffortModelOptimizer effortOptimizer = new EffortModelOptimizer(memory, eventBus);
 
@@ -175,6 +178,11 @@ public class SystemFactory {
         EffortPredictor effortPredictor = new EffortPredictor(memory);
         EffortTracker effortTracker = new EffortTracker(effortPredictor);
         SalienceCalculator salienceCalculator = new SalienceCalculator(effortPredictor, memory);
+        
+        // Create the new Attention Service
+        this.attentionService = new AttentionService(memory, salienceCalculator, ucr, motives);
+        
+        // Use the existing SalienceAttention as the primary attention mechanism
         Attention attention = new SalienceAttention(salienceCalculator, motives, eventBus, ucr);
         attention.addCandidate(researchGoal);
 

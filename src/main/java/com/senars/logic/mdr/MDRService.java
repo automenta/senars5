@@ -46,6 +46,14 @@ public class MDRService {
         );
         monitors.add(failedActionMonitor);
         
+        // Monitor for motive refinement
+        MonitorConfig motiveRefinementMonitor = new MotiveRefinementMonitorConfig(memory);
+        monitors.add(motiveRefinementMonitor);
+        
+        // Monitor for memory curation
+        MonitorConfig memoryCurationMonitor = new MemoryCurationMonitorConfig(memory);
+        monitors.add(memoryCurationMonitor);
+        
         LOGGER.info("Registered {} default monitors", monitors.size());
     }
 
@@ -143,12 +151,33 @@ public class MDRService {
     private Thought generateRemediationGoal(Feedback feedback, Thought diagnosisReport, MonitorConfig monitor) {
         String goalText;
         
-        // Special handling for schema optimization
+        // Special handling for different monitor types
         if (monitor instanceof SchemaOptimizationMonitorConfig) {
             SchemaOptimizationMonitorConfig schemaMonitor = (SchemaOptimizationMonitorConfig) monitor;
             if (schemaMonitor.isSchemaRelatedFailure(feedback)) {
                 goalText = String.format(
                         "Optimize the schema related to the failure in tool '%s'. Diagnosis: %s",
+                        feedback.toolName(),
+                        diagnosisReport.content().text()
+                );
+            } else {
+                goalText = String.format(
+                        "Fix the root cause of the failure in tool '%s'. Diagnosis: %s",
+                        feedback.toolName(),
+                        diagnosisReport.content().text()
+                );
+            }
+        } else if (monitor instanceof MotiveRefinementMonitorConfig) {
+            goalText = String.format(
+                    "Refine motives based on pattern of failures in tool '%s'. Diagnosis: %s",
+                    feedback.toolName(),
+                    diagnosisReport.content().text()
+            );
+        } else if (monitor instanceof MemoryCurationMonitorConfig) {
+            MemoryCurationMonitorConfig memoryMonitor = (MemoryCurationMonitorConfig) monitor;
+            if (memoryMonitor.isContextRetrievalFailure(feedback)) {
+                goalText = String.format(
+                        "Improve context retrieval mechanisms based on failure in tool '%s'. Diagnosis: %s",
                         feedback.toolName(),
                         diagnosisReport.content().text()
                 );
