@@ -1,4 +1,4 @@
-package com.senars.explain;
+package com.senars.explanation;
 
 import com.senars.core.*;
 import com.senars.events.EventBus;
@@ -25,13 +25,13 @@ public class CausalExplanationGenerator implements EventSubscriber<Events.NewTho
     private final EventBus eventBus;
     private final Memory memory;
     private final UnifiedCausalReasoner ucr;
-    private final Explain explain;
+    private final CausalChainTracer tracer;
 
     public CausalExplanationGenerator(EventBus eventBus, Memory memory, UnifiedCausalReasoner ucr) {
         this.eventBus = eventBus;
         this.memory = memory;
         this.ucr = ucr;
-        this.explain = new Explain(memory);
+        this.tracer = new CausalChainTracer(memory);
     }
 
     @Override
@@ -95,10 +95,10 @@ public class CausalExplanationGenerator implements EventSubscriber<Events.NewTho
     private String generateExplanationText(Thought targetThought) {
         try {
             // Get the causal chain
-            List<Thought> causalChain = explain.getCausalChain(targetThought);
+            List<Thought> causalChain = tracer.getCausalChain(targetThought);
 
             // Format the causal chain into a narrative
-            return explain.formatCausalChain(causalChain, targetThought);
+            return tracer.formatCausalChain(causalChain, targetThought);
         } catch (Exception e) {
             LOGGER.error("Error generating explanation text", e);
             return "Error generating explanation: " + e.getMessage();

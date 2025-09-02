@@ -1,5 +1,6 @@
 package com.senars.cycle;
 
+import com.senars.attention.Attention;
 import com.senars.effort.EffortTracker;
 import com.senars.events.EventBus;
 import com.senars.logic.GoalOrientedPlanner;

@@ -1,124 +1,106 @@
 package com.senars.attention;
 
 import com.senars.core.Thought;
+import com.senars.events.EventBus;
+import com.senars.events.Events;
 import com.senars.logic.UnifiedCausalReasoner;
 import com.senars.motive.MotiveHierarchy;
-import com.senars.salience.SalienceCalculator;
 import com.senars.systems.Memory;
-import com.senars.systems.ScoredThought;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.AbstractMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
-import java.util.stream.Collectors;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
- * An intelligent Attention Service that prioritizes Thoughts by calling the UCR
- * in a lightweight estimation mode to get an accurate PredictedEffort.
- * This makes the entire system more efficient by ensuring cognitive resources
- * are spent on the most promising tasks first.
+ * The unified Attention Service for the SeNARS Cognitive Architecture.
+ * This service implements the Attention interface and is the central point for managing
+ * candidate thoughts and selecting the most salient one for processing.
+ * It uses a SalienceCalculator and the UCR for intelligent effort estimation to prioritize thoughts.
  */
-public class AttentionService {
+public class AttentionService implements Attention {
     private static final Logger LOGGER = LoggerFactory.getLogger(AttentionService.class);
 
-    private final Memory memory;
+    private final List<Thought> candidates = new CopyOnWriteArrayList<>();
     private final SalienceCalculator salienceCalculator;
-    private final UnifiedCausalReasoner ucr;
     private final MotiveHierarchy motiveHierarchy;
+    private final EventBus eventBus;
+    private final UnifiedCausalReasoner ucr;
+    private final Memory memory;
 
-    public AttentionService(Memory memory, SalienceCalculator salienceCalculator,
-                            UnifiedCausalReasoner ucr, MotiveHierarchy motiveHierarchy) {
+    public AttentionService(Memory memory, SalienceCalculator salienceCalculator, UnifiedCausalReasoner ucr, MotiveHierarchy motiveHierarchy, EventBus eventBus) {
         this.memory = memory;
         this.salienceCalculator = salienceCalculator;
         this.ucr = ucr;
         this.motiveHierarchy = motiveHierarchy;
+        this.eventBus = eventBus;
     }
 
-    /**
-     * Selects the most salient Thought from a list of candidates using intelligent prioritization.
-     *
-     * @param candidateThoughts List of candidate thoughts to evaluate
-     * @return The most salient thought, or empty if no candidates
-     */
-    public Optional<Thought> selectFocusThought(List<Thought> candidateThoughts) {
-        if (candidateThoughts.isEmpty()) {
+    @Override
+    public void addCandidate(Thought thought) {
+        if (thought != null && !candidates.contains(thought)) {
+            candidates.add(thought);
+        }
+    }
+
+    @Override
+    public Optional<Thought> selectFocusThought() {
+        if (candidates.isEmpty()) {
             return Optional.empty();
         }
 
-        // Calculate intelligent salience scores for all candidates
-        List<ScoredThought> scoredThoughts = candidateThoughts.stream()
-                .map(thought -> {
-                    double salience = calculateIntelligentSalience(thought);
-                    return new ScoredThought(thought, salience);
-                })
-                .sorted((a, b) -> Double.compare(b.score(), a.score())) // Descending order
-                .toList();
+        LOGGER.debug("--- Attention Funnel: Selecting Focus Thought from {} candidates ---", candidates.size());
 
-        LOGGER.info("Ranked {} candidate thoughts by salience", scoredThoughts.size());
+        Optional<Thought> bestThought = candidates.stream()
+                .map(thought -> new AbstractMap.SimpleImmutableEntry<>(thought, calculateIntelligentSalience(thought)))
+                .max(Map.Entry.comparingByValue())
+                .map(Map.Entry::getKey);
 
-        // Return the highest scoring thought
-        return Optional.of(scoredThoughts.getFirst().thought());
+        bestThought.ifPresent(thought -> {
+            LOGGER.info("Selected Focus Thought: '{}' (ID: {})", thought.content().text(), thought.id());
+            eventBus.publish(new Events.FocusThoughtSelectedEvent(thought));
+            candidates.remove(thought);
+        });
+        LOGGER.debug("-------------------------------------------------");
+
+        return bestThought;
     }
 
-    /**
-     * Calculates an intelligent salience score for a thought using the UCR for effort estimation.
-     *
-     * @param thought The thought to calculate salience for
-     * @return The calculated salience score
-     */
     private double calculateIntelligentSalience(Thought thought) {
         // First, get the base salience using the existing calculator
         double baseSalience = salienceCalculator.calculate(thought, motiveHierarchy);
+        double finalSalience = baseSalience;
 
-        // Then, get a more accurate effort estimation from the UCR
+        // Then, try to get a more accurate effort estimation from the UCR
         try {
-            UnifiedCausalReasoner.ReasoningOptions options =
-                    UnifiedCausalReasoner.ReasoningOptions.estimation();
-
-            List<Thought> estimationResults = ucr.reason(thought, "forward", options);
+            // Use a lightweight estimation mode of the UCR.
+            List<Thought> estimationResults = ucr.reason(thought, "forward", UnifiedCausalReasoner.ReasoningOptions.estimation());
 
             if (!estimationResults.isEmpty()) {
-                // Extract the predicted effort from the estimation result
                 Thought estimationResult = estimationResults.getFirst();
                 String estimationText = estimationResult.content().text();
 
                 if (estimationText != null) {
-                    // Parse the effort estimation from the text
-                    // Format: "Effort estimation for thought [id]: [value] units"
+                    // This parsing logic is a placeholder for a more robust mechanism.
                     String[] parts = estimationText.split(": ");
                     if (parts.length >= 3) {
-                        try {
-                            double predictedEffort = Double.parseDouble(parts[2].split(" ")[0]);
-
-                            // Adjust the salience based on the more accurate effort estimation
-                            // Salience = BaseSalience / PredictedEffort
-                            if (predictedEffort > 0) {
-                                return baseSalience / predictedEffort;
-                            }
-                        } catch (NumberFormatException e) {
-                            LOGGER.warn("Could not parse effort estimation from text: {}", estimationText);
+                        double predictedEffort = Double.parseDouble(parts[2].split(" ")[0]);
+                        if (predictedEffort > 0) {
+                            // Adjust salience based on the more accurate effort.
+                            finalSalience = baseSalience / predictedEffort;
+                            LOGGER.trace("Adjusted salience for thought {} from {} to {} based on UCR effort estimation.", thought.id(), baseSalience, finalSalience);
                         }
                     }
                 }
             }
         } catch (Exception e) {
-            LOGGER.warn("Error during UCR effort estimation for thought {}, using base salience: {}",
-                    thought.id(), e.getMessage());
+            LOGGER.warn("Error during UCR effort estimation for thought {}. Using base salience. Error: {}", thought.id(), e.getMessage());
         }
 
-        // Fall back to base salience if UCR estimation fails
-        return baseSalience;
-    }
-
-    /**
-     * Asynchronously selects the most salient Thought from a list of candidates.
-     *
-     * @param candidateThoughts List of candidate thoughts to evaluate
-     * @return A CompletableFuture that will contain the most salient thought
-     */
-    public CompletableFuture<Optional<Thought>> selectFocusThoughtAsync(List<Thought> candidateThoughts) {
-        return CompletableFuture.supplyAsync(() -> selectFocusThought(candidateThoughts));
+        LOGGER.debug("Candidate: '{}' (ID: {}) - Calculated Salience: {}", thought.content().text(), thought.id(), String.format("%.4f", finalSalience));
+        return finalSalience;
     }
 }

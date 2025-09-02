@@ -1,4 +1,4 @@
-package com.senars.salience;
+package com.senars.attention;
 
 import com.senars.core.Thought;
 import com.senars.core.ThoughtType;

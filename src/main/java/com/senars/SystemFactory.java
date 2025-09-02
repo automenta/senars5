@@ -1,10 +1,20 @@
 package com.senars;
 
+import com.senars.attention.Attention;
 import com.senars.attention.AttentionService;
+import com.senars.attention.SalienceCalculator;
 import com.senars.config.AppConfig;
 import com.senars.core.Genesis;
 import com.senars.core.Thought;
-import com.senars.cycle.*;
+import com.senars.cycle.Action;
+import com.senars.cycle.ActionFeedbackQueue;
+import com.senars.cycle.CognitiveCycle;
+import com.senars.cycle.Inference;
+import com.senars.cycle.CognitiveCycleServices;
+import com.senars.cycle.CompositePerception;
+import com.senars.cycle.Perception;
+import com.senars.cycle.PerceptionChannel;
+import com.senars.cycle.ToolUsingAction;
 import com.senars.db.DatabaseManager;
 import com.senars.effort.EffortPredictor;
 import com.senars.effort.EffortTracker;
@@ -12,8 +22,8 @@ import com.senars.events.EventBus;
 import com.senars.events.Events;
 import com.senars.events.LoggingEventSubscriber;
 import com.senars.expansion.AutonomousCapabilityExpansion;
-import com.senars.explain.CausalExplanationGenerator;
-import com.senars.explain.ExplanationGenerator;
+import com.senars.explanation.CausalExplanationGenerator;
+import com.senars.explanation.ExplanationGenerator;
 import com.senars.explanation.ExplanationService;
 import com.senars.governance.GovernanceService;
 import com.senars.health.SystemHealthMonitor;
@@ -24,7 +34,6 @@ import com.senars.logic.mdr.MDRService;
 import com.senars.motive.MotiveHierarchy;
 import com.senars.optimizer.EffortModelOptimizer;
 import com.senars.optimizer.SchemaOptimizer;
-import com.senars.salience.SalienceCalculator;
 import com.senars.systems.GoalGraph;
 import com.senars.systems.Memory;
 import com.senars.systems.immemory.ConsolePerception;
@@ -40,9 +49,12 @@ import dev.langchain4j.model.ollama.OllamaChatModel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.senars.systems.Rule;
+
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -91,23 +103,22 @@ public class SystemFactory {
         this.memory = new InMemoryMemory(config, dbManager);
         this.logicEngine = new LogicEngine();
 
-        // Create the two-stage governor
-        LOGGER.info("Initializing Governance Layer...");
-        String constitution = Genesis.loadConstitution();
-        OllamaChatModel vettingModel = OllamaChatModel.builder()
-                .baseUrl(config.getLlmApiUrl())
-                .modelName(config.getLlmModelName()) // In a real system, this might be a smaller, faster model
-                .timeout(Duration.ofSeconds(config.getLlmApiTimeout() / 2)) // Faster timeout for safety checks
-                .build();
-
         // Create the Unified Causal Reasoner (replaces Grounding system)
         UnifiedCausalReasoner ucr = UCRFactory.createUCR(memory, eventBus, chatModel);
 
         // Create the new Governance Service
-        this.governance = new GovernanceService(ucr);
-        // Add the PreventDeprecatedSchemaUseRule to the governance service
-        this.governance.addRule(new PreventDeprecatedSchemaUseRule(memory, logicEngine));
-        LOGGER.info("Governance Layer initialized with new Governance Service");
+        LOGGER.info("Initializing Governance Layer...");
+        String constitution = Genesis.loadConstitution();
+        ChatLanguageModel vettingModel = OllamaChatModel.builder()
+                .baseUrl(config.getLlmApiUrl())
+                .modelName(config.getLlmModelName()) // In a real system, this might be a smaller, faster model
+                .timeout(Duration.ofSeconds(config.getLlmApiTimeout() / 2)) // Faster timeout for safety checks
+                .build();
+        List<Rule> rules = new ArrayList<>();
+        rules.add(new PreventDeprecatedSchemaUseRule(memory, logicEngine));
+
+        this.governance = new GovernanceService(ucr, rules, constitution, vettingModel);
+        LOGGER.info("Governance Layer initialized with unified Governance Service.");
         this.schemaOptimizer = new SchemaOptimizer(memory, eventBus);
         EffortModelOptimizer effortOptimizer = new EffortModelOptimizer(memory, eventBus);
 
@@ -177,12 +188,10 @@ public class SystemFactory {
         EffortTracker effortTracker = new EffortTracker(effortPredictor);
         SalienceCalculator salienceCalculator = new SalienceCalculator(effortPredictor, memory);
 
-        // Create the new Attention Service
-        this.attentionService = new AttentionService(memory, salienceCalculator, ucr, motives);
+        // Create the new unified Attention Service
+        this.attentionService = new AttentionService(memory, salienceCalculator, ucr, motives, eventBus);
+        this.attentionService.addCandidate(researchGoal);
 
-        // Use the existing SalienceAttention as the primary attention mechanism
-        Attention attention = new SalienceAttention(salienceCalculator, motives, eventBus, ucr);
-        attention.addCandidate(researchGoal);
 
         // 6. No LLM-based Cognitive Processor anymore (replaced by UCR)
 
@@ -207,7 +216,7 @@ public class SystemFactory {
 
         CognitiveCycleServices services = new CognitiveCycleServices(
                 perception,
-                attention,
+                this.attentionService,
                 ucr,
                 action,
                 memory,

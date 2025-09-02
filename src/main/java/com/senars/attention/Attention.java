@@ -1,4 +1,4 @@
-package com.senars.cycle;
+package com.senars.attention;
 
 import com.senars.core.Thought;
 

@@ -15,7 +15,7 @@ public class MemoryCurationMonitorConfig extends MonitorConfig {
     public MemoryCurationMonitorConfig(Memory memory) {
         super(
                 "MemoryCurationMonitor",
-                feedback -> feedback.status() == com.senars.core.ActionStatus.FAILURE
+                feedback -> feedback != null && feedback.status() == com.senars.core.ActionStatus.FAILURE
                         && feedback.output() != null
                         && feedback.output().toLowerCase().contains("context retrieval"),
                 "Monitors for poor context retrieval errors and triggers memory curation"
@@ -31,7 +31,7 @@ public class MemoryCurationMonitorConfig extends MonitorConfig {
      */
     public boolean isContextRetrievalFailure(Feedback feedback) {
         // Check if the failure message indicates a context retrieval issue
-        return feedback.output() != null &&
+        return feedback != null && feedback.output() != null &&
                 feedback.output().toLowerCase().contains("context retrieval");
     }
 }

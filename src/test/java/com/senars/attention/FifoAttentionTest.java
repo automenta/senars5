@@ -1,4 +1,4 @@
-package com.senars.cycle;
+package com.senars.attention;
 
 import com.senars.core.*;
 import org.junit.jupiter.api.BeforeEach;
@@ -11,7 +11,7 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-class FifoSalienceAttentionTest {
+class FifoAttentionTest {
 
     private Attention fifoFunnel;
 

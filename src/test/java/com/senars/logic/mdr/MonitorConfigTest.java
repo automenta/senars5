@@ -51,11 +51,8 @@ class MemoryCurationMonitorConfigTest {
         Memory memory = mock(Memory.class);
         MemoryCurationMonitorConfig monitor = new MemoryCurationMonitorConfig(memory);
         Feedback feedback = mock(Feedback.class);
-        Thought thought = mock(Thought.class);
-        when(feedback.output()).thenReturn(thought);
+        when(feedback.output()).thenReturn("some output context retrieval failure more output");
         when(feedback.status()).thenReturn(ActionStatus.FAILURE);
-        when(thought.toString()).thenReturn("context retrieval failure");
-
 
         // Act & Assert
         assertFalse(monitor.isContextRetrievalFailure(null));

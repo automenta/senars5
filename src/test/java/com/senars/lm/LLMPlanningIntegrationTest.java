@@ -6,7 +6,6 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.senars.config.AppConfig;
 import com.senars.core.Thought;
 import com.senars.db.DatabaseManager;
-import com.senars.explain.Explain;
 import com.senars.systems.Memory;
 import com.senars.systems.immemory.InMemoryMemory;
 import dev.langchain4j.model.chat.ChatLanguageModel;
@@ -37,7 +36,6 @@ public class LLMPlanningIntegrationTest {
         dbManager = new DatabaseManager(dbFile);
         memory = new InMemoryMemory(AppConfig.getInstance(), dbManager);
         chatModel = mock(ChatLanguageModel.class);
-        Explain explain = mock(Explain.class);
         ToolKit toolKit = mock(ToolKit.class);
 
         // Load schemas into memory

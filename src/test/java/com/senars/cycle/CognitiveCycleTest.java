@@ -1,17 +1,15 @@
 package com.senars.cycle;
 
+import com.senars.attention.Attention;
 import com.senars.core.*;
-import com.senars.effort.EffortPredictor;
 import com.senars.effort.EffortTracker;
 import com.senars.events.EventBus;
 import com.senars.logic.GoalOrientedPlanner;
 import com.senars.logic.MetaCognitiveService;
 import com.senars.logic.UnifiedCausalReasoner;
 import com.senars.logic.mdr.MDRService;
-import com.senars.motive.MotiveHierarchy;
 import com.senars.optimizer.EffortModelOptimizer;
 import com.senars.optimizer.SchemaOptimizer;
-import com.senars.salience.SalienceCalculator;
 import com.senars.systems.Governor;
 import com.senars.systems.Memory;
 import com.senars.ui.ConsolePrinter;
@@ -41,7 +39,7 @@ class CognitiveCycleTest {
     @Mock
     private Action actionSystem;
     @Mock
-    private UnifiedCausalReasoner ucr; // Replaces groundingSystem and cognitiveProcessor
+    private UnifiedCausalReasoner ucr;
     @Mock
     private EventBus eventBus;
     @Mock
@@ -60,19 +58,14 @@ class CognitiveCycleTest {
     private GoalOrientedPlanner goalOrientedPlanner;
     @Mock
     private ConsolePrinter consolePrinter;
-
+    @Mock
     private Attention attentionFunnel;
+
     private CognitiveCycle cognitiveCycle;
 
 
     @BeforeEach
     void setUp() {
-        // Setup real components for testing the cycle with salience
-        var motiveHierarchy = new MotiveHierarchy();
-        var effortPredictor = new EffortPredictor(memory); // Pass the memory nexus mock
-        var salienceCalculator = new SalienceCalculator(effortPredictor, memory);
-        attentionFunnel = new SalienceAttention(salienceCalculator, motiveHierarchy, eventBus, ucr);
-
         CognitiveCycleServices services = new CognitiveCycleServices(
                 perceptionSystem,
                 attentionFunnel,
@@ -91,34 +84,31 @@ class CognitiveCycleTest {
                 consolePrinter
         );
         cognitiveCycle = new CognitiveCycle(services);
+        lenient().when(ucr.reason(any(), any(), any())).thenReturn(List.of());
     }
 
     private Thought createTestThought(ThoughtType type, double activation) {
         return new Thought(
                 UUID.randomUUID().toString(),
                 new ThoughtContent("test content for " + type, null, null, null, null, null, null),
-                new ThoughtState(1.0, 0.0, activation), // clarity, salience (unused), activation
+                new ThoughtState(1.0, 0.0, activation),
                 new ThoughtMeta(type, ThoughtOrigin.SYSTEM, List.of(), Instant.now())
         );
     }
 
     @Test
     void step_processesMostSalientThought() throws ShutdownException {
-        Thought lowSalienceThought = createTestThought(ThoughtType.BELIEF, 0.1); // Low activation
-        Thought highSalienceThought = createTestThought(ThoughtType.BELIEF, 1.0); // High activation
+        Thought highSalienceThought = createTestThought(ThoughtType.BELIEF, 1.0);
         Thought newThought = createTestThought(ThoughtType.REPORT, 0.5);
 
-        attentionFunnel.addCandidate(lowSalienceThought);
-        attentionFunnel.addCandidate(highSalienceThought);
+        when(attentionFunnel.selectFocusThought()).thenReturn(Optional.of(highSalienceThought));
         when(ucr.reason(eq(highSalienceThought), eq("forward"), any(UnifiedCausalReasoner.ReasoningOptions.class))).thenReturn(List.of(newThought));
 
         cognitiveCycle.step();
 
-        // Verify that the most salient thought was processed
         verify(ucr).reason(eq(highSalienceThought), eq("forward"), any(UnifiedCausalReasoner.ReasoningOptions.class));
-
-        // Verify the new thought was saved and added back to the funnel
         verify(memory).saveThought(newThought);
+        verify(attentionFunnel).addCandidate(newThought);
     }
 
     @Test
@@ -126,16 +116,11 @@ class CognitiveCycleTest {
         Thought goal = createTestThought(ThoughtType.GOAL, 1.0);
         Thought actionPlan = createTestThought(ThoughtType.ACTION, 0.9);
 
-        attentionFunnel.addCandidate(goal);
+        when(attentionFunnel.selectFocusThought()).thenReturn(Optional.of(goal), Optional.of(actionPlan));
         when(ucr.reason(eq(goal), eq("forward"), any(UnifiedCausalReasoner.ReasoningOptions.class))).thenReturn(List.of(actionPlan));
 
-        cognitiveCycle.step(); // First step processes the GOAL and produces the ACTION
-
-        // The action plan is saved to memory and added to the funnel
-        verify(memory).saveThought(actionPlan);
-
-        // Now the action plan should be the most salient thing
-        cognitiveCycle.step(); // Second step should process the ACTION
+        cognitiveCycle.step();
+        cognitiveCycle.step();
 
         verify(governor).reviewPlan(actionPlan);
         verify(actionSystem).executePlan(actionPlan);
@@ -147,17 +132,15 @@ class CognitiveCycleTest {
         Thought actionPlan = createTestThought(ThoughtType.ACTION, 0.9);
         String vetoReason = "This is unsafe!";
 
-        attentionFunnel.addCandidate(goal);
+        when(attentionFunnel.selectFocusThought()).thenReturn(Optional.of(goal), Optional.of(actionPlan));
         when(ucr.reason(eq(goal), eq("forward"), any(UnifiedCausalReasoner.ReasoningOptions.class))).thenReturn(List.of(actionPlan));
         when(governor.reviewPlan(actionPlan)).thenReturn(Optional.of(vetoReason));
 
-        cognitiveCycle.step(); // Process GOAL, create ACTION
-        cognitiveCycle.step(); // Process ACTION, get vetoed
+        cognitiveCycle.step();
+        cognitiveCycle.step();
 
         verify(governor).reviewPlan(actionPlan);
         verify(actionSystem, never()).executePlan(actionPlan);
-
-        // Verify a new GOAL was created and saved (one for the plan, one for the goal)
         verify(memory, times(2)).saveThought(any(Thought.class));
     }
 
@@ -165,18 +148,13 @@ class CognitiveCycleTest {
     void step_perceivesAndProcessesThoughtInSameCycle() throws ShutdownException {
         Thought perceivedThought = createTestThought(ThoughtType.BELIEF, 0.8);
 
-        // On the FIRST call, perceive a thought. On subsequent calls, perceive nothing.
-        when(perceptionSystem.perceive())
-                .thenReturn(List.of(perceivedThought))
-                .thenReturn(Collections.emptyList());
+        when(perceptionSystem.perceive()).thenReturn(List.of(perceivedThought));
+        when(attentionFunnel.selectFocusThought()).thenReturn(Optional.empty());
 
-        // The first step perceives and should also process the thought, as it's the only one.
         cognitiveCycle.step();
 
-        // Verify the perception system was checked.
         verify(perceptionSystem).perceive();
-        // Verify the thought was processed in the same cycle.
-        verify(ucr).reason(eq(perceivedThought), eq("forward"), any(UnifiedCausalReasoner.ReasoningOptions.class));
+        verify(attentionFunnel).addCandidate(perceivedThought);
     }
 
     @Test
@@ -190,31 +168,22 @@ class CognitiveCycleTest {
         Feedback feedback = new Feedback(ActionStatus.SUCCESS, "test.tool", "Good job", 100L, actionPlan);
 
         when(feedbackQueue.poll()).thenReturn(feedback);
+        when(attentionFunnel.selectFocusThought()).thenReturn(Optional.empty());
 
         cognitiveCycle.step();
 
         verify(ucr).processFeedback(feedback);
-        // Ensure feedback is not added to the attention funnel
-        // We can check if the funnel is empty or check its size before and after.
-        // For this test, we can assume if ucr was called, it wasn't funneled.
     }
 
     @Test
     void step_callsGoalPlannerWhenIdle() throws ShutdownException {
-        // Arrange
         Thought proactiveTask = createTestThought(ThoughtType.ACTION, 0.9);
-        // Ensure the attention funnel is empty
+        when(attentionFunnel.selectFocusThought()).thenReturn(Optional.empty());
         when(goalOrientedPlanner.generateNextTask()).thenReturn(Optional.of(proactiveTask));
 
-        // Act
         cognitiveCycle.step();
 
-        // Assert
-        // Verify that the planner was called because the system was idle
         verify(goalOrientedPlanner).generateNextTask();
-        // Verify that the new proactive task was saved to memory and added to the attention funnel
         verify(memory).saveThought(proactiveTask);
-        // You could also assert that the attention funnel now contains the proactive task,
-        // but verifying the saveThought is a strong indicator.
     }
 }

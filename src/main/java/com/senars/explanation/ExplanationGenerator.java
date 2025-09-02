@@ -1,4 +1,4 @@
-package com.senars.explain;
+package com.senars.explanation;
 
 import com.senars.core.*;
 import com.senars.events.EventBus;

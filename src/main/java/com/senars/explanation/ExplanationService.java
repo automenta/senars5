@@ -3,7 +3,6 @@ package com.senars.explanation;
 import com.senars.core.Thought;
 import com.senars.core.ThoughtType;
 import com.senars.events.EventBus;
-import com.senars.explain.Explain;
 import com.senars.logic.UnifiedCausalReasoner;
 import com.senars.systems.Memory;
 import dev.langchain4j.data.message.UserMessage;
@@ -26,14 +25,14 @@ public class ExplanationService {
     private final UnifiedCausalReasoner ucr;
     private final EventBus eventBus;
     private final ChatLanguageModel chatModel;
-    private final Explain explain;
+    private final CausalChainTracer tracer;
 
     public ExplanationService(Memory memory, UnifiedCausalReasoner ucr, EventBus eventBus, ChatLanguageModel chatModel) {
         this.memory = memory;
         this.ucr = ucr;
         this.eventBus = eventBus;
         this.chatModel = chatModel;
-        this.explain = new Explain(memory);
+        this.tracer = new CausalChainTracer(memory);
     }
 
     /**
@@ -55,10 +54,10 @@ public class ExplanationService {
                 Thought targetThought = targetThoughtOpt.get();
 
                 // Get the causal chain
-                List<Thought> causalChain = explain.getCausalChain(targetThought);
+                List<Thought> causalChain = tracer.getCausalChain(targetThought);
 
                 // Format the explanation
-                String basicExplanation = explain.formatCausalChain(causalChain, targetThought);
+                String basicExplanation = tracer.formatCausalChain(causalChain, targetThought);
 
                 // If we have a user question, generate a more focused explanation
                 if (userQuestion != null && !userQuestion.trim().isEmpty()) {

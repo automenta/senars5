@@ -1,4 +1,4 @@
-package com.senars.salience;
+package com.senars.attention;
 
 import org.junit.jupiter.api.Test;
 

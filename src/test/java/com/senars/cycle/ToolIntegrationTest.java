@@ -31,8 +31,6 @@ public class ToolIntegrationTest {
     @Mock
     private com.senars.lm.StructuredOutputParser outputParser;
     @Mock
-    private com.senars.explain.Explain explain;
-    @Mock
     private com.senars.events.EventBus eventBus;
 
 

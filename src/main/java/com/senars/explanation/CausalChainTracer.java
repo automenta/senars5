@@ -1,4 +1,4 @@
-package com.senars.explain;
+package com.senars.explanation;
 
 import com.senars.core.CausalLink;
 import com.senars.core.Thought;
@@ -10,11 +10,11 @@ import java.util.*;
  * The Explainable AI (XAI) Engine.
  * This class is responsible for reconstructing the reasoning process that led to a specific thought.
  */
-public class Explain {
+class CausalChainTracer {
 
     private final Memory memory;
 
-    public Explain(Memory memory) {
+    CausalChainTracer(Memory memory) {
         this.memory = memory;
     }
 

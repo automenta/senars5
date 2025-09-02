@@ -11,8 +11,10 @@ import dev.langchain4j.model.chat.ChatLanguageModel;
 import dev.langchain4j.model.output.Response;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import org.mockito.MockitoAnnotations;
 
+import java.nio.file.Path;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
@@ -21,6 +23,8 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class UnifiedCausalReasonerTest {
 
+    @TempDir
+    Path tempDir;
     private UnifiedCausalReasoner ucr;
     private Memory memory;
     private EventBus eventBus;
@@ -45,7 +49,7 @@ class UnifiedCausalReasonerTest {
         MockitoAnnotations.openMocks(this);
         eventBus = new EventBus();
         chatModel = new MockChatModel("[]"); // Default mock response
-        DatabaseManager dbManager = new DatabaseManager(); // In-memory DB for testing
+        DatabaseManager dbManager = new DatabaseManager(tempDir.resolve("test.db"));
         memory = new InMemoryMemory(AppConfig.getInstance(), dbManager);
         ucr = new UnifiedCausalReasonerImpl(memory, eventBus, chatModel);
     }
