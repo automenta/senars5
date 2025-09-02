@@ -31,6 +31,7 @@ import com.senars.systems.perception.FilePerceptionChannel;
 import com.senars.systems.rules.KeywordBlocklistRule;
 import com.senars.systems.rules.PreventDeprecatedSchemaUseRule;
 import com.senars.tools.*;
+import com.senars.tools.ApiTool;
 import com.senars.explain.Explain;
 import com.senars.explain.ExplanationGenerator;
 import dev.langchain4j.model.chat.ChatLanguageModel;
@@ -140,7 +141,8 @@ public class SystemFactory {
                 new CodeExecutionTool(),
                 new EmbeddingGenerationTool(memory, embeddingModel),
                 new LogicalInferenceTool(inference),
-                new SchemaManagementTool(memory, logicEngine, eventBus)
+                new SchemaManagementTool(memory, logicEngine, eventBus),
+                new ApiTool()
         );
         Action action = new ToolUsingAction(toolKit);
 

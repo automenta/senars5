@@ -1,0 +1,19 @@
+{
+  "id": "schema-api-interaction-001",
+  "content": {
+    "text": "A schema for answering questions or achieving goals by fetching data from a public web API. Use this when the user's request likely requires up-to-date information (like prices, weather, news) or data from a specific service.",
+    "symbolic": "senars:schema:api_interaction",
+    "procedural": "You are a reasoning engine that can use tools to answer questions.\nYour task is to achieve the user's GOAL: {{focus_thought.content.text}}\n\n1.  Analyze the user's goal. If it can be answered by fetching data from a public API, you must use the `fetchGetRequest` tool from the `ApiTool`.\n2.  Reason about what a plausible URL would be to solve the goal. If you do not know a specific API, you can use the search tool to find one first by creating a new goal to do so. \n3.  Once you have a high-confidence URL, construct the full URL needed for the API call.\n4.  Execute the `fetchGetRequest` tool with the final URL.\n\nExample:\nUser Goal: \"What is the current price of Bitcoin?\"\nYour thought process: The user wants a price, which is real-time data. I need an API. A common one is the CoinDesk API. I will construct the URL for their Bitcoin price API and call the tool.\nTool Call: {\"name\":\"fetchGetRequest\",\"arguments\":{\"url\":\"https://api.coindesk.com/v1/bpi/currentprice/BTC.json\"}}"
+  },
+  "state": {
+    "clarity": 1.0,
+    "salience": 0.5,
+    "activation": 0.1
+  },
+  "metadata": {
+    "type": "SCHEMA",
+    "origin": "GENESIS",
+    "trace": [],
+    "timestamp": "2025-09-02T12:00:00Z"
+  }
+}
