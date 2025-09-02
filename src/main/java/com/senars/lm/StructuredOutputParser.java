@@ -31,19 +31,27 @@ public class StructuredOutputParser {
     }
 
     /**
-     * Parses the LLM's response string, expecting a JSON array of Thought objects.
+     * Parses the LLM's response string, which can be either a single JSON Thought object or a JSON array of them.
      *
      * @param llmResponse The response from the language model.
-     * @return A list of new Thought objects. Returns an empty list if parsing fails.
+     * @return A list of new Thought objects. Returns a list with a single REPORT thought if parsing fails.
      */
     public List<Thought> parse(String llmResponse) {
+        String trimmedResponse = llmResponse.trim();
+
         try {
-            // We expect the LLM to return a JSON array of Thought objects.
-            // Using TypeReference allows Jackson to correctly deserialize the generic List<Thought>.
-            return objectMapper.readValue(llmResponse, new TypeReference<>() {
-            });
+            // Heuristic: if it looks like an array, parse it as a list.
+            if (trimmedResponse.startsWith("[") && trimmedResponse.endsWith("]")) {
+                LOGGER.debug("Attempting to parse response as a JSON array of Thoughts.");
+                return objectMapper.readValue(trimmedResponse, new TypeReference<>() {});
+            } else {
+                // Otherwise, assume it's a single thought object.
+                LOGGER.debug("Attempting to parse response as a single JSON Thought.");
+                Thought singleThought = objectMapper.readValue(trimmedResponse, Thought.class);
+                return List.of(singleThought);
+            }
         } catch (IOException e) {
-            LOGGER.warn("Failed to parse LLM response as JSON array. Falling back to simple report. Error: {}", e.getMessage());
+            LOGGER.warn("Failed to parse LLM response as structured Thought(s). Falling back to simple report. Error: {}", e.getMessage());
             // Fallback for non-JSON or malformed responses
             return List.of(createReportThought(llmResponse));
         }

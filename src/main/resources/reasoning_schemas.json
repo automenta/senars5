@@ -55,5 +55,24 @@
       "trace": [],
       "timestamp": "2025-09-01T12:00:00Z"
     }
+  },
+  {
+    "id": "schema-direct-reasoning-001",
+    "content": {
+      "text": "A general-purpose schema for answering questions, executing commands, or evaluating statements of fact by generating a single, direct response. This is the default reasoning mechanism for most user-facing queries.",
+      "symbolic": "senars:schema:direct_reasoning",
+      "procedural": "You are the core reasoning engine for the SeNARS cognitive architecture. Your task is to process the FOCUS THOUGHT based on the provided CONTEXT THOUGHTS. Your response MUST be a single, well-formed JSON object representing a new SeNARS Thought. The new thought should be a `BELIEF` or `REPORT` that directly addresses the focus thought. For example, if the focus is a `QUESTION`, the new thought should be a `BELIEF` that answers it. If the focus is a `GOAL` to summarize text, the new thought should be a `REPORT` containing the summary. The `clarity` of the new thought should reflect your confidence in the answer. The `trace` must include the ID of the focus thought. Do NOT wrap the JSON in markdown. Your output MUST be ONLY the JSON object.\n\nFOCUS THOUGHT:\n---\n{{focus_thought}}\n---\n\nCONTEXT THOUGHTS:\n---\n{{context}}\n---\n\nYour JSON Output:"
+    },
+    "state": {
+      "clarity": 1.0,
+      "salience": 1.0,
+      "activation": 1.0
+    },
+    "metadata": {
+      "type": "SCHEMA",
+      "origin": "GENESIS",
+      "trace": [],
+      "timestamp": "2025-09-01T12:00:00Z"
+    }
   }
 ]

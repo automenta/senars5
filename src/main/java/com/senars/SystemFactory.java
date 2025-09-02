@@ -108,7 +108,6 @@ public class SystemFactory {
         List<Thought> genesisBeliefs = Genesis.loadKnowledgeFromFile("genesis_knowledge.json", embeddingModel);
         List<Thought> genesisSchemas = Genesis.loadSchemasFromFile("genesis_schemas.json", embeddingModel);
         List<Thought> reasoningSchemas = Genesis.loadSchemasFromFile("reasoning_schemas.json", embeddingModel);
-        List<Thought> parsingSchemas = Genesis.loadSchemasFromFile("parsing-schema.json", embeddingModel);
         List<Thought> embeddingSchemas = Genesis.loadSchemasFromFile("embedding-generation-schema.json", embeddingModel);
         List<Thought> optimizationSchemas = Genesis.loadSchemasFromFile("schema_optimizer_schema.json", embeddingModel);
         optimizationSchemas.addAll(Genesis.loadSchemasFromFile("effort_model_optimizer_schema.json", embeddingModel));
@@ -119,12 +118,11 @@ public class SystemFactory {
         genesisBeliefs.forEach(memory::saveThought);
         genesisSchemas.forEach(memory::saveThought);
         reasoningSchemas.forEach(memory::saveThought);
-        parsingSchemas.forEach(memory::saveThought);
         embeddingSchemas.forEach(memory::saveThought);
         optimizationSchemas.forEach(memory::saveThought);
         memory.saveThought(logicalActionSchema);
         memory.saveThought(failureRecoverySchema);
-        LOGGER.info("Loaded {} Genesis Drives, {} Beliefs, and {} Schemas into Memory Nexus.", genesisDrives.size(), genesisBeliefs.size(), genesisSchemas.size() + reasoningSchemas.size() + parsingSchemas.size() + embeddingSchemas.size() + optimizationSchemas.size() + 2);
+        LOGGER.info("Loaded {} Genesis Drives, {} Beliefs, and {} Schemas into Memory Nexus.", genesisDrives.size(), genesisBeliefs.size(), genesisSchemas.size() + reasoningSchemas.size() + embeddingSchemas.size() + optimizationSchemas.size() + 2);
 
         // 4. Cognitive Cycle Components
         Inference inference = new Inference(memory, logicEngine);
