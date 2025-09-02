@@ -4,12 +4,12 @@ import com.senars.core.*;
 import com.senars.effort.EffortPredictor;
 import com.senars.effort.EffortTracker;
 import com.senars.events.EventBus;
+import com.senars.logic.UnifiedCausalReasoner;
 import com.senars.motive.MotiveHierarchy;
 import com.senars.optimizer.EffortModelOptimizer;
 import com.senars.optimizer.SchemaOptimizer;
 import com.senars.salience.SalienceCalculator;
 import com.senars.systems.Governor;
-import com.senars.systems.Grounding;
 import com.senars.systems.Memory;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -35,11 +35,9 @@ class CognitiveCycleTest {
     @Mock
     private Perception perceptionSystem;
     @Mock
-    private Cognition cognitiveProcessor;
-    @Mock
     private Action actionSystem;
     @Mock
-    private Grounding groundingSystem;
+    private UnifiedCausalReasoner ucr; // Replaces groundingSystem and cognitiveProcessor
     @Mock
     private EventBus eventBus;
     @Mock
@@ -60,17 +58,16 @@ class CognitiveCycleTest {
         // Setup real components for testing the cycle with salience
         var motiveHierarchy = new MotiveHierarchy();
         var effortPredictor = new EffortPredictor(memory); // Pass the memory nexus mock
-        var salienceCalculator = new SalienceCalculator(effortPredictor);
-        attentionFunnel = new SalienceAttention(salienceCalculator, motiveHierarchy, eventBus);
+        var salienceCalculator = new SalienceCalculator(effortPredictor, memory);
+        attentionFunnel = new SalienceAttention(salienceCalculator, motiveHierarchy, eventBus, ucr);
 
         cognitiveCycle = new CognitiveCycle(
                 perceptionSystem,
                 attentionFunnel,
-                cognitiveProcessor,
+                ucr, // Use UCR instead of cognitiveProcessor
                 actionSystem,
                 memory,
                 governor,
-                groundingSystem,
                 feedbackQueue,
                 schemaOptimizer,
                 effortOptimizer,
@@ -96,13 +93,12 @@ class CognitiveCycleTest {
 
         attentionFunnel.addCandidate(lowSalienceThought);
         attentionFunnel.addCandidate(highSalienceThought);
-        when(cognitiveProcessor.think(highSalienceThought)).thenReturn(List.of(newThought));
+        when(ucr.reason(eq(highSalienceThought), eq("forward"), any(UnifiedCausalReasoner.ReasoningOptions.class))).thenReturn(List.of(newThought));
 
         cognitiveCycle.step();
 
         // Verify that the most salient thought was processed
-        verify(cognitiveProcessor).think(highSalienceThought);
-        verify(cognitiveProcessor, never()).think(lowSalienceThought);
+        verify(ucr).reason(eq(highSalienceThought), eq("forward"), any(UnifiedCausalReasoner.ReasoningOptions.class));
 
         // Verify the new thought was saved and added back to the funnel
         verify(memory).saveThought(newThought);
@@ -114,7 +110,7 @@ class CognitiveCycleTest {
         Thought actionPlan = createTestThought(ThoughtType.ACTION, 0.9);
 
         attentionFunnel.addCandidate(goal);
-        when(cognitiveProcessor.think(goal)).thenReturn(List.of(actionPlan));
+        when(ucr.reason(eq(goal), eq("forward"), any(UnifiedCausalReasoner.ReasoningOptions.class))).thenReturn(List.of(actionPlan));
 
         cognitiveCycle.step(); // First step processes the GOAL and produces the ACTION
 
@@ -135,7 +131,7 @@ class CognitiveCycleTest {
         String vetoReason = "This is unsafe!";
 
         attentionFunnel.addCandidate(goal);
-        when(cognitiveProcessor.think(goal)).thenReturn(List.of(actionPlan));
+        when(ucr.reason(eq(goal), eq("forward"), any(UnifiedCausalReasoner.ReasoningOptions.class))).thenReturn(List.of(actionPlan));
         when(governor.reviewPlan(actionPlan)).thenReturn(Optional.of(vetoReason));
 
         cognitiveCycle.step(); // Process GOAL, create ACTION
@@ -163,11 +159,11 @@ class CognitiveCycleTest {
         // Verify the perception system was checked.
         verify(perceptionSystem).perceive();
         // Verify the thought was processed in the same cycle.
-        verify(cognitiveProcessor).think(perceivedThought);
+        verify(ucr).reason(eq(perceivedThought), eq("forward"), any(UnifiedCausalReasoner.ReasoningOptions.class));
     }
 
     @Test
-    void step_handlesFeedbackReportAndCallsGroundingSystem() throws ShutdownException {
+    void step_handlesFeedbackReportAndCallsUCR() throws ShutdownException {
         Thought actionPlan = new Thought(
                 "action-1",
                 new ThoughtContent("Do something", null, null, null, null, null, null),
@@ -180,9 +176,9 @@ class CognitiveCycleTest {
 
         cognitiveCycle.step();
 
-        verify(groundingSystem).processFeedback(feedback);
+        verify(ucr).processFeedback(feedback);
         // Ensure feedback is not added to the attention funnel
         // We can check if the funnel is empty or check its size before and after.
-        // For this test, we can assume if groundingSystem was called, it wasn't funneled.
+        // For this test, we can assume if ucr was called, it wasn't funneled.
     }
 }

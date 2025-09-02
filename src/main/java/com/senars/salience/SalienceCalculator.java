@@ -5,6 +5,7 @@ import com.senars.core.ThoughtContent;
 import com.senars.core.ThoughtType;
 import com.senars.effort.EffortPredictor;
 import com.senars.motive.MotiveHierarchy;
+import com.senars.systems.Memory;
 
 import java.util.List;
 import java.util.Optional;
@@ -18,16 +19,19 @@ public class SalienceCalculator {
     private static final String ENRICH_KNOWLEDGE_DRIVE_ID = "drive-enrichknowledge";
     private static final double UNCERTAINTY_BONUS_MULTIPLIER = 50.0;
     private static final double ENRICHMENT_BONUS = 25.0; // A fixed bonus for thoughts that need enrichment
+    private static final double CAUSAL_LEVERAGE_WEIGHT = 0.5; // Weight for causal leverage in salience calculation
 
     private final EffortPredictor effortPredictor;
+    private final Memory memory;
 
-    public SalienceCalculator(EffortPredictor effortPredictor) {
+    public SalienceCalculator(EffortPredictor effortPredictor, Memory memory) {
         this.effortPredictor = effortPredictor;
+        this.memory = memory;
     }
 
     /**
      * Calculates the salience of a Thought based on the formula:
-     * Salience = (Activation + MotiveBonus) * Clarity / PredictedEffort
+     * Salience = ((Activation + MotiveBonus) * Clarity / PredictedEffort) + (CausalLeverage * Weight)
      *
      * @param thought         The Thought to calculate salience for.
      * @param motiveHierarchy The system's current motive hierarchy.
@@ -46,7 +50,14 @@ public class SalienceCalculator {
             predictedEffort = 1.0;
         }
 
-        return (activation + motiveBonus) * clarity / predictedEffort;
+        // Calculate the base salience using the original formula
+        double baseSalience = (activation + motiveBonus) * clarity / predictedEffort;
+
+        // Calculate causal leverage bonus
+        double causalLeverage = memory.calculateCausalLeverage(thought.id());
+        double leverageBonus = causalLeverage * CAUSAL_LEVERAGE_WEIGHT;
+
+        return baseSalience + leverageBonus;
     }
 
     private double calculateMotiveBonus(Thought thought, MotiveHierarchy motiveHierarchy) {

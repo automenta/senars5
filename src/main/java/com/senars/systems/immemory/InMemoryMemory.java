@@ -16,6 +16,8 @@ import com.senars.systems.vectorstore.ScoredId;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
+import java.util.HashSet;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -132,6 +134,43 @@ public class InMemoryMemory implements Memory {
     @Override
     public List<Thought> getAllThoughts() {
         return graphDB.getAllThoughts();
+    }
+
+    @Override
+    public Set<CausalLink> getCausalLinksFrom(String thoughtId) {
+        return graphDB.getCausalLinksFrom(thoughtId);
+    }
+
+    @Override
+    public Set<CausalLink> getCausalLinksTo(String thoughtId) {
+        return graphDB.getCausalLinksTo(thoughtId);
+    }
+
+    @Override
+    public Set<Thought> getCausallyConnectedThoughts(String thoughtId, int maxDepth) {
+        // Simple implementation that gets directly connected thoughts
+        Set<Thought> connected = new HashSet<>();
+        
+        // Get forward connections
+        Set<CausalLink> forwardLinks = getCausalLinksFrom(thoughtId);
+        for (CausalLink link : forwardLinks) {
+            getThoughtById(link.targetThoughtId()).ifPresent(connected::add);
+        }
+        
+        // Get backward connections
+        Set<CausalLink> backwardLinks = getCausalLinksTo(thoughtId);
+        for (CausalLink link : backwardLinks) {
+            getThoughtById(link.sourceThoughtId()).ifPresent(connected::add);
+        }
+        
+        return connected;
+    }
+
+    @Override
+    public double calculateCausalLeverage(String thoughtId) {
+        // Simple implementation that returns a fixed value
+        // In a real implementation, this would calculate the actual causal leverage
+        return 0.5;
     }
 
     @Override

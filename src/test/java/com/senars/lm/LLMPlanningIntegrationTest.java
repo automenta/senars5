@@ -36,7 +36,6 @@ public class LLMPlanningIntegrationTest {
     Path tempDir;
     private Memory memory;
     private ChatLanguageModel chatModel;
-    private LMCognition cognition;
     private DatabaseManager dbManager;
 
     @BeforeEach
@@ -51,17 +50,6 @@ public class LLMPlanningIntegrationTest {
         // Load schemas into memory
         loadSchema("planning-schema.json");
         loadSchema("parsing-schema.json");
-
-
-        cognition = new LMCognition(
-                chatModel,
-                memory,
-                new PromptBuilder(),
-                new StructuredOutputParser(),
-                explain,
-                toolKit,
-                new EventBus()
-        );
     }
 
     private void loadSchema(String schemaName) throws IOException {
@@ -80,63 +68,4 @@ public class LLMPlanningIntegrationTest {
         dbManager.close();
     }
 
-    @Test
-    void testGoalDecompositionIntoActionPlans() {
-        // 1. Define the high-level GOAL
-        Thought goal = new Thought(
-                "goal-123",
-                new ThoughtContent("Make a cup of tea.", null, List.of(0.1, 0.2, 0.3), null, null, null, null),
-                new ThoughtState(1.0, 100.0, 1.0),
-                new ThoughtMeta(ThoughtType.GOAL, ThoughtOrigin.USER, List.of(), Instant.now())
-        );
-        memory.saveThought(goal);
-
-        // 2. Define the expected LLM response (a JSON array of action plans)
-        String llmPlanResponse = """
-                [
-                  {
-                    "id": "action-1",
-                    "content": { "text": "Boil water." },
-                    "state": { "clarity": 1.0, "salience": 100.0, "activation": 1.0 },
-                    "metadata": { "type": "ACTION", "origin": "LLM_INFERENCE", "trace": ["goal-123"] }
-                  },
-                  {
-                    "id": "action-2",
-                    "content": { "text": "Get a cup and a tea bag." },
-                    "state": { "clarity": 1.0, "salience": 100.0, "activation": 1.0 },
-                    "metadata": { "type": "ACTION", "origin": "LLM_INFERENCE", "trace": ["goal-123"] }
-                  },
-                  {
-                    "id": "action-3",
-                    "content": { "text": "Pour water into the cup with the tea bag." },
-                    "state": { "clarity": 1.0, "salience": 100.0, "activation": 1.0 },
-                    "metadata": { "type": "ACTION", "origin": "LLM_INFERENCE", "trace": ["goal-123"] }
-                  }
-                ]""";
-
-        // 3. Mock the ChatLanguageModel to return the unparsed plan for the first cycle,
-        // and the parsed plan for the second (parsing) cycle.
-        when(chatModel.generate(any(dev.langchain4j.data.message.UserMessage.class)))
-                .thenReturn(Response.from(AiMessage.from(llmPlanResponse))) // Cycle 1: LLM returns a plan that needs parsing.
-                .thenReturn(Response.from(AiMessage.from(llmPlanResponse))); // Cycle 2: LLM "parses" the text by returning the clean JSON.
-
-        // 4. Process the GOAL thought
-        List<Thought> finalResult = cognition.think(goal);
-
-        // 5. Assert the final results
-        assertNotNull(finalResult);
-        assertEquals(3, finalResult.size(), "Should produce three action plan steps.");
-
-        // Check the type of each thought
-        assertTrue(finalResult.stream().allMatch(t -> t.metadata().type() == ThoughtType.ACTION),
-                "All resulting thoughts should be of type ACTION.");
-
-        // Check the content of each thought
-        assertEquals("Boil water.", finalResult.get(0).content().text());
-        assertEquals("Get a cup and a tea bag.", finalResult.get(1).content().text());
-        assertEquals("Pour water into the cup with the tea bag.", finalResult.get(2).content().text());
-
-        // Check that the trace is correct
-        assertEquals("goal-123", finalResult.get(0).metadata().trace().getFirst());
     }
-}

@@ -1,6 +1,7 @@
 package com.senars.systems.immemory;
 
 import com.senars.core.*;
+import com.senars.logic.UnifiedCausalReasoner;
 import com.senars.systems.Rule;
 import dev.langchain4j.data.message.AiMessage;
 import dev.langchain4j.model.chat.ChatLanguageModel;
@@ -16,8 +17,7 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class InMemoryGovernanceLayerTest {
@@ -36,7 +36,8 @@ class InMemoryGovernanceLayerTest {
     void reviewPlan_withNoRules_shouldApprove() {
         when(vettingModel.generate(any(dev.langchain4j.data.message.UserMessage.class)))
                 .thenReturn(Response.from(AiMessage.from("NO")));
-        InMemoryGovernor governanceLayer = new InMemoryGovernor(List.of(), FAKE_CONSTITUTION, vettingModel);
+        UnifiedCausalReasoner mockUCR = mock(UnifiedCausalReasoner.class);
+        InMemoryGovernor governanceLayer = new InMemoryGovernor(List.of(), FAKE_CONSTITUTION, vettingModel, mockUCR);
         Thought plan = createActionPlan("Do something benign.");
         Optional<String> result = governanceLayer.reviewPlan(plan);
         assertTrue(result.isEmpty());
@@ -51,7 +52,8 @@ class InMemoryGovernanceLayerTest {
         when(vettingModel.generate(any(dev.langchain4j.data.message.UserMessage.class)))
                 .thenReturn(Response.from(AiMessage.from("NO")));
 
-        InMemoryGovernor governanceLayer = new InMemoryGovernor(List.of(rule1, rule2), FAKE_CONSTITUTION, vettingModel);
+        UnifiedCausalReasoner mockUCR = mock(UnifiedCausalReasoner.class);
+        InMemoryGovernor governanceLayer = new InMemoryGovernor(List.of(rule1, rule2), FAKE_CONSTITUTION, vettingModel, mockUCR);
         Thought plan = createActionPlan("Do something benign.");
         Optional<String> result = governanceLayer.reviewPlan(plan);
 
@@ -66,7 +68,8 @@ class InMemoryGovernanceLayerTest {
         when(rule1.check(any())).thenReturn(Optional.of(vetoReason));
         // rule2 and vetting model are not even called
 
-        InMemoryGovernor governanceLayer = new InMemoryGovernor(List.of(rule1, rule2), FAKE_CONSTITUTION, vettingModel);
+        UnifiedCausalReasoner mockUCR = mock(UnifiedCausalReasoner.class);
+        InMemoryGovernor governanceLayer = new InMemoryGovernor(List.of(rule1, rule2), FAKE_CONSTITUTION, vettingModel, mockUCR);
         Thought plan = createActionPlan("Do something questionable.");
         Optional<String> result = governanceLayer.reviewPlan(plan);
 
@@ -80,7 +83,8 @@ class InMemoryGovernanceLayerTest {
         when(vettingModel.generate(any(dev.langchain4j.data.message.UserMessage.class)))
                 .thenReturn(Response.from(AiMessage.from("YES, because " + vetoReason)));
 
-        InMemoryGovernor governanceLayer = new InMemoryGovernor(List.of(), FAKE_CONSTITUTION, vettingModel);
+        UnifiedCausalReasoner mockUCR = mock(UnifiedCausalReasoner.class);
+        InMemoryGovernor governanceLayer = new InMemoryGovernor(List.of(), FAKE_CONSTITUTION, vettingModel, mockUCR);
         Thought plan = createActionPlan("Be mean to the user.");
         Optional<String> result = governanceLayer.reviewPlan(plan);
 
@@ -92,7 +96,8 @@ class InMemoryGovernanceLayerTest {
     void reviewPlan_withConstitutionalApproval_shouldApprove() {
         when(vettingModel.generate(any(dev.langchain4j.data.message.UserMessage.class)))
                 .thenReturn(Response.from(AiMessage.from("NO")));
-        InMemoryGovernor governanceLayer = new InMemoryGovernor(List.of(), FAKE_CONSTITUTION, vettingModel);
+        UnifiedCausalReasoner mockUCR = mock(UnifiedCausalReasoner.class);
+        InMemoryGovernor governanceLayer = new InMemoryGovernor(List.of(), FAKE_CONSTITUTION, vettingModel, mockUCR);
         Thought plan = createActionPlan("Be very helpful and polite.");
         Optional<String> result = governanceLayer.reviewPlan(plan);
 

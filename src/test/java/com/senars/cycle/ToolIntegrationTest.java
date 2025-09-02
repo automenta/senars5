@@ -1,7 +1,6 @@
 package com.senars.cycle;
 
 import com.senars.core.*;
-import com.senars.lm.LMCognition;
 import com.senars.lm.ToolKit;
 import com.senars.logic.LogicEngine;
 import com.senars.systems.Memory;
@@ -42,7 +41,6 @@ public class ToolIntegrationTest {
     private ToolKit toolKit;
     private Action toolUsingAction;
     private LogicalInferenceTool logicalInferenceTool;
-    private Cognition cognition;
 
     @BeforeEach
     void setUp() {
@@ -51,7 +49,6 @@ public class ToolIntegrationTest {
         logicalInferenceTool = new LogicalInferenceTool(inference);
         toolKit = new ToolKit(logicalInferenceTool); // In a real scenario, more tools would be here.
         toolUsingAction = new ToolUsingAction(toolKit);
-        cognition = spy(new LMCognition(chatModel, memory, promptBuilder, outputParser, explain, toolKit, eventBus));
     }
 
     private Thought createActionPlan(String toolRequestJson) {
@@ -127,49 +124,5 @@ public class ToolIntegrationTest {
         assertEquals(ActionStatus.FAILURE, feedback.status());
         assertEquals("executeQuery", feedback.toolName());
         assertEquals("Error: The knowledge base is empty. No facts or rules are available.", feedback.output());
-    }
-
-    @Test
-    void testFailureRecoveryLoop() {
-        // Arrange: Create a failure goal, similar to what Grounding would create.
-        String failureText = "Investigate and resolve failure of tool 'executeQuery'. Error: Query yielded no solutions.";
-        Thought failureGoal = new Thought(
-                "failure-goal-1",
-                new ThoughtContent(failureText, null, List.of(1.0, 2.0, 3.0), null, null, null, null),
-                new ThoughtState(1.0, 100.0, 1.0),
-                new ThoughtMeta(ThoughtType.GOAL, ThoughtOrigin.SYSTEM, emptyList(), Instant.now())
-        );
-
-        // Arrange: Mock the memory to return the Failure Recovery Schema when requested.
-        Thought recoverySchema = com.senars.core.Genesis.createFailureRecoverySchema(new dev.langchain4j.model.embedding.AllMiniLmL6V2EmbeddingModel());
-        when(memory.findSchemaBySymbolicName(com.senars.core.Genesis.FAILURE_RECOVERY_SCHEMA_SYMBOL))
-                .thenReturn(java.util.Optional.of(recoverySchema));
-
-        // Arrange: Mock the prompt builder to return a valid prompt
-        when(promptBuilder.build(any(), any(), any(), any())).thenReturn("test prompt");
-
-        // Arrange: Mock the LLM to return a new action plan (e.g., to use a search tool)
-        String newActionJson = "{\"name\":\"search\",\"arguments\":{\"query\":\"who is luke's father\"}}";
-        when(chatModel.generate(any(dev.langchain4j.data.message.UserMessage.class)))
-                .thenReturn(dev.langchain4j.model.output.Response.from(dev.langchain4j.data.message.AiMessage.from(newActionJson)));
-
-        // Act: Process the failure goal.
-        List<Thought> newThoughts = cognition.think(failureGoal);
-
-        // Assert
-        // 1. Verify that the findRelevantSchema method was called and returned our recovery schema.
-        verify((LMCognition) cognition).findRelevantSchema(failureGoal);
-
-        // 2. Assert that the result is a single new thought.
-        assertEquals(1, newThoughts.size());
-        Thought newActionPlan = newThoughts.getFirst();
-
-        // 3. Assert that the new thought is an ACTION plan.
-        assertEquals(ThoughtType.ACTION, newActionPlan.metadata().type());
-
-        // 4. Assert that the action plan is for the new tool (search).
-        ToolExecutionRequest newRequest = toolKit.parse(newActionPlan.content().symbolic());
-        assertNotNull(newRequest);
-        assertEquals("search", newRequest.name());
     }
 }

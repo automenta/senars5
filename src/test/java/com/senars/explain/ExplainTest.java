@@ -10,8 +10,10 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.Instant;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -30,52 +32,72 @@ class ExplainTest {
     }
 
     private Thought createTestThought(String id, String text, ThoughtType type, List<String> trace) {
+        // Create causal links for the trace
+        Set<CausalLink> causalLinks = new HashSet<>();
+        if (trace != null) {
+            for (String traceId : trace) {
+                causalLinks.add(new CausalLink(traceId, id, CausalRelationType.DIRECT_CAUSATION));
+            }
+        }
+        
         return new Thought(
                 id,
                 new ThoughtContent(text, null, null, null, null, null, null),
                 new ThoughtState(1.0, 1.0, 1.0),
-                new ThoughtMeta(type, ThoughtOrigin.USER, trace, Instant.now())
+                new ThoughtMeta(type, ThoughtOrigin.USER, trace, causalLinks, Instant.now())
         );
     }
 
     @Test
-    void testGetTrace_Success() {
+    void testGetCausalChain_Success() {
         Thought thought1 = createTestThought("id1", "Goal: A", ThoughtType.GOAL, Collections.emptyList());
         Thought thought2 = createTestThought("id2", "Action: B", ThoughtType.ACTION, List.of("id1"));
 
         when(memory.getThoughtById("id1")).thenReturn(Optional.of(thought1));
+        when(memory.getThoughtById("id2")).thenReturn(Optional.of(thought2));
 
-        List<Thought> trace = explain.getTrace(thought2);
+        List<Thought> trace = explain.getCausalChain(thought2);
 
         assertNotNull(trace);
+        // The causal chain should include both thoughts
+        assertEquals(2, trace.size());
+        assertTrue(trace.contains(thought1));
+        assertTrue(trace.contains(thought2));
+    }
+
+    @Test
+    void testGetCausalChain_Empty() {
+        Thought thought = createTestThought("id1", "Goal: A", ThoughtType.GOAL, Collections.emptyList());
+
+        List<Thought> trace = explain.getCausalChain(thought);
+
+        assertNotNull(trace);
+        // The causal chain should include the thought itself even if it has no causal links
         assertEquals(1, trace.size());
-        assertEquals("id1", trace.getFirst().id());
-        verify(memory, times(1)).getThoughtById("id1");
+        assertEquals(thought, trace.get(0));
     }
 
     @Test
-    void testGetTrace_EmptyTrace() {
+    void testFormatCausalChain_Success() {
         Thought thought1 = createTestThought("id1", "Goal: A", ThoughtType.GOAL, Collections.emptyList());
-        List<Thought> trace = explain.getTrace(thought1);
-        assertTrue(trace.isEmpty());
+        Thought thought2 = createTestThought("id2", "Action: B", ThoughtType.ACTION, List.of("id1"));
+        List<Thought> trace = List.of(thought1);
+
+        String formatted = explain.formatCausalChain(trace, thought2);
+
+        assertNotNull(formatted);
+        assertTrue(formatted.contains("Goal: A"));
+        assertTrue(formatted.contains("Action: B"));
     }
 
     @Test
-    void testFormatTrace_Success() {
-        Thought thought1 = createTestThought("id1", "This is a goal.", ThoughtType.GOAL, Collections.emptyList());
-        Thought thought2 = createTestThought("id2", "This is an action.", ThoughtType.ACTION, List.of("id1"));
+    void testFormatCausalChain_Empty() {
+        Thought thought = createTestThought("id1", "Goal: A", ThoughtType.GOAL, Collections.emptyList());
+        List<Thought> trace = Collections.emptyList();
 
-        String formatted = explain.formatTrace(List.of(thought1), thought2);
+        String formatted = explain.formatCausalChain(trace, thought);
 
-        assertTrue(formatted.contains("The reasoning for 'This is an action.' was as follows:"));
-        assertTrue(formatted.contains("1. [GOAL] This is a goal."));
-        assertTrue(formatted.contains("Which led to the final conclusion."));
-    }
-
-    @Test
-    void testFormatTrace_EmptyTrace() {
-        Thought thought1 = createTestThought("id1", "This is a goal.", ThoughtType.GOAL, Collections.emptyList());
-        String formatted = explain.formatTrace(Collections.emptyList(), thought1);
-        assertEquals("The thought 'This is a goal.' has no recorded reasoning trace. It may be a foundational thought or user input.", formatted);
+        assertNotNull(formatted);
+        assertTrue(formatted.contains("no recorded causal chain"));
     }
 }

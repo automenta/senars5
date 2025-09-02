@@ -1,9 +1,11 @@
 package com.senars.systems;
 
+import com.senars.core.CausalLink;
 import com.senars.core.Thought;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 /**
  * The high-level facade for the Memory Nexus.
@@ -77,6 +79,41 @@ public interface Memory {
      * @return A list of all thoughts.
      */
     List<Thought> getAllThoughts();
+
+    /**
+     * Gets all causal links where the specified thought is the source.
+     *
+     * @param thoughtId The ID of the source thought.
+     * @return A set of causal links originating from the specified thought.
+     */
+    Set<CausalLink> getCausalLinksFrom(String thoughtId);
+
+    /**
+     * Gets all causal links where the specified thought is the target.
+     *
+     * @param thoughtId The ID of the target thought.
+     * @return A set of causal links pointing to the specified thought.
+     */
+    Set<CausalLink> getCausalLinksTo(String thoughtId);
+
+    /**
+     * Finds all thoughts that are causally connected to the specified thought,
+     * traversing both forward and backward in the causal graph up to the specified depth.
+     *
+     * @param thoughtId The ID of the thought to start from.
+     * @param maxDepth  The maximum depth to traverse in either direction.
+     * @return A set of thoughts that are causally connected to the specified thought.
+     */
+    Set<Thought> getCausallyConnectedThoughts(String thoughtId, int maxDepth);
+
+    /**
+     * Calculates the causal leverage of a thought, which measures how much influence
+     * the thought has on high-value outcomes in the causal graph.
+     *
+     * @param thoughtId The ID of the thought to calculate leverage for.
+     * @return The causal leverage score.
+     */
+    double calculateCausalLeverage(String thoughtId);
 
     /**
      * Persists the underlying memory stores.

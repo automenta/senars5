@@ -3,6 +3,7 @@ package com.senars.salience;
 import com.senars.core.*;
 import com.senars.effort.EffortPredictor;
 import com.senars.motive.MotiveHierarchy;
+import com.senars.systems.Memory;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
@@ -13,7 +14,7 @@ import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 class SalienceCalculatorTest {
 
@@ -22,10 +23,12 @@ class SalienceCalculatorTest {
     private SalienceCalculator calculator;
     private MotiveHierarchy motiveHierarchy;
     private EffortPredictor mockEffortPredictor;
+    private Memory mockMemory;
 
     @BeforeEach
     void setUp() {
         mockEffortPredictor = Mockito.mock(EffortPredictor.class);
+        mockMemory = Mockito.mock(Memory.class);
         // Default behavior for tests that don't care about effort
         when(mockEffortPredictor.predict(any(Thought.class))).thenReturn(1.0);
     }
@@ -62,7 +65,7 @@ class SalienceCalculatorTest {
         List<Double> embedding = List.of(1.0, 0.0);
         Thought drive = createTestDrive("drive-acquire-knowledge", "knowledge", embedding);
         motiveHierarchy = new MotiveHierarchy(List.of(drive));
-        calculator = new SalienceCalculator(mockEffortPredictor);
+        calculator = new SalienceCalculator(mockEffortPredictor, mockMemory);
 
         Thought thoughtToScore = createTestThought("test", embedding, 0.5, 0.8);
         double salience = calculator.calculate(thoughtToScore, motiveHierarchy);
@@ -76,7 +79,7 @@ class SalienceCalculatorTest {
     void testCalculate_onlyReduceUncertaintyDriveBonus() {
         Thought drive = createTestDrive(REDUCE_UNCERTAINTY_DRIVE_ID, "uncertainty", null); // No embedding needed
         motiveHierarchy = new MotiveHierarchy(List.of(drive));
-        calculator = new SalienceCalculator(mockEffortPredictor);
+        calculator = new SalienceCalculator(mockEffortPredictor, mockMemory);
 
         // Thought with low clarity
         Thought thoughtToScore = createTestThought("test", List.of(1.0, 0.0), 0.5, 0.6);
@@ -93,7 +96,7 @@ class SalienceCalculatorTest {
     void testCalculate_reduceUncertaintyDoesNotApplyForHighClarity() {
         Thought drive = createTestDrive(REDUCE_UNCERTAINTY_DRIVE_ID, "uncertainty", null);
         motiveHierarchy = new MotiveHierarchy(List.of(drive));
-        calculator = new SalienceCalculator(mockEffortPredictor);
+        calculator = new SalienceCalculator(mockEffortPredictor, mockMemory);
 
         // Thought with perfect clarity
         Thought thoughtToScore = createTestThought("test", List.of(1.0, 0.0), 0.5, 1.0);
@@ -118,7 +121,7 @@ class SalienceCalculatorTest {
 
         motiveHierarchy = new MotiveHierarchy(List.of(drive));
         motiveHierarchy.addAmbition(ambition);
-        calculator = new SalienceCalculator(mockEffortPredictor);
+        calculator = new SalienceCalculator(mockEffortPredictor, mockMemory);
 
         // A thought that matches both the ambition and the drive, but on different dimensions
         List<Double> thoughtEmbedding = VectorMath.normalize(List.of(1.0, 1.0, 0.0));
@@ -152,7 +155,7 @@ class SalienceCalculatorTest {
 
         motiveHierarchy = new MotiveHierarchy(List.of(drive1, drive2));
         motiveHierarchy.addAmbition(ambition);
-        calculator = new SalienceCalculator(mockEffortPredictor);
+        calculator = new SalienceCalculator(mockEffortPredictor, mockMemory);
 
         // A thought with low clarity that matches a goal and a drive
         Thought thoughtToScore = createTestThought("test", embeddingThought, 0.1, 0.5);

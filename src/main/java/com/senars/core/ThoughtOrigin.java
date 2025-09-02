@@ -5,5 +5,7 @@ public enum ThoughtOrigin {
     LLM_INFERENCE,
     LOGIC_INFERENCE,
     USER,
-    SYSTEM
+    SYSTEM,
+    UCR_FORWARD,
+    UCR_BACKWARD
 }

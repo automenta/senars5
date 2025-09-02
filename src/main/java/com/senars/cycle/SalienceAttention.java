@@ -3,6 +3,7 @@ package com.senars.cycle;
 import com.senars.core.Thought;
 import com.senars.events.EventBus;
 import com.senars.events.Events;
+import com.senars.logic.UnifiedCausalReasoner;
 import com.senars.motive.MotiveHierarchy;
 import com.senars.salience.SalienceCalculator;
 import org.slf4j.Logger;
@@ -16,7 +17,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
  * An implementation of the Attention Funnel that selects the focus thought
- * based on the highest calculated salience score.
+ * based on the highest calculated salience score, enhanced with causal leverage analysis.
  */
 public class SalienceAttention implements Attention {
 
@@ -25,11 +26,13 @@ public class SalienceAttention implements Attention {
     private final SalienceCalculator salienceCalculator;
     private final MotiveHierarchy motiveHierarchy;
     private final EventBus eventBus;
+    private final UnifiedCausalReasoner ucr;
 
-    public SalienceAttention(SalienceCalculator salienceCalculator, MotiveHierarchy motiveHierarchy, EventBus eventBus) {
+    public SalienceAttention(SalienceCalculator salienceCalculator, MotiveHierarchy motiveHierarchy, EventBus eventBus, UnifiedCausalReasoner ucr) {
         this.salienceCalculator = salienceCalculator;
         this.motiveHierarchy = motiveHierarchy;
         this.eventBus = eventBus;
+        this.ucr = ucr;
     }
 
     @Override
@@ -39,7 +42,6 @@ public class SalienceAttention implements Attention {
         }
     }
 
-    // ...
     @Override
     public Optional<Thought> selectFocusThought() {
         if (candidates.isEmpty()) {

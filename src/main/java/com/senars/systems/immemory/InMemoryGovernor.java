@@ -1,6 +1,8 @@
 package com.senars.systems.immemory;
 
 import com.senars.core.Thought;
+import com.senars.core.ThoughtType;
+import com.senars.logic.UnifiedCausalReasoner;
 import com.senars.systems.Governor;
 import com.senars.systems.Rule;
 import dev.langchain4j.data.message.UserMessage;
@@ -20,6 +22,7 @@ import java.util.regex.Pattern;
  * It uses a two-stage process to review action plans:
  * 1. A fast, hard-coded check against a list of symbolic rules.
  * 2. A more nuanced, LM-based check against a set of constitutional principles.
+ * 3. A predictive check using the UCR's simulation mode.
  */
 public class InMemoryGovernor implements Governor {
 
@@ -28,6 +31,7 @@ public class InMemoryGovernor implements Governor {
     private final List<Rule> rules;
     private final String constitutionalPrinciples;
     private final ChatLanguageModel vettingModel;
+    private final UnifiedCausalReasoner ucr;
 
     /**
      * Constructs a new InMemoryGovernor.
@@ -35,11 +39,13 @@ public class InMemoryGovernor implements Governor {
      * @param rules                    A list of hard-coded rules for the first-stage check.
      * @param constitutionalPrinciples The text of the constitution for the second-stage LM check.
      * @param vettingModel             A dedicated, isolated ChatLanguageModel for vetting.
+     * @param ucr                      The Unified Causal Reasoner for predictive governance.
      */
-    public InMemoryGovernor(List<Rule> rules, String constitutionalPrinciples, ChatLanguageModel vettingModel) {
+    public InMemoryGovernor(List<Rule> rules, String constitutionalPrinciples, ChatLanguageModel vettingModel, UnifiedCausalReasoner ucr) {
         this.rules = Objects.requireNonNull(rules);
         this.constitutionalPrinciples = Objects.requireNonNull(constitutionalPrinciples);
         this.vettingModel = Objects.requireNonNull(vettingModel);
+        this.ucr = Objects.requireNonNull(ucr);
     }
 
     @Override
@@ -53,8 +59,39 @@ public class InMemoryGovernor implements Governor {
             }
         }
 
-        // Stage 2: Constitutional LM Vetting (Nuanced, Semantic)
+        // Stage 2: Predictive Governance Check (UCR Simulation)
+        Optional<String> predictiveVeto = performPredictiveGovernanceCheck(actionPlan);
+        if (predictiveVeto.isPresent()) {
+            return predictiveVeto;
+        }
+
+        // Stage 3: Constitutional LM Vetting (Nuanced, Semantic)
         return performConstitutionalVetting(actionPlan);
+    }
+
+    private Optional<String> performPredictiveGovernanceCheck(Thought actionPlan) {
+        try {
+            LOGGER.debug("Performing predictive governance check for action plan: {}", actionPlan.id());
+            
+            // Use the UCR to simulate the action plan
+            List<Thought> simulations = ucr.simulate(actionPlan, UnifiedCausalReasoner.ReasoningOptions.simulation());
+            
+            // Check if any simulations indicate potential problems
+            for (Thought simulation : simulations) {
+                // If the simulation indicates a potential problem (low clarity)
+                if (simulation.state().clarity() < 0.7) {
+                    String reason = "Predictive governance check detected potential issues: " + simulation.content().text();
+                    LOGGER.warn("VETOED by predictive governance: {}", reason);
+                    return Optional.of(reason);
+                }
+            }
+            
+            return Optional.empty(); // No issues detected
+        } catch (Exception e) {
+            LOGGER.error("Error during predictive governance check. Continuing with other checks.", e);
+            // Continue with other checks if the predictive check fails
+            return Optional.empty();
+        }
     }
 
     private Optional<String> performConstitutionalVetting(Thought actionPlan) {

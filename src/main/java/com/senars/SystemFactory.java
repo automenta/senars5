@@ -10,30 +10,27 @@ import com.senars.effort.EffortTracker;
 import com.senars.events.EventBus;
 import com.senars.events.Events;
 import com.senars.events.LoggingEventSubscriber;
-import com.senars.lm.LMCognition;
-import com.senars.lm.PromptBuilder;
-import com.senars.lm.StructuredOutputParser;
+import com.senars.explain.CausalExplanationGenerator;
+import com.senars.explain.Explain;
+import com.senars.explain.ExplanationGenerator;
 import com.senars.lm.ToolKit;
 import com.senars.logic.LogicEngine;
+import com.senars.logic.UCRFactory;
+import com.senars.logic.UnifiedCausalReasoner;
 import com.senars.motive.MotiveHierarchy;
 import com.senars.optimizer.EffortModelOptimizer;
 import com.senars.optimizer.SchemaOptimizer;
 import com.senars.salience.SalienceCalculator;
 import com.senars.systems.Governor;
-import com.senars.systems.Grounding;
 import com.senars.systems.Memory;
 import com.senars.systems.Rule;
 import com.senars.systems.immemory.ConsolePerception;
 import com.senars.systems.immemory.InMemoryGovernor;
-import com.senars.systems.immemory.InMemoryGrounding;
 import com.senars.systems.immemory.InMemoryMemory;
 import com.senars.systems.perception.FilePerceptionChannel;
 import com.senars.systems.rules.KeywordBlocklistRule;
 import com.senars.systems.rules.PreventDeprecatedSchemaUseRule;
 import com.senars.tools.*;
-import com.senars.tools.ApiTool;
-import com.senars.explain.Explain;
-import com.senars.explain.ExplanationGenerator;
 import dev.langchain4j.model.chat.ChatLanguageModel;
 import dev.langchain4j.model.embedding.AllMiniLmL6V2EmbeddingModel;
 import dev.langchain4j.model.embedding.EmbeddingModel;
@@ -96,15 +93,15 @@ public class SystemFactory {
                 .timeout(Duration.ofSeconds(config.getLlmApiTimeout() / 2)) // Faster timeout for safety checks
                 .build();
 
+        // Create the Unified Causal Reasoner (replaces Grounding system)
+        UnifiedCausalReasoner ucr = UCRFactory.createUCR(memory, eventBus);
+
         List<Rule> rules = List.of(
                 new KeywordBlocklistRule(List.of("delete all files", "shutdown", "rm -rf")),
                 new PreventDeprecatedSchemaUseRule(memory, logicEngine)
         );
-        Governor governance = new InMemoryGovernor(rules, constitution, vettingModel);
+        Governor governance = new InMemoryGovernor(rules, constitution, vettingModel, ucr);
         LOGGER.info("Governance Layer initialized with {} rules and constitutional vetting.", rules.size());
-
-
-        Grounding grounding = new InMemoryGrounding(memory, eventBus);
         this.schemaOptimizer = new SchemaOptimizer(memory, eventBus);
         EffortModelOptimizer effortOptimizer = new EffortModelOptimizer(memory, eventBus);
 
@@ -172,35 +169,21 @@ public class SystemFactory {
 
         EffortPredictor effortPredictor = new EffortPredictor(memory);
         EffortTracker effortTracker = new EffortTracker(effortPredictor);
-        SalienceCalculator salienceCalculator = new SalienceCalculator(effortPredictor);
-        Attention attention = new SalienceAttention(salienceCalculator, motives, eventBus);
+        SalienceCalculator salienceCalculator = new SalienceCalculator(effortPredictor, memory);
+        Attention attention = new SalienceAttention(salienceCalculator, motives, eventBus, ucr);
         attention.addCandidate(researchGoal);
 
-        // 6. LLM-based Cognitive Processor
-        PromptBuilder promptBuilder = new PromptBuilder();
-        StructuredOutputParser outputParser = new StructuredOutputParser();
-        Explain explain = new Explain(memory);
-
-        Cognition cognitiveProcessor = new LMCognition(
-                chatModel,
-                memory,
-                promptBuilder,
-                outputParser,
-                explain,
-                toolKit,
-                eventBus
-        );
+        // 6. No LLM-based Cognitive Processor anymore (replaced by UCR)
 
         // 7. The Cognitive Cycle itself
         ActionFeedbackQueue feedbackQueue = new ActionFeedbackQueue();
         this.cognitiveCycle = new CognitiveCycle(
                 perception,
                 attention,
-                cognitiveProcessor,
+                ucr, // Use UCR instead of cognitiveProcessor
                 action,
                 memory,
                 governance,
-                grounding,
                 feedbackQueue,
                 schemaOptimizer,
                 effortOptimizer,
@@ -210,7 +193,9 @@ public class SystemFactory {
 
         // 8. Event Bus Subscriptions
         ExplanationGenerator explanationGenerator = new ExplanationGenerator(eventBus);
+        CausalExplanationGenerator causalExplanationGenerator = new CausalExplanationGenerator(eventBus, memory, ucr);
         eventBus.subscribe(Events.NewThoughtCreatedEvent.class, cognitiveCycle::onNewThoughtCreated);
+        eventBus.subscribe(Events.NewThoughtCreatedEvent.class, causalExplanationGenerator::onEvent);
         eventBus.subscribe(Events.ActionExecutedEvent.class, schemaOptimizer::onActionExecuted);
         eventBus.subscribe(Events.CognitionStartEvent.class, effortTracker::onCognitionStart);
         eventBus.subscribe(Events.CognitionEndEvent.class, effortTracker::onCognitionEnd);

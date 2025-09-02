@@ -37,14 +37,14 @@ public class ExplanationGenerator implements EventSubscriber<Events.SchemaOptimi
 
         String goalText = String.format(
                 "The schema %s was recently replaced by a new version, %s, due to an automated optimization process. " +
-                "Generate a human-readable report explaining why this change was made. Use the provenance trace of the new schema to find the optimization goal and the original schema.",
+                "Generate a human-readable report explaining why this change was made. Use the causal links of the new schema to find the optimization goal and the original schema.",
                 event.oldSchemaId(),
                 event.newSchemaId()
         );
 
         ThoughtContent content = new ThoughtContent(goalText, null, null, null, null, null, null);
 
-        // The trace should include the new schema so the XAI system knows where to start looking.
+        // The causal links should include the new schema so the XAI system knows where to start looking.
         ThoughtMeta meta = new ThoughtMeta(
                 ThoughtType.GOAL,
                 ThoughtOrigin.SYSTEM,

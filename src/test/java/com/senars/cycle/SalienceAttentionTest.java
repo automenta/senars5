@@ -2,6 +2,7 @@ package com.senars.cycle;
 
 import com.senars.core.*;
 import com.senars.events.EventBus;
+import com.senars.logic.UnifiedCausalReasoner;
 import com.senars.motive.MotiveHierarchy;
 import com.senars.salience.SalienceCalculator;
 import org.junit.jupiter.api.BeforeEach;
@@ -15,7 +16,7 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class SalienceAttentionTest {
@@ -33,7 +34,9 @@ class SalienceAttentionTest {
 
     @BeforeEach
     void setUp() {
-        attentionFunnel = new SalienceAttention(salienceCalculator, motiveHierarchy, eventBus);
+        // Create a mock UCR for testing
+        UnifiedCausalReasoner mockUCR = mock(UnifiedCausalReasoner.class);
+        attentionFunnel = new SalienceAttention(salienceCalculator, motiveHierarchy, eventBus, mockUCR);
     }
 
     private Thought createTestThought(String id, double activation) {
