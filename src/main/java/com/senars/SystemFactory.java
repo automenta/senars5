@@ -94,7 +94,7 @@ public class SystemFactory {
                 .build();
 
         // Create the Unified Causal Reasoner (replaces Grounding system)
-        UnifiedCausalReasoner ucr = UCRFactory.createUCR(memory, eventBus);
+        UnifiedCausalReasoner ucr = UCRFactory.createUCR(memory, eventBus, chatModel);
 
         List<Rule> rules = List.of(
                 new KeywordBlocklistRule(List.of("delete all files", "shutdown", "rm -rf")),

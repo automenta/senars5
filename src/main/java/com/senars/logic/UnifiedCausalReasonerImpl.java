@@ -4,12 +4,16 @@ import com.senars.core.*;
 import com.senars.events.EventBus;
 import com.senars.events.Events;
 import com.senars.systems.Memory;
+import dev.langchain4j.model.chat.ChatLanguageModel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import dev.langchain4j.data.message.UserMessage;
 
 /**
  * Implementation of the Unified Causal Reasoner (UCR).
@@ -24,16 +28,18 @@ public class UnifiedCausalReasonerImpl implements UnifiedCausalReasoner {
 
     private final Memory memory;
     private final EventBus eventBus;
+    private final ChatLanguageModel chatModel;
     private final double reinforcementFactor;
     private final double blameFactor;
 
-    public UnifiedCausalReasonerImpl(Memory memory, EventBus eventBus) {
-        this(memory, eventBus, DEFAULT_REINFORCEMENT_FACTOR, DEFAULT_BLAME_FACTOR);
+    public UnifiedCausalReasonerImpl(Memory memory, EventBus eventBus, ChatLanguageModel chatModel) {
+        this(memory, eventBus, chatModel, DEFAULT_REINFORCEMENT_FACTOR, DEFAULT_BLAME_FACTOR);
     }
 
-    public UnifiedCausalReasonerImpl(Memory memory, EventBus eventBus, double reinforcementFactor, double blameFactor) {
+    public UnifiedCausalReasonerImpl(Memory memory, EventBus eventBus, ChatLanguageModel chatModel, double reinforcementFactor, double blameFactor) {
         this.memory = Objects.requireNonNull(memory);
         this.eventBus = Objects.requireNonNull(eventBus);
+        this.chatModel = Objects.requireNonNull(chatModel);
         this.reinforcementFactor = reinforcementFactor;
         this.blameFactor = blameFactor;
     }
@@ -70,18 +76,41 @@ public class UnifiedCausalReasonerImpl implements UnifiedCausalReasoner {
             return performSimulation(focusThought, options);
         }
 
-        // For actual forward reasoning, we need to integrate with the LLM components
-        // This is a simplified version that mimics the Cognitive Processor logic
-        // In a full implementation, this would be more sophisticated
-        
         eventBus.publish(new Events.CognitionStartEvent(focusThought));
         try {
-            LOGGER.info("Processing thought: {} of type {} using UCR forward reasoning", 
+            LOGGER.info("Processing thought: {} of type {} using UCR forward reasoning",
                     focusThought.id(), focusThought.metadata().type());
 
-            // For now, we'll create a simple action plan as an example
-            // In a full implementation, this would involve complex LLM interactions
-            return createForwardReasoningResult(focusThought);
+            // 1. Generate potential actions
+            List<Thought> potentialActions = generatePotentialActions(focusThought);
+            if (potentialActions.isEmpty()) {
+                LOGGER.warn("UCR generated no potential actions for thought {}", focusThought.id());
+                return Collections.emptyList();
+            }
+            LOGGER.info("Generated {} potential actions.", potentialActions.size());
+
+            // 2. Simulate each action to predict its outcome
+            Map<Thought, Double> simulatedOutcomes = new HashMap<>();
+            for (Thought action : potentialActions) {
+                List<Thought> simulationResults = performSimulation(action, ReasoningOptions.simulation());
+                // For simplicity, we take the clarity of the first simulation result.
+                // A more complex model could analyze all results.
+                double clarity = simulationResults.isEmpty() ? 0.0 : simulationResults.get(0).state().clarity();
+                simulatedOutcomes.put(action, clarity);
+                LOGGER.debug("Simulated action '{}' -> Predicted Clarity: {}", action.content().text(), clarity);
+            }
+
+            // 3. Select the best action
+            Optional<Thought> bestAction = selectBestAction(simulatedOutcomes);
+
+            if (bestAction.isPresent()) {
+                LOGGER.info("Selected best action: '{}'", bestAction.get().content().text());
+                return List.of(bestAction.get());
+            } else {
+                LOGGER.warn("No suitable action was selected after simulation for thought {}", focusThought.id());
+                return Collections.emptyList();
+            }
+
         } catch (Exception e) {
             LOGGER.error("Error during UCR forward reasoning for thought: {}", focusThought.id(), e);
             eventBus.publish(new Events.CognitionErrorEvent(focusThought, e));
@@ -89,6 +118,13 @@ public class UnifiedCausalReasonerImpl implements UnifiedCausalReasoner {
         } finally {
             eventBus.publish(new Events.CognitionEndEvent(focusThought));
         }
+    }
+
+    private Optional<Thought> selectBestAction(Map<Thought, Double> simulatedOutcomes) {
+        // Select the action with the highest predicted clarity.
+        return simulatedOutcomes.entrySet().stream()
+                .max(Map.Entry.comparingByValue())
+                .map(Map.Entry::getKey);
     }
 
     /**
@@ -171,42 +207,6 @@ public class UnifiedCausalReasonerImpl implements UnifiedCausalReasoner {
         // of the action plan against safety principles and system constraints
         
         return issues;
-    }
-
-    /**
-     * Creates a forward reasoning result based on the focus thought.
-     * This is a simplified version that would be replaced with full LLM integration.
-     *
-     * @param focusThought The focus thought to reason about
-     * @return A list of thoughts generated by the reasoning process
-     */
-    private List<Thought> createForwardReasoningResult(Thought focusThought) {
-        // This is where we would integrate with the LLM components from the Cognitive Processor
-        // For now, we'll create a simple action plan
-        
-        ThoughtContent content = new ThoughtContent(
-                "Action plan generated by UCR forward reasoning for thought " + focusThought.id(),
-                "ucr:action_plan",
-                null, null, null, null, null
-        );
-        
-        // Create causal links instead of using the old trace system
-        Set<CausalLink> causalLinks = Set.of(
-                new CausalLink(focusThought.id(), UUID.randomUUID().toString(), CausalRelationType.DIRECT_CAUSATION)
-        );
-        
-        ThoughtMeta meta = new ThoughtMeta(
-                ThoughtType.ACTION,
-                ThoughtOrigin.UCR_FORWARD,
-                List.of(), // Empty trace as we're using causal links
-                causalLinks,
-                Instant.now()
-        );
-        
-        ThoughtState state = new ThoughtState(1.0, 1.0, 1.0);
-        Thought actionPlan = new Thought(UUID.randomUUID().toString(), content, state, meta);
-        
-        return List.of(actionPlan);
     }
 
     @Override
@@ -294,5 +294,60 @@ public class UnifiedCausalReasonerImpl implements UnifiedCausalReasoner {
 
         // Publish the new goal to the event bus so the cognitive cycle can add it to the attention funnel
         eventBus.publish(new Events.NewThoughtCreatedEvent(failureGoal));
+    }
+
+    private List<Thought> generatePotentialActions(Thought focusThought) {
+        String prompt = String.format(
+                """
+                Given the current thought: '%s'
+
+                Brainstorm 3 potential, distinct, and actionable next steps. The output must be a valid JSON array of strings.
+
+                Example:
+                ["Step 1 text...", "Step 2 text...", "Step 3 text..."]
+                """,
+                focusThought.content().text()
+        );
+
+        String response = chatModel.generate(UserMessage.from(prompt));
+
+        List<Thought> actionThoughts = new ArrayList<>();
+        try {
+            // A simple regex to find strings within a JSON array.
+            // It handles escaped quotes but is not a full JSON parser.
+            Pattern pattern = Pattern.compile("\"(.*?)(?<!\\\\)\"");
+            Matcher matcher = pattern.matcher(response);
+
+            while (matcher.find()) {
+                String actionText = matcher.group(1);
+
+                ThoughtContent content = new ThoughtContent(
+                        actionText,
+                        "ucr:potential_action",
+                        null, null, null, null, null
+                );
+
+                Set<CausalLink> causalLinks = Set.of(
+                        new CausalLink(focusThought.id(), UUID.randomUUID().toString(), CausalRelationType.DIRECT_CAUSATION)
+                );
+
+                ThoughtMeta meta = new ThoughtMeta(
+                        ThoughtType.ACTION,
+                        ThoughtOrigin.UCR_FORWARD,
+                        List.of(),
+                        causalLinks,
+                        Instant.now()
+                );
+
+                ThoughtState state = new ThoughtState(1.0, 1.0, 1.0);
+                Thought actionPlan = new Thought(UUID.randomUUID().toString(), content, state, meta);
+                actionThoughts.add(actionPlan);
+            }
+        } catch (Exception e) {
+            LOGGER.error("Failed to parse potential actions from LLM response: {}", response, e);
+            return Collections.emptyList();
+        }
+
+        return actionThoughts;
     }
 }

@@ -129,10 +129,10 @@ public class InMemoryGovernor implements Governor {
 
             return Optional.empty(); // Plan is approved
         } catch (Exception e) {
-            LOGGER.error("Error during constitutional vetting. Approving plan as a fallback safety measure.", e);
-            // Fallback to approve if the vetting model fails, to prevent the system from getting stuck.
-            // A more robust implementation might trigger a high-priority error state.
-            return Optional.empty();
+            LOGGER.error("Error during constitutional vetting. Vetoing plan as a fallback safety measure.", e);
+            // Fallback to VETO if the vetting model fails, to prevent the system from failing open.
+            // The CognitiveCycle will see the veto and create a replan goal to investigate the failure.
+            return Optional.of("Vetoed due to an internal error in the constitutional vetting model: " + e.getMessage());
         }
     }
 
