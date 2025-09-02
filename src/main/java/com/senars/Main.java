@@ -66,7 +66,7 @@ public class Main {
         );
         Governor governance = new InMemoryGovernor(rules);
         Grounding grounding = new InMemoryGrounding(memory, eventBus);
-        SchemaOptimizer schemaOptimizer = new SchemaOptimizer(memory);
+        SchemaOptimizer schemaOptimizer = new SchemaOptimizer(memory, eventBus);
 
         // 3. Genesis & Bootstrapping
         LOGGER.info("Executing Genesis Protocol...");

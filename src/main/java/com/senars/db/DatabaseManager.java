@@ -32,8 +32,13 @@ public class DatabaseManager implements Closeable {
      */
     public DatabaseManager(Path dbFilePath) {
         LOGGER.info("Initializing database at: {}", dbFilePath);
-        this.db = DBMaker
-                .fileDB(dbFilePath.toFile())
+        DBMaker.Maker maker;
+        if (dbFilePath != null) {
+            maker = DBMaker.fileDB(dbFilePath.toFile());
+        } else {
+            maker = DBMaker.heapDB();
+        }
+        this.db = maker
                 .transactionEnable() // Enable transactions for data safety
                 .closeOnJvmShutdown()  // Ensure the DB is closed gracefully
                 .make();

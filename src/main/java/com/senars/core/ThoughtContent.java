@@ -1,5 +1,6 @@
 package com.senars.core;
 
+import java.io.Serializable;
 import java.util.List;
 
 /**
@@ -23,5 +24,5 @@ public record ThoughtContent(
         Object procedural,
         Feedback feedback,
         List<String> rules
-) {
+) implements Serializable {
 }

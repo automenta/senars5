@@ -1,5 +1,7 @@
 package com.senars.core;
 
+import java.io.Serializable;
+
 /**
  * Represents the dynamic state of a Thought, which evolves over time.
  * Using a record implies that state evolution happens by creating new instances
@@ -13,5 +15,5 @@ public record ThoughtState(
         double clarity,
         double salience,
         double activation
-) {
+) implements Serializable {
 }

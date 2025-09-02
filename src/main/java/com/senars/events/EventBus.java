@@ -16,7 +16,7 @@ import java.util.concurrent.Executors;
  */
 public class EventBus {
     private static final Logger LOGGER = LoggerFactory.getLogger(EventBus.class);
-    private final Map<Class<? extends Event>, List<EventSubscriber>> subscribers = new ConcurrentHashMap<>();
+    private final Map<Class<? extends Event>, List<EventSubscriber<? extends Event>>> subscribers = new ConcurrentHashMap<>();
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
 
     /**
@@ -34,8 +34,9 @@ public class EventBus {
      * Publishes an event, notifying all relevant subscribers asynchronously.
      * @param event The event to publish.
      */
+    @SuppressWarnings("unchecked")
     public void publish(Event event) {
-        List<EventSubscriber> eventSubscribers = subscribers.get(event.getClass());
+        List<EventSubscriber<? extends Event>> eventSubscribers = subscribers.get(event.getClass());
         if (eventSubscribers != null) {
             executor.submit(() -> {
                 for (EventSubscriber subscriber : eventSubscribers) {

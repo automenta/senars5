@@ -1,5 +1,7 @@
 package com.senars.core;
 
+import java.io.Serializable;
+
 /**
  * The universal data structure for all cognitive phenomena in the SeNARS system.
  * It is an immutable record, meaning any "modification" results in a new Thought instance.
@@ -14,5 +16,5 @@ public record Thought(
         ThoughtContent content,
         ThoughtState state,
         ThoughtMeta metadata
-) {
+) implements Serializable {
 }

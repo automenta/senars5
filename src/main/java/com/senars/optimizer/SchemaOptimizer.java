@@ -1,6 +1,7 @@
 package com.senars.optimizer;
 
 import com.senars.core.*;
+import com.senars.events.EventBus;
 import com.senars.events.Events;
 import com.senars.systems.Memory;
 import org.slf4j.Logger;
@@ -17,15 +18,17 @@ import java.util.stream.Collectors;
 public class SchemaOptimizer {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(SchemaOptimizer.class);
-    private static final int MIN_SAMPLES_THRESHOLD = 5;
-    private static final long EXECUTION_TIME_THRESHOLD_MS = 2000;
+    private static final int MIN_SAMPLES_THRESHOLD = 10;
+    private static final long EXECUTION_TIME_THRESHOLD_MS = 1500;
     public static final String REWRITE_SCHEMA_SYMBOLIC = "senars:rewrite_schema";
 
     private final Memory memory;
-    private final Map<String, List<Long>> schemaPerformanceData = new ConcurrentHashMap<>();
+    private final EventBus eventBus;
+    private final Map<String, SchemaPerformanceTracker> schemaPerformanceData = new ConcurrentHashMap<>();
 
-    public SchemaOptimizer(Memory memory) {
+    public SchemaOptimizer(Memory memory, EventBus eventBus) {
         this.memory = memory;
+        this.eventBus = eventBus;
     }
 
     /**
@@ -35,26 +38,21 @@ public class SchemaOptimizer {
      */
     public void onActionExecuted(Events.ActionExecutedEvent event) {
         Feedback feedback = event.feedback();
-        if (feedback.status() != ActionStatus.SUCCESS) {
-            return;
-        }
-
         Thought actionPlan = feedback.actionPlan();
+
         if (actionPlan == null || actionPlan.metadata() == null || actionPlan.metadata().trace() == null) {
             return;
         }
 
         // Find the schema ID in the trace and log the performance
         actionPlan.metadata().trace().stream()
-                .map(memory::getThoughtById)
-                .filter(Optional::isPresent)
-                .map(Optional::get)
+                .findFirst() // The immediate parent is the most relevant schema
+                .flatMap(memory::getThoughtById)
                 .filter(thought -> thought.metadata().type() == ThoughtType.SCHEMA)
-                .findFirst()
                 .ifPresent(schema -> {
-                    LOGGER.debug("Logging execution time for schema {}: {}ms", schema.id(), feedback.executionTimeMs());
-                    schemaPerformanceData.computeIfAbsent(schema.id(), k -> new ArrayList<>())
-                            .add(feedback.executionTimeMs());
+                    LOGGER.debug("Logging execution time for schema {}: {}ms, Status: {}", schema.id(), feedback.executionTimeMs(), feedback.status());
+                    schemaPerformanceData.computeIfAbsent(schema.id(), k -> new SchemaPerformanceTracker())
+                            .addExecution(feedback.executionTimeMs(), feedback.status() == ActionStatus.SUCCESS);
                 });
     }
 
@@ -67,43 +65,46 @@ public class SchemaOptimizer {
         LOGGER.debug("Running schema optimizer on collected performance data...");
         List<Thought> optimizationGoals = new ArrayList<>();
 
-        for (Map.Entry<String, List<Long>> entry : schemaPerformanceData.entrySet()) {
+        for (Map.Entry<String, SchemaPerformanceTracker> entry : schemaPerformanceData.entrySet()) {
             String schemaId = entry.getKey();
-            List<Long> times = entry.getValue();
+            SchemaPerformanceTracker tracker = entry.getValue();
 
-            if (times.size() < MIN_SAMPLES_THRESHOLD) {
+            if (tracker.getTotalExecutions() < MIN_SAMPLES_THRESHOLD) {
                 continue;
             }
 
-            OptionalDouble averageTimeOpt = times.stream().mapToLong(Long::longValue).average();
-            if (averageTimeOpt.isEmpty()) {
-                continue;
-            }
-            double averageTime = averageTimeOpt.getAsDouble();
+            double averageTime = tracker.getAverageExecutionTime();
+            double successRate = tracker.getSuccessRate();
 
-            if (averageTime > EXECUTION_TIME_THRESHOLD_MS) {
-                LOGGER.warn("Schema {} is underperforming with average execution time of {}ms after {} uses. Generating optimization goal.",
-                        schemaId, String.format("%.2f", averageTime), times.size());
+            // Check for high execution time or low success rate
+            if (averageTime > EXECUTION_TIME_THRESHOLD_MS || successRate < 0.5) {
+                LOGGER.warn("Schema {} is underperforming (AvgTime: {}ms, SuccessRate: {}%, Executions: {}). Generating optimization goal.",
+                        schemaId, String.format("%.2f", averageTime), String.format("%.2f", successRate * 100), tracker.getTotalExecutions());
 
                 memory.getThoughtById(schemaId).ifPresent(schemaThought -> {
-                    Thought goal = createOptimizationGoal(schemaThought, averageTime);
+                    Thought goal = createOptimizationGoal(schemaThought, averageTime, successRate);
                     optimizationGoals.add(goal);
+                    eventBus.publish(new Events.SchemaOptimizationGoalCreatedEvent(goal));
                 });
+
+                // Reset the tracker for this schema after generating a goal
+                tracker.reset();
             }
         }
 
-        if (!optimizationGoals.isEmpty()) {
-            schemaPerformanceData.clear();
-        }
         return optimizationGoals;
     }
 
 
-    private Thought createOptimizationGoal(Thought inefficientSchema, double avgTime) {
+    private Thought createOptimizationGoal(Thought inefficientSchema, double avgTime, double successRate) {
+        String reason = avgTime > EXECUTION_TIME_THRESHOLD_MS ?
+                String.format("its average execution time is %.0f ms", avgTime) :
+                String.format("its success rate is only %.0f%%", successRate * 100);
+
         String goalText = String.format(
-                "The schema '%s' is inefficient. Its average execution time is %.0f ms. Analyze its procedural content (prompt) and generate a new, more efficient version.",
+                "The schema '%s' is inefficient because %s. Analyze its procedural content and generate a new, more efficient version.",
                 inefficientSchema.content().text(),
-                avgTime
+                reason
         );
 
         ThoughtContent content = new ThoughtContent(
@@ -119,7 +120,7 @@ public class SchemaOptimizer {
                 List.of(inefficientSchema.id()),
                 Instant.now()
         );
-        ThoughtState state = new ThoughtState(1.0, 100.0, 1.0);
+        ThoughtState state = new ThoughtState(1.0, 100.0, 1.0); // High salience
 
         return new Thought(UUID.randomUUID().toString(), content, state, meta);
     }

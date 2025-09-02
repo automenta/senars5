@@ -138,6 +138,7 @@ class Langchain4jCognitiveProcessorTest {
 
 
     @Test
+    @SuppressWarnings("unchecked")
     void processShouldOrchestrateCallsToCollaborators() {
         // Arrange
         String focusThoughtId = "focus-thought-id";

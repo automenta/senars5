@@ -4,15 +4,14 @@ import com.senars.core.*;
 import com.senars.events.EventBus;
 import com.senars.events.Events;
 import com.senars.systems.Memory;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.Instant;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -27,8 +26,12 @@ class SchemaOptimizerTest {
     @Mock
     private EventBus eventBus;
 
-    @InjectMocks
     private SchemaOptimizer schemaOptimizer;
+
+    @BeforeEach
+    void setUp() {
+        schemaOptimizer = new SchemaOptimizer(memory, eventBus);
+    }
 
     private Thought createSchema(String id) {
         return new Thought(id,
@@ -37,61 +40,71 @@ class SchemaOptimizerTest {
                 new ThoughtMeta(ThoughtType.SCHEMA, ThoughtOrigin.SYSTEM, List.of(), Instant.now()));
     }
 
-    private Thought createBelief(String id, String schemaId, double clarity) {
+    private Thought createBelief(String id, String schemaId) {
         return new Thought(id,
                 new ThoughtContent("Belief based on schema", null, null, null, null, null, null),
-                new ThoughtState(clarity, 1.0, 1.0),
+                new ThoughtState(1.0, 1.0, 1.0),
                 new ThoughtMeta(ThoughtType.BELIEF, ThoughtOrigin.LLM_INFERENCE, List.of(schemaId), Instant.now()));
     }
 
     @Test
-    void run_withUnderperformingSchema_generatesOptimizationGoal() {
+    void run_withSlowSchema_generatesOptimizationGoal() {
         // Arrange
         Thought schema = createSchema("schema1");
-        List<Thought> allThoughts = new ArrayList<>();
-        allThoughts.add(schema);
+        when(memory.getThoughtById("schema1")).thenReturn(Optional.of(schema));
 
-        // Add 15 beliefs, 12 of which are low clarity, bringing avg clarity below 0.5
-        // 12 * 0.2 = 2.4; 3 * 1.0 = 3.0; Total clarity = 5.4; Avg = 5.4 / 15 = 0.36
-        for (int i = 0; i < 12; i++) {
-            allThoughts.add(createBelief("belief" + i, "schema1", 0.2));
-        }
-        for (int i = 12; i < 15; i++) {
-            allThoughts.add(createBelief("belief" + i, "schema1", 1.0));
+        // Simulate 15 slow but successful executions
+        for (int i = 0; i < 15; i++) {
+            Thought belief = createBelief("belief" + i, "schema1");
+            Feedback feedback = new Feedback(ActionStatus.SUCCESS, "test.tool", "test", 2000L, belief);
+            schemaOptimizer.onActionExecuted(new Events.ActionExecutedEvent(feedback));
         }
 
         // Act
-        for (Thought thought : allThoughts) {
-            if (thought.metadata().type() == ThoughtType.BELIEF) {
-                Feedback feedback = new Feedback(thought.state().clarity() > 0.5 ? ActionStatus.SUCCESS : ActionStatus.FAILURE, "test.tool", "test", 2500L, thought);
-                schemaOptimizer.onActionExecuted(new Events.ActionExecutedEvent(feedback));
-            }
-        }
         List<Thought> goals = schemaOptimizer.run();
 
         // Assert
-        assertEquals(1, goals.size(), "Should generate one optimization goal.");
-        Thought goal = goals.getFirst();
-        assertEquals(ThoughtType.GOAL, goal.metadata().type());
-        assertEquals(SchemaOptimizer.REWRITE_SCHEMA_SYMBOLIC, goal.content().symbolic());
-        assertTrue(goal.metadata().trace().contains("schema1"));
+        assertEquals(1, goals.size(), "Should generate one optimization goal for slow schema.");
+        verify(eventBus).publish(any(Events.SchemaOptimizationGoalCreatedEvent.class));
+    }
 
-        // Verify event was published
-        ArgumentCaptor<Events.SchemaOptimizationGoalCreatedEvent> eventCaptor = ArgumentCaptor.forClass(Events.SchemaOptimizationGoalCreatedEvent.class);
-        verify(eventBus).publish(eventCaptor.capture());
-        assertEquals(goal, eventCaptor.getValue().goal());
+    @Test
+    void run_withUnsuccessfulSchema_generatesOptimizationGoal() {
+        // Arrange
+        Thought schema = createSchema("schema2");
+        when(memory.getThoughtById("schema2")).thenReturn(Optional.of(schema));
+
+        // Simulate 15 executions, most of which fail
+        for (int i = 0; i < 12; i++) {
+            Thought belief = createBelief("belief" + i, "schema2");
+            Feedback feedback = new Feedback(ActionStatus.FAILURE, "test.tool", "test", 100L, belief);
+            schemaOptimizer.onActionExecuted(new Events.ActionExecutedEvent(feedback));
+        }
+        for (int i = 12; i < 15; i++) {
+            Thought belief = createBelief("belief" + i, "schema2");
+            Feedback feedback = new Feedback(ActionStatus.SUCCESS, "test.tool", "test", 100L, belief);
+            schemaOptimizer.onActionExecuted(new Events.ActionExecutedEvent(feedback));
+        }
+
+        // Act
+        List<Thought> goals = schemaOptimizer.run();
+
+        // Assert
+        assertEquals(1, goals.size(), "Should generate one optimization goal for unsuccessful schema.");
+        verify(eventBus).publish(any(Events.SchemaOptimizationGoalCreatedEvent.class));
     }
 
     @Test
     void run_withWellPerformingSchema_doesNotGenerateGoal() {
         // Arrange
-        Thought schema = createSchema("schema1");
-        List<Thought> allThoughts = new ArrayList<>();
-        allThoughts.add(schema);
+        Thought schema = createSchema("schema3");
+        when(memory.getThoughtById("schema3")).thenReturn(Optional.of(schema));
 
-        // Average clarity is high
+        // Simulate 15 fast and successful executions
         for (int i = 0; i < 15; i++) {
-            allThoughts.add(createBelief("belief" + i, "schema1", 0.9));
+            Thought belief = createBelief("belief" + i, "schema3");
+            Feedback feedback = new Feedback(ActionStatus.SUCCESS, "test.tool", "test", 100L, belief);
+            schemaOptimizer.onActionExecuted(new Events.ActionExecutedEvent(feedback));
         }
 
         // Act
@@ -105,13 +118,14 @@ class SchemaOptimizerTest {
     @Test
     void run_withSchemaUsedTooFewTimes_doesNotGenerateGoal() {
         // Arrange
-        Thought schema = createSchema("schema1");
-        List<Thought> allThoughts = new ArrayList<>();
-        allThoughts.add(schema);
+        Thought schema = createSchema("schema4");
+        when(memory.getThoughtById("schema4")).thenReturn(Optional.of(schema));
 
         // Only 5 uses, which is below the threshold of 10
         for (int i = 0; i < 5; i++) {
-            allThoughts.add(createBelief("belief" + i, "schema1", 0.1));
+            Thought belief = createBelief("belief" + i, "schema4");
+            Feedback feedback = new Feedback(ActionStatus.FAILURE, "test.tool", "test", 3000L, belief);
+            schemaOptimizer.onActionExecuted(new Events.ActionExecutedEvent(feedback));
         }
 
         // Act

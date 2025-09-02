@@ -114,13 +114,7 @@ class InMemoryGroundingSystemTest {
         Thought thought1 = createTestThought("thought1", 0.5); // least recent
         Thought thought2 = createTestThought("thought2", 0.5);
         Thought thought3 = createTestThought("thought3", 0.5); // most recent
-        Thought actionPlan = new Thought(
-                "action-1",
-                new ThoughtContent("text", null, null, null, null, null, null),
-                new ThoughtState(1.0, 1.0, 1.0),
-                new ThoughtMeta(ThoughtType.ACTION_PLAN, ThoughtOrigin.LLM_INFERENCE, List.of("thought1", "thought2", "thought3"), Instant.now())
-        );
-        Feedback feedback = createFeedback(actionPlan, ActionStatus.SUCCESS);
+        Feedback feedback = createFeedback(List.of("thought1", "thought2", "thought3"), ActionStatus.SUCCESS);
 
         when(memory.getThoughtById("thought1")).thenReturn(Optional.of(thought1));
         when(memory.getThoughtById("thought2")).thenReturn(Optional.of(thought2));

@@ -2,6 +2,8 @@ package com.senars.effort;
 
 import com.senars.core.Thought;
 
+import java.io.Serializable;
+
 /**
  * A simple effort prediction model that calculates effort as a linear function
  * of the length of the Thought's text content.
@@ -11,7 +13,7 @@ import com.senars.core.Thought;
  * @param coefficient The multiplier for the text length.
  * @param intercept   A constant value added to the result.
  */
-public record LinearTextEffortModel(double coefficient, double intercept) implements IEffortPredictionModel {
+public record LinearTextEffortModel(double coefficient, double intercept) implements IEffortPredictionModel, Serializable {
 
     /**
      * A default model to use when no specific model is configured.

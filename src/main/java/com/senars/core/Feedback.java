@@ -1,5 +1,7 @@
 package com.senars.core;
 
+import java.io.Serializable;
+
 /**
  * A structured representation of the feedback from an executed action.
  * This object contains all the necessary information for the Grounding system
@@ -17,5 +19,5 @@ public record Feedback(
         String output,
         long executionTimeMs,
         Thought actionPlan
-) {
+) implements Serializable {
 }
