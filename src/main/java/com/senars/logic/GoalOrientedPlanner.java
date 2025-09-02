@@ -1,17 +1,11 @@
 package com.senars.logic;
 
-import com.senars.core.Goal;
-import com.senars.core.Thought;
-import com.senars.core.ThoughtContent;
-import com.senars.core.ThoughtMeta;
-import com.senars.core.ThoughtOrigin;
-import com.senars.core.ThoughtState;
-import com.senars.core.ThoughtType;
+import com.senars.core.*;
 import com.senars.systems.GoalGraph;
+
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
 
 /**
  * A planner that reasons about the GoalGraph to generate proactive, goal-oriented tasks.

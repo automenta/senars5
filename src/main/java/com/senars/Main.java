@@ -41,7 +41,7 @@ public class Main {
         } finally {
             LOGGER.info("Stopping System Health Monitor...");
             factory.healthMonitor.stopMonitoring();
-            
+
             LOGGER.info("Persisting memory state...");
             factory.memory.persist();
             factory.eventBus.shutdown();

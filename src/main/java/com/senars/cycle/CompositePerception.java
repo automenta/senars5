@@ -30,7 +30,7 @@ public class CompositePerception implements Perception {
      * @return A single list containing all thoughts perceived from all channels in this cycle.
      */
     @Override
-    public List<Thought> perceive() throws ShutdownException {
+    public List<Thought> perceive() {
         List<Thought> allPerceivedThoughts = new ArrayList<>();
         for (PerceptionChannel channel : channels) {
             try {

@@ -19,6 +19,15 @@ public record Goal(
         double priority
 ) implements Serializable {
 
+    public Goal {
+        Objects.requireNonNull(id, "id cannot be null");
+        Objects.requireNonNull(description, "description cannot be null");
+        Objects.requireNonNull(status, "status cannot be null");
+        if (priority < 0.0) {
+            throw new IllegalArgumentException("priority cannot be negative");
+        }
+    }
+
     /**
      * The lifecycle status of a Goal.
      */
@@ -39,14 +48,5 @@ public record Goal(
          * The goal is waiting for a dependency to be met before it can become active.
          */
         BLOCKED
-    }
-
-    public Goal {
-        Objects.requireNonNull(id, "id cannot be null");
-        Objects.requireNonNull(description, "description cannot be null");
-        Objects.requireNonNull(status, "status cannot be null");
-        if (priority < 0.0) {
-            throw new IllegalArgumentException("priority cannot be negative");
-        }
     }
 }

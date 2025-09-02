@@ -15,7 +15,6 @@ public interface Perception {
      * and transforms it into one or more perceptual Thoughts (e.g., BELIEF, QUESTION).
      *
      * @return A list of new Thoughts generated from external perceptual sources.
-     * @throws ShutdownException if a shutdown command is detected from a perception channel.
      */
-    List<Thought> perceive() throws ShutdownException;
+    List<Thought> perceive();
 }

@@ -9,8 +9,6 @@ import org.slf4j.LoggerFactory;
 
 import java.time.Instant;
 import java.util.*;
-import java.util.concurrent.CompletableFuture;
-import java.util.stream.Collectors;
 
 /**
  * Implements the Monitor-Diagnose-Remediate pattern as a generic service.
@@ -29,7 +27,7 @@ public class MDRService {
         this.memory = Objects.requireNonNull(memory);
         this.chatModel = Objects.requireNonNull(chatModel);
         this.monitors = new ArrayList<>();
-        
+
         // Register default monitors
         registerDefaultMonitors();
     }
@@ -45,21 +43,21 @@ public class MDRService {
                 "Monitors for failed action executions and triggers diagnostic analysis"
         );
         monitors.add(failedActionMonitor);
-        
+
         // Monitor for motive refinement
         MonitorConfig motiveRefinementMonitor = new MotiveRefinementMonitorConfig(memory);
         monitors.add(motiveRefinementMonitor);
-        
+
         // Monitor for memory curation
         MonitorConfig memoryCurationMonitor = new MemoryCurationMonitorConfig(memory);
         monitors.add(memoryCurationMonitor);
-        
+
         LOGGER.info("Registered {} default monitors", monitors.size());
     }
 
     /**
      * Adds a new monitor configuration to the service.
-     * 
+     *
      * @param monitorConfig The monitor configuration to add
      */
     public void addMonitor(MonitorConfig monitorConfig) {
@@ -70,33 +68,33 @@ public class MDRService {
     /**
      * Processes feedback from executed actions to detect issues and trigger self-correction.
      * This is the "Monitor" part of the MDR pattern.
-     * 
+     *
      * @param feedback The feedback from an executed action
      * @return Optional containing a remediation goal if an issue was detected and diagnosed
      */
     public Optional<Thought> processFeedback(Feedback feedback) {
         LOGGER.debug("Processing feedback for tool '{}'", feedback.toolName());
-        
+
         // Check if any monitor is triggered by this feedback
         Optional<MonitorConfig> triggeredMonitor = monitors.stream()
                 .filter(monitor -> monitor.getTriggerCondition().test(feedback))
                 .findFirst();
-                
+
         if (triggeredMonitor.isPresent()) {
-            LOGGER.info("Monitor '{}' triggered for feedback from tool '{}'", 
+            LOGGER.info("Monitor '{}' triggered for feedback from tool '{}'",
                     triggeredMonitor.get().getName(), feedback.toolName());
-            
+
             // Perform diagnosis and remediation
             return diagnoseAndRemediate(feedback, triggeredMonitor.get());
         }
-        
+
         return Optional.empty();
     }
 
     /**
      * Performs the diagnosis and remediation process for a triggered monitor.
      * This is the "Diagnose" and "Remediate" parts of the MDR pattern.
-     * 
+     *
      * @param feedback The feedback that triggered the monitor
      * @param monitor The monitor that was triggered
      * @return Optional containing a remediation goal
@@ -104,36 +102,36 @@ public class MDRService {
     private Optional<Thought> diagnoseAndRemediate(Feedback feedback, MonitorConfig monitor) {
         try {
             LOGGER.info("Starting diagnosis for failed action using UCR backward reasoning");
-            
+
             // Use the UCR's backward reasoning to diagnose the root cause
             List<Thought> diagnosisResults = ucr.reason(
-                    feedback.actionPlan(), 
-                    "backward", 
+                    feedback.actionPlan(),
+                    "backward",
                     UnifiedCausalReasoner.ReasoningOptions.defaults()
             );
-            
+
             if (diagnosisResults.isEmpty()) {
                 LOGGER.warn("UCR backward reasoning produced no results for diagnosis");
                 return Optional.empty();
             }
-            
+
             // Find the diagnostic report (should be a REPORT thought)
             Optional<Thought> diagnosticReport = diagnosisResults.stream()
                     .filter(thought -> thought.metadata().type() == ThoughtType.REPORT)
                     .findFirst();
-                    
+
             if (diagnosticReport.isEmpty()) {
                 LOGGER.warn("No diagnostic report found in UCR results");
                 return Optional.empty();
             }
-            
+
             LOGGER.info("Diagnosis complete. Generating remediation plan.");
-            
+
             // Generate a remediation goal based on the diagnosis
             Thought remediationGoal = generateRemediationGoal(feedback, diagnosticReport.get(), monitor);
-            
+
             return Optional.of(remediationGoal);
-            
+
         } catch (Exception e) {
             LOGGER.error("Error during diagnosis and remediation process", e);
             return Optional.empty();
@@ -142,7 +140,7 @@ public class MDRService {
 
     /**
      * Generates a remediation goal based on the diagnosis report.
-     * 
+     *
      * @param feedback The original feedback
      * @param diagnosisReport The diagnosis report from the UCR
      * @param monitor The monitor that triggered the process
@@ -150,52 +148,51 @@ public class MDRService {
      */
     private Thought generateRemediationGoal(Feedback feedback, Thought diagnosisReport, MonitorConfig monitor) {
         String goalText;
-        
+
         // Special handling for different monitor types
-        if (monitor instanceof SchemaOptimizationMonitorConfig) {
-            SchemaOptimizationMonitorConfig schemaMonitor = (SchemaOptimizationMonitorConfig) monitor;
-            if (schemaMonitor.isSchemaRelatedFailure(feedback)) {
-                goalText = String.format(
-                        "Optimize the schema related to the failure in tool '%s'. Diagnosis: %s",
-                        feedback.toolName(),
-                        diagnosisReport.content().text()
-                );
-            } else {
-                goalText = String.format(
-                        "Fix the root cause of the failure in tool '%s'. Diagnosis: %s",
-                        feedback.toolName(),
-                        diagnosisReport.content().text()
-                );
+        switch (monitor) {
+            case SchemaOptimizationMonitorConfig schemaMonitor -> {
+                if (schemaMonitor.isSchemaRelatedFailure(feedback)) {
+                    goalText = String.format(
+                            "Optimize the schema related to the failure in tool '%s'. Diagnosis: %s",
+                            feedback.toolName(),
+                            diagnosisReport.content().text()
+                    );
+                } else {
+                    goalText = String.format(
+                            "Fix the root cause of the failure in tool '%s'. Diagnosis: %s",
+                            feedback.toolName(),
+                            diagnosisReport.content().text()
+                    );
+                }
             }
-        } else if (monitor instanceof MotiveRefinementMonitorConfig) {
-            goalText = String.format(
+            case MotiveRefinementMonitorConfig config -> goalText = String.format(
                     "Refine motives based on pattern of failures in tool '%s'. Diagnosis: %s",
                     feedback.toolName(),
                     diagnosisReport.content().text()
             );
-        } else if (monitor instanceof MemoryCurationMonitorConfig) {
-            MemoryCurationMonitorConfig memoryMonitor = (MemoryCurationMonitorConfig) monitor;
-            if (memoryMonitor.isContextRetrievalFailure(feedback)) {
-                goalText = String.format(
-                        "Improve context retrieval mechanisms based on failure in tool '%s'. Diagnosis: %s",
-                        feedback.toolName(),
-                        diagnosisReport.content().text()
-                );
-            } else {
-                goalText = String.format(
-                        "Fix the root cause of the failure in tool '%s'. Diagnosis: %s",
-                        feedback.toolName(),
-                        diagnosisReport.content().text()
-                );
+            case MemoryCurationMonitorConfig memoryMonitor -> {
+                if (memoryMonitor.isContextRetrievalFailure(feedback)) {
+                    goalText = String.format(
+                            "Improve context retrieval mechanisms based on failure in tool '%s'. Diagnosis: %s",
+                            feedback.toolName(),
+                            diagnosisReport.content().text()
+                    );
+                } else {
+                    goalText = String.format(
+                            "Fix the root cause of the failure in tool '%s'. Diagnosis: %s",
+                            feedback.toolName(),
+                            diagnosisReport.content().text()
+                    );
+                }
             }
-        } else {
-            goalText = String.format(
+            case null, default -> goalText = String.format(
                     "Fix the root cause of the failure in tool '%s'. Diagnosis: %s",
                     feedback.toolName(),
                     diagnosisReport.content().text()
             );
         }
-        
+
         return new Thought(
                 UUID.randomUUID().toString(),
                 new ThoughtContent(goalText, "mdr:remediation", null, null, null, null, null),

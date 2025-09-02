@@ -9,14 +9,10 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.Instant;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class ExplainTest {
@@ -39,7 +35,7 @@ class ExplainTest {
                 causalLinks.add(new CausalLink(traceId, id, CausalRelationType.DIRECT_CAUSATION));
             }
         }
-        
+
         return new Thought(
                 id,
                 new ThoughtContent(text, null, null, null, null, null, null),
@@ -74,7 +70,7 @@ class ExplainTest {
         assertNotNull(trace);
         // The causal chain should include the thought itself even if it has no causal links
         assertEquals(1, trace.size());
-        assertEquals(thought, trace.get(0));
+        assertEquals(thought, trace.getFirst());
     }
 
     @Test

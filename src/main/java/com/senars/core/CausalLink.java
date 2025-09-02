@@ -13,7 +13,7 @@ public record CausalLink(
         CausalRelationType relationType,
         double strength
 ) implements Serializable {
-    
+
     public CausalLink {
         Objects.requireNonNull(sourceThoughtId, "sourceThoughtId cannot be null");
         Objects.requireNonNull(targetThoughtId, "targetThoughtId cannot be null");
@@ -22,7 +22,7 @@ public record CausalLink(
             throw new IllegalArgumentException("strength must be between 0.0 and 1.0");
         }
     }
-    
+
     /**
      * Creates a causal link with default strength of 1.0
      */

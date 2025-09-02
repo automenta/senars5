@@ -87,8 +87,8 @@ public class MapDBEmbeddingStore implements EmbeddingStore<TextSegment> {
         }
 
         return queue.stream()
-            .sorted((a, b) -> Double.compare(b.score(), a.score()))
-            .toList();
+                .sorted((a, b) -> Double.compare(b.score(), a.score()))
+                .toList();
     }
 
     public void clear() {

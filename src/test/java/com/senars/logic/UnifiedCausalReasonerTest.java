@@ -1,23 +1,22 @@
 package com.senars.logic;
 
+import com.senars.config.AppConfig;
 import com.senars.core.*;
+import com.senars.db.DatabaseManager;
 import com.senars.events.EventBus;
 import com.senars.systems.Memory;
 import com.senars.systems.immemory.InMemoryMemory;
-import com.senars.config.AppConfig;
-import com.senars.db.DatabaseManager;
 import dev.langchain4j.model.chat.ChatLanguageModel;
 import dev.langchain4j.model.chat.mock.ChatModelMock;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
 import java.time.Instant;
-import java.util.*;
+import java.util.List;
+import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
 
 class UnifiedCausalReasonerTest {
 
@@ -54,7 +53,7 @@ class UnifiedCausalReasonerTest {
         assertNotNull(results);
         // Since we're using a mock that returns an empty array, we expect no action thoughts
         // but we should still get a result from the UCR
-        assertTrue(results.isEmpty() || results.size() > 0);
+        assertTrue(results.isEmpty() || !results.isEmpty());
     }
 
     @Test
@@ -74,7 +73,7 @@ class UnifiedCausalReasonerTest {
         // Verify that we get results
         assertNotNull(results);
         // We should get at least a diagnostic report
-        assertTrue(results.isEmpty() || results.size() > 0);
+        assertTrue(results.isEmpty() || !results.isEmpty());
     }
 
     @Test
@@ -94,8 +93,8 @@ class UnifiedCausalReasonerTest {
         // Verify that we get simulation results
         assertNotNull(results);
         assertEquals(1, results.size());
-        assertEquals(ThoughtType.REPORT, results.get(0).metadata().type());
-        assertTrue(results.get(0).content().text().contains("Simulation"));
+        assertEquals(ThoughtType.REPORT, results.getFirst().metadata().type());
+        assertTrue(results.getFirst().content().text().contains("Simulation"));
     }
 
     @Test
@@ -115,8 +114,8 @@ class UnifiedCausalReasonerTest {
         // Verify that we get estimation results
         assertNotNull(results);
         assertEquals(1, results.size());
-        assertEquals(ThoughtType.REPORT, results.get(0).metadata().type());
-        assertTrue(results.get(0).content().text().contains("Effort estimation"));
+        assertEquals(ThoughtType.REPORT, results.getFirst().metadata().type());
+        assertTrue(results.getFirst().content().text().contains("Effort estimation"));
     }
 
     @Test
@@ -128,8 +127,6 @@ class UnifiedCausalReasonerTest {
         Thought thought = new Thought(UUID.randomUUID().toString(), content, state, meta);
 
         // Try with invalid direction
-        assertThrows(IllegalArgumentException.class, () -> {
-            ucr.reason(thought, "sideways", UnifiedCausalReasoner.ReasoningOptions.defaults());
-        });
+        assertThrows(IllegalArgumentException.class, () -> ucr.reason(thought, "sideways", UnifiedCausalReasoner.ReasoningOptions.defaults()));
     }
 }

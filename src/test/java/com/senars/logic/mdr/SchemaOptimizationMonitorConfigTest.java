@@ -13,52 +13,53 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class SchemaOptimizationMonitorConfigTest {
 
     @Mock
     private Memory memory;
-    
+
     private SchemaOptimizationMonitorConfig schemaOptimizationMonitor;
-    
+
     @BeforeEach
     void setUp() {
         schemaOptimizationMonitor = new SchemaOptimizationMonitorConfig(memory);
     }
-    
+
     @Test
     void constructor_setsCorrectProperties() {
         assertEquals("SchemaOptimizationMonitor", schemaOptimizationMonitor.getName());
-        assertEquals("Monitors for failed action executions and traces them back to schemas for optimization", 
+        assertEquals("Monitors for failed action executions and traces them back to schemas for optimization",
                 schemaOptimizationMonitor.getDescription());
     }
-    
+
     @Test
     void getTriggerCondition_returnsFailurePredicate() {
         // Test with a success feedback
         Thought actionPlan = createActionPlan();
         Feedback successFeedback = new Feedback(ActionStatus.SUCCESS, "test.tool", "Success", 100L, actionPlan);
         assertFalse(schemaOptimizationMonitor.getTriggerCondition().test(successFeedback));
-        
+
         // Test with a failure feedback
         Feedback failureFeedback = new Feedback(ActionStatus.FAILURE, "test.tool", "Failed", 100L, actionPlan);
         assertTrue(schemaOptimizationMonitor.getTriggerCondition().test(failureFeedback));
     }
-    
+
     @Test
     void isSchemaRelatedFailure_withNullActionPlan_returnsFalse() {
         // Arrange
         Feedback feedback = new Feedback(ActionStatus.FAILURE, "test.tool", "Failed", 100L, null);
-        
+
         // Act
         boolean result = schemaOptimizationMonitor.isSchemaRelatedFailure(feedback);
-        
+
         // Assert
         assertFalse(result);
     }
-    
+
     @Test
     void isSchemaRelatedFailure_withSchemaInTrace_returnsTrue() {
         // Arrange
@@ -66,17 +67,17 @@ class SchemaOptimizationMonitorConfigTest {
         Thought schema = createSchema(schemaId);
         Thought actionPlan = createActionPlanWithTrace(schemaId);
         Feedback feedback = new Feedback(ActionStatus.FAILURE, "test.tool", "Failed", 100L, actionPlan);
-        
+
         when(memory.getThoughtById(schemaId)).thenReturn(Optional.of(schema));
-        
+
         // Act
         boolean result = schemaOptimizationMonitor.isSchemaRelatedFailure(feedback);
-        
+
         // Assert
         assertTrue(result);
         verify(memory).getThoughtById(schemaId);
     }
-    
+
     @Test
     void isSchemaRelatedFailure_withoutSchemaInTrace_returnsFalse() {
         // Arrange
@@ -84,17 +85,17 @@ class SchemaOptimizationMonitorConfigTest {
         Thought belief = createBelief(nonSchemaId);
         Thought actionPlan = createActionPlanWithTrace(nonSchemaId);
         Feedback feedback = new Feedback(ActionStatus.FAILURE, "test.tool", "Failed", 100L, actionPlan);
-        
+
         when(memory.getThoughtById(nonSchemaId)).thenReturn(Optional.of(belief));
-        
+
         // Act
         boolean result = schemaOptimizationMonitor.isSchemaRelatedFailure(feedback);
-        
+
         // Assert
         assertFalse(result);
         verify(memory).getThoughtById(nonSchemaId);
     }
-    
+
     private Thought createActionPlan() {
         return new Thought(
                 "action-plan-1",
@@ -103,7 +104,7 @@ class SchemaOptimizationMonitorConfigTest {
                 new ThoughtMeta(ThoughtType.ACTION, ThoughtOrigin.UCR_FORWARD, List.of(), Instant.now())
         );
     }
-    
+
     private Thought createActionPlanWithTrace(String traceId) {
         return new Thought(
                 "action-plan-1",
@@ -112,7 +113,7 @@ class SchemaOptimizationMonitorConfigTest {
                 new ThoughtMeta(ThoughtType.ACTION, ThoughtOrigin.UCR_FORWARD, List.of(traceId), Instant.now())
         );
     }
-    
+
     private Thought createSchema(String id) {
         return new Thought(
                 id,
@@ -121,7 +122,7 @@ class SchemaOptimizationMonitorConfigTest {
                 new ThoughtMeta(ThoughtType.SCHEMA, ThoughtOrigin.SYSTEM, List.of(), Instant.now())
         );
     }
-    
+
     private Thought createBelief(String id) {
         return new Thought(
                 id,

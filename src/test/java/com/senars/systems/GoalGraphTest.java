@@ -12,8 +12,8 @@ import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.anyString;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -71,7 +71,7 @@ class GoalGraphTest {
         List<Goal> result = goalGraph.findHighPriorityActiveGoals();
 
         assertEquals(1, result.size());
-        assertEquals("g1", result.get(0).id()); // Only the blocker goal should be returned
+        assertEquals("g1", result.getFirst().id()); // Only the blocker goal should be returned
     }
 
     @Test
@@ -86,6 +86,6 @@ class GoalGraphTest {
         List<Goal> result = goalGraph.findHighPriorityActiveGoals();
 
         assertEquals(1, result.size());
-        assertEquals("g2", result.get(0).id()); // The previously blocked goal should now be active
+        assertEquals("g2", result.getFirst().id()); // The previously blocked goal should now be active
     }
 }

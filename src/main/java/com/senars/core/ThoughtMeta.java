@@ -21,14 +21,14 @@ public record ThoughtMeta(
         Set<CausalLink> causalLinks,
         Instant timestamp
 ) implements Serializable {
-    
+
     /**
      * Constructor for backward compatibility that creates an empty causalLinks set
      */
     public ThoughtMeta(ThoughtType type, ThoughtOrigin origin, List<String> trace, Instant timestamp) {
         this(type, origin, trace, Set.of(), timestamp);
     }
-    
+
     /**
      * Constructor with causalLinks
      */
@@ -37,7 +37,7 @@ public record ThoughtMeta(
         if (trace == null) {
             trace = List.of();
         }
-        
+
         // Ensure causalLinks is never null
         if (causalLinks == null) {
             causalLinks = Set.of();

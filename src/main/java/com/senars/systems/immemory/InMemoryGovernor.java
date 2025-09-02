@@ -1,7 +1,6 @@
 package com.senars.systems.immemory;
 
 import com.senars.core.Thought;
-import com.senars.core.ThoughtType;
 import com.senars.logic.UnifiedCausalReasoner;
 import com.senars.systems.Governor;
 import com.senars.systems.Rule;
@@ -72,10 +71,10 @@ public class InMemoryGovernor implements Governor {
     private Optional<String> performPredictiveGovernanceCheck(Thought actionPlan) {
         try {
             LOGGER.debug("Performing predictive governance check for action plan: {}", actionPlan.id());
-            
+
             // Use the UCR to simulate the action plan
             List<Thought> simulations = ucr.simulate(actionPlan, UnifiedCausalReasoner.ReasoningOptions.simulation());
-            
+
             // Check if any simulations indicate potential problems
             for (Thought simulation : simulations) {
                 // If the simulation indicates a potential problem (low clarity)
@@ -85,7 +84,7 @@ public class InMemoryGovernor implements Governor {
                     return Optional.of(reason);
                 }
             }
-            
+
             return Optional.empty(); // No issues detected
         } catch (Exception e) {
             LOGGER.error("Error during predictive governance check. Continuing with other checks.", e);

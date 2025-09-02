@@ -1,6 +1,5 @@
 package com.senars.logic.mdr;
 
-import com.senars.core.Thought;
 import com.senars.core.Feedback;
 
 import java.util.function.Predicate;

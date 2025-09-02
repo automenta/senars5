@@ -44,7 +44,7 @@ public class MapDBGraphStore implements GraphDB {
         if (thought.metadata().type() == ThoughtType.SCHEMA && thought.content().symbolic() != null) {
             symbolicIndex.put(thought.content().symbolic(), thought.id());
         }
-        
+
         // Save causal links
         Set<CausalLink> causalLinksSet = thought.metadata().causalLinks();
         if (causalLinksSet != null && !causalLinksSet.isEmpty()) {
@@ -55,7 +55,7 @@ public class MapDBGraphStore implements GraphDB {
                 }
             }
         }
-        
+
         dbManager.commit(); // Commit the transaction
     }
 
@@ -181,22 +181,22 @@ public class MapDBGraphStore implements GraphDB {
         Set<Thought> connectedThoughts = new HashSet<>();
         Set<String> visited = new HashSet<>();
         Queue<BfsNode> queue = new LinkedList<>();
-        
+
         // Add the starting thought
         queue.add(new BfsNode(thoughtId, 0, BfsDirection.BOTH));
         visited.add(thoughtId);
-        
+
         // BFS traversal for both directions up to maxDepth
         while (!queue.isEmpty()) {
             BfsNode currentNode = queue.poll();
-            
+
             // Skip if we've exceeded max depth
             if (currentNode.depth() > maxDepth) {
                 continue;
             }
-            
+
             getThoughtById(currentNode.thoughtId()).ifPresent(connectedThoughts::add);
-            
+
             // Traverse in the specified direction
             if (currentNode.direction() == BfsDirection.FORWARD || currentNode.direction() == BfsDirection.BOTH) {
                 // Add outgoing links (forward direction)
@@ -209,7 +209,7 @@ public class MapDBGraphStore implements GraphDB {
                     }
                 }
             }
-            
+
             if (currentNode.direction() == BfsDirection.BACKWARD || currentNode.direction() == BfsDirection.BOTH) {
                 // Add incoming links (backward direction)
                 Set<CausalLink> incomingLinks = getCausalLinksTo(currentNode.thoughtId());
@@ -222,22 +222,8 @@ public class MapDBGraphStore implements GraphDB {
                 }
             }
         }
-        
+
         return connectedThoughts;
-    }
-    
-    /**
-     * Helper class for BFS traversal
-     */
-    private record BfsNode(String thoughtId, int depth, BfsDirection direction) {}
-    
-    /**
-     * Direction for BFS traversal
-     */
-    private enum BfsDirection {
-        FORWARD,
-        BACKWARD,
-        BOTH
     }
 
     @Override
@@ -245,22 +231,22 @@ public class MapDBGraphStore implements GraphDB {
         Set<Thought> affectedThoughts = new HashSet<>();
         Set<String> visited = new HashSet<>();
         Queue<String> queue = new LinkedList<>();
-        
+
         // Start with the given thought
         queue.add(thoughtId);
         visited.add(thoughtId);
-        
+
         // Forward traversal to find all downstream effects
         while (!queue.isEmpty()) {
             String currentId = queue.poll();
             getThoughtById(currentId).ifPresent(affectedThoughts::add);
-            
+
             // Follow outgoing causal links
             Set<CausalLink> outgoingLinks = getCausalLinksFrom(currentId);
             for (CausalLink link : outgoingLinks) {
                 // Only follow direct causation and indirect causation links for counterfactual analysis
-                if (link.relationType() == com.senars.core.CausalRelationType.DIRECT_CAUSATION || 
-                    link.relationType() == com.senars.core.CausalRelationType.INDIRECT_CAUSATION) {
+                if (link.relationType() == com.senars.core.CausalRelationType.DIRECT_CAUSATION ||
+                        link.relationType() == com.senars.core.CausalRelationType.INDIRECT_CAUSATION) {
                     String targetId = link.targetThoughtId();
                     if (!visited.contains(targetId)) {
                         visited.add(targetId);
@@ -269,7 +255,7 @@ public class MapDBGraphStore implements GraphDB {
                 }
             }
         }
-        
+
         return affectedThoughts;
     }
 
@@ -279,10 +265,10 @@ public class MapDBGraphStore implements GraphDB {
         // by a change to this thought, weighted by their salience and adjusted for distance
         Set<Thought> downstreamThoughts = performCounterfactualAnalysis(thoughtId);
         double leverage = 0.0;
-        
+
         // Also consider the depth of each thought in the causal chain
         Map<String, Integer> depths = calculateCausalDepths(thoughtId);
-        
+
         for (Thought thought : downstreamThoughts) {
             // Skip the original thought
             if (!thought.id().equals(thoughtId)) {
@@ -292,10 +278,10 @@ public class MapDBGraphStore implements GraphDB {
                 leverage += thought.state().salience() * depthWeight;
             }
         }
-        
+
         return leverage;
     }
-    
+
     /**
      * Calculate the depth of each causally connected thought from the given thought
      */
@@ -303,16 +289,16 @@ public class MapDBGraphStore implements GraphDB {
         Map<String, Integer> depths = new HashMap<>();
         Set<String> visited = new HashSet<>();
         Queue<BfsNode> queue = new LinkedList<>();
-        
+
         // Add the starting thought with depth 0
         queue.add(new BfsNode(thoughtId, 0, BfsDirection.FORWARD));
         depths.put(thoughtId, 0);
         visited.add(thoughtId);
-        
+
         // BFS traversal forward only to calculate depths
         while (!queue.isEmpty()) {
             BfsNode currentNode = queue.poll();
-            
+
             // Add outgoing links (forward direction)
             Set<CausalLink> outgoingLinks = getCausalLinksFrom(currentNode.thoughtId());
             for (CausalLink link : outgoingLinks) {
@@ -325,7 +311,7 @@ public class MapDBGraphStore implements GraphDB {
                 }
             }
         }
-        
+
         return depths;
     }
 
@@ -338,5 +324,20 @@ public class MapDBGraphStore implements GraphDB {
     @Override
     public void load() {
         LOGGER.info("Load is a no-op for MapDBGraphStore. Data is loaded automatically on init.");
+    }
+
+    /**
+     * Direction for BFS traversal
+     */
+    private enum BfsDirection {
+        FORWARD,
+        BACKWARD,
+        BOTH
+    }
+
+    /**
+     * Helper class for BFS traversal
+     */
+    private record BfsNode(String thoughtId, int depth, BfsDirection direction) {
     }
 }

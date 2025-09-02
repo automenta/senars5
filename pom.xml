@@ -149,7 +149,7 @@
         <dependency>
             <groupId>org.jetbrains.kotlin</groupId>
             <artifactId>kotlin-stdlib-jdk8</artifactId>
-<!--            1.8.22-->
+            <!--            1.8.22-->
             <version>1.9.25</version>
         </dependency>
 

@@ -27,19 +27,6 @@ public class GoalGraph {
     }
 
     /**
-     * Represents the relationship between two goals in the graph.
-     */
-    public enum GoalRelationship {
-        SUB_GOAL_OF,
-        BLOCKS
-    }
-
-    /**
-     * A record to store a directed link in the goal graph.
-     */
-    private record GoalRelationshipLink(String targetGoalId, GoalRelationship relationship) implements Serializable {}
-
-    /**
      * Adds a new Goal to the graph or updates an existing one.
      * @param goal The Goal to save.
      */
@@ -55,7 +42,7 @@ public class GoalGraph {
      */
     public void linkGoals(String sourceGoalId, String targetGoalId, GoalRelationship relationship) {
         goalLinks.computeIfAbsent(sourceGoalId, k -> ConcurrentHashMap.newKeySet())
-                 .add(new GoalRelationshipLink(targetGoalId, relationship));
+                .add(new GoalRelationshipLink(targetGoalId, relationship));
     }
 
     /**
@@ -98,5 +85,19 @@ public class GoalGraph {
      */
     public Optional<Goal> getGoalById(String goalId) {
         return Optional.ofNullable(goals.get(goalId));
+    }
+
+    /**
+     * Represents the relationship between two goals in the graph.
+     */
+    public enum GoalRelationship {
+        SUB_GOAL_OF,
+        BLOCKS
+    }
+
+    /**
+     * A record to store a directed link in the goal graph.
+     */
+    private record GoalRelationshipLink(String targetGoalId, GoalRelationship relationship) implements Serializable {
     }
 }

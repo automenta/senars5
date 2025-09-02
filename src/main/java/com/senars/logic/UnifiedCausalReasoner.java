@@ -2,7 +2,6 @@ package com.senars.logic;
 
 import com.senars.core.Feedback;
 import com.senars.core.Thought;
-import com.senars.systems.Memory;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -87,22 +86,6 @@ public interface UnifiedCausalReasoner {
             this(simulate, maxDepth, null, false);
         }
 
-        public boolean isSimulate() {
-            return simulate;
-        }
-
-        public int getMaxDepth() {
-            return maxDepth;
-        }
-
-        public String getConstraints() {
-            return constraints;
-        }
-
-        public boolean isEstimateOnly() {
-            return estimateOnly;
-        }
-
         public static ReasoningOptions defaults() {
             return new ReasoningOptions(false, 5);
         }
@@ -121,6 +104,22 @@ public interface UnifiedCausalReasoner {
 
         public static ReasoningOptions safetyCheck() {
             return new ReasoningOptions(true, 3, "safety", false);
+        }
+
+        public boolean isSimulate() {
+            return simulate;
+        }
+
+        public int getMaxDepth() {
+            return maxDepth;
+        }
+
+        public String getConstraints() {
+            return constraints;
+        }
+
+        public boolean isEstimateOnly() {
+            return estimateOnly;
         }
     }
 }

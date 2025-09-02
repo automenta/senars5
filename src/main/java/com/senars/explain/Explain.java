@@ -5,7 +5,6 @@ import com.senars.core.Thought;
 import com.senars.systems.Memory;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
 /**
  * The Explainable AI (XAI) Engine.
@@ -33,20 +32,20 @@ public class Explain {
 
         // Build a map of thought IDs to thoughts for efficient lookup
         Map<String, Thought> thoughtMap = new HashMap<>();
-        
+
         // Get all thoughts in the causal chain
         Set<String> thoughtIds = new HashSet<>();
         collectCausalThoughtIds(targetThought, thoughtIds);
-        
+
         // Load all thoughts from memory
         for (String thoughtId : thoughtIds) {
             memory.getThoughtById(thoughtId).ifPresent(thought -> thoughtMap.put(thoughtId, thought));
         }
-        
+
         // Build the causal chain ordered from root to target
         return buildCausalChain(targetThought, thoughtMap);
     }
-    
+
     /**
      * Recursively collects all thought IDs in the causal chain.
      *
@@ -57,17 +56,17 @@ public class Explain {
         if (thought == null || thoughtIds.contains(thought.id())) {
             return;
         }
-        
+
         thoughtIds.add(thought.id());
-        
+
         if (thought.metadata().causalLinks() != null) {
             for (CausalLink link : thought.metadata().causalLinks()) {
-                memory.getThoughtById(link.sourceThoughtId()).ifPresent(causeThought -> 
-                    collectCausalThoughtIds(causeThought, thoughtIds));
+                memory.getThoughtById(link.sourceThoughtId()).ifPresent(causeThought ->
+                        collectCausalThoughtIds(causeThought, thoughtIds));
             }
         }
     }
-    
+
     /**
      * Builds the causal chain ordered from root to target.
      *
@@ -83,7 +82,7 @@ public class Explain {
         Collections.reverse(chain); // Reverse to get root-to-target order
         return chain;
     }
-    
+
     /**
      * Recursively builds the causal chain.
      *
@@ -92,14 +91,14 @@ public class Explain {
      * @param chain The chain being built.
      * @param visited The set of visited thought IDs.
      */
-    private void buildCausalChainRecursive(Thought thought, Map<String, Thought> thoughtMap, 
-                                          List<Thought> chain, Set<String> visited) {
+    private void buildCausalChainRecursive(Thought thought, Map<String, Thought> thoughtMap,
+                                           List<Thought> chain, Set<String> visited) {
         if (thought == null || visited.contains(thought.id())) {
             return;
         }
-        
+
         visited.add(thought.id());
-        
+
         if (thought.metadata().causalLinks() != null) {
             for (CausalLink link : thought.metadata().causalLinks()) {
                 Thought causeThought = thoughtMap.get(link.sourceThoughtId());

@@ -4,30 +4,23 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.senars.config.AppConfig;
-import com.senars.core.*;
+import com.senars.core.Thought;
 import com.senars.db.DatabaseManager;
-import com.senars.events.EventBus;
+import com.senars.explain.Explain;
 import com.senars.systems.Memory;
 import com.senars.systems.immemory.InMemoryMemory;
-import com.senars.explain.Explain;
-import dev.langchain4j.data.message.AiMessage;
 import dev.langchain4j.model.chat.ChatLanguageModel;
-import dev.langchain4j.model.output.Response;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Path;
-import java.time.Instant;
 import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 public class LLMPlanningIntegrationTest {
 
@@ -68,4 +61,4 @@ public class LLMPlanningIntegrationTest {
         dbManager.close();
     }
 
-    }
+}

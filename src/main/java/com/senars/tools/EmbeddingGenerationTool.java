@@ -5,6 +5,7 @@ import com.senars.core.ThoughtContent;
 import com.senars.systems.Memory;
 import dev.langchain4j.agent.tool.Tool;
 import dev.langchain4j.model.embedding.EmbeddingModel;
+import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -55,22 +56,7 @@ public class EmbeddingGenerationTool {
                 embedding.add((double) f);
             }
 
-            ThoughtContent newContent = new ThoughtContent(
-                    thought.content().text(),
-                    thought.content().symbolic(),
-                    embedding,
-                    thought.content().perceptual(),
-                    thought.content().procedural(),
-                    thought.content().feedback(),
-                    thought.content().rules()
-            );
-
-            Thought updatedThought = new Thought(
-                    thought.id(),
-                    newContent,
-                    thought.state(),
-                    thought.metadata()
-            );
+            var updatedThought = getThought(thought, embedding);
 
             memory.saveThought(updatedThought);
             String successMsg = "Successfully generated and saved embedding for thought " + thoughtId;
@@ -82,5 +68,26 @@ public class EmbeddingGenerationTool {
             LOGGER.error(errorMsg, e);
             return "Error: " + errorMsg + ". " + e.getMessage();
         }
+    }
+
+    @NotNull
+    private Thought getThought(Thought thought, List<Double> embedding) {
+        ThoughtContent newContent = new ThoughtContent(
+                thought.content().text(),
+                thought.content().symbolic(),
+                embedding,
+                thought.content().perceptual(),
+                thought.content().procedural(),
+                thought.content().feedback(),
+                thought.content().rules()
+        );
+
+        Thought updatedThought = new Thought(
+                thought.id(),
+                newContent,
+                thought.state(),
+                thought.metadata()
+        );
+        return updatedThought;
     }
 }

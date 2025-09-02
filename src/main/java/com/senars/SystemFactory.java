@@ -1,5 +1,6 @@
 package com.senars;
 
+import com.senars.attention.AttentionService;
 import com.senars.config.AppConfig;
 import com.senars.core.Genesis;
 import com.senars.core.Thought;
@@ -10,37 +11,27 @@ import com.senars.effort.EffortTracker;
 import com.senars.events.EventBus;
 import com.senars.events.Events;
 import com.senars.events.LoggingEventSubscriber;
+import com.senars.expansion.AutonomousCapabilityExpansion;
 import com.senars.explain.CausalExplanationGenerator;
-import com.senars.explain.Explain;
 import com.senars.explain.ExplanationGenerator;
 import com.senars.explanation.ExplanationService;
-import com.senars.expansion.AutonomousCapabilityExpansion;
+import com.senars.governance.GovernanceService;
 import com.senars.health.SystemHealthMonitor;
 import com.senars.lm.PromptBuilder;
 import com.senars.lm.ToolKit;
-import com.senars.logic.LogicEngine;
-import com.senars.logic.MetaCognitiveService;
-import com.senars.logic.GoalOrientedPlanner;
+import com.senars.logic.*;
 import com.senars.logic.mdr.MDRService;
-import com.senars.systems.GoalGraph;
-import com.senars.logic.UCRFactory;
-import com.senars.logic.UnifiedCausalReasoner;
 import com.senars.motive.MotiveHierarchy;
 import com.senars.optimizer.EffortModelOptimizer;
 import com.senars.optimizer.SchemaOptimizer;
 import com.senars.salience.SalienceCalculator;
-import com.senars.systems.Governor;
-import com.senars.governance.GovernanceService;
+import com.senars.systems.GoalGraph;
 import com.senars.systems.Memory;
-import com.senars.systems.Rule;
 import com.senars.systems.immemory.ConsolePerception;
-import com.senars.systems.immemory.InMemoryGovernor;
 import com.senars.systems.immemory.InMemoryMemory;
 import com.senars.systems.perception.FilePerceptionChannel;
-import com.senars.systems.rules.KeywordBlocklistRule;
 import com.senars.systems.rules.PreventDeprecatedSchemaUseRule;
 import com.senars.tools.*;
-import com.senars.attention.AttentionService;
 import dev.langchain4j.model.chat.ChatLanguageModel;
 import dev.langchain4j.model.embedding.AllMiniLmL6V2EmbeddingModel;
 import dev.langchain4j.model.embedding.EmbeddingModel;
@@ -66,12 +57,12 @@ public class SystemFactory {
     public final EventBus eventBus;
     public final SchemaOptimizer schemaOptimizer; // Made public for test access
     public final LogicEngine logicEngine; // Made public for test access
-    private final CognitiveCycle cognitiveCycle;
     public final GovernanceService governance; // Made public for access to the new governance service
     public final AttentionService attentionService; // Made public for access to the new attention service
     public final SystemHealthMonitor healthMonitor; // Made public for access to the new health monitor
     public final ExplanationService explanationService; // Made public for access to the new explanation service
     public final AutonomousCapabilityExpansion capabilityExpansion; // Made public for access to the new capability expansion
+    private final CognitiveCycle cognitiveCycle;
 
     public SystemFactory() {
         this(OllamaChatModel.builder()
@@ -184,10 +175,10 @@ public class SystemFactory {
         EffortPredictor effortPredictor = new EffortPredictor(memory);
         EffortTracker effortTracker = new EffortTracker(effortPredictor);
         SalienceCalculator salienceCalculator = new SalienceCalculator(effortPredictor, memory);
-        
+
         // Create the new Attention Service
         this.attentionService = new AttentionService(memory, salienceCalculator, ucr, motives);
-        
+
         // Use the existing SalienceAttention as the primary attention mechanism
         Attention attention = new SalienceAttention(salienceCalculator, motives, eventBus, ucr);
         attention.addCandidate(researchGoal);
@@ -206,10 +197,10 @@ public class SystemFactory {
         // 8. Phase 4 Components
         // Create the System Health Monitor
         this.healthMonitor = new SystemHealthMonitor(memory, ucr, eventBus);
-        
+
         // Create the Explanation Service
         this.explanationService = new ExplanationService(memory, ucr, eventBus, chatModel);
-        
+
         // Create the Autonomous Capability Expansion
         this.capabilityExpansion = new AutonomousCapabilityExpansion(memory, ucr, eventBus, chatModel, explanationService, healthMonitor);
 
@@ -235,17 +226,17 @@ public class SystemFactory {
         ExplanationGenerator explanationGenerator = new ExplanationGenerator(eventBus);
         CausalExplanationGenerator causalExplanationGenerator = new CausalExplanationGenerator(eventBus, memory, ucr);
         eventBus.subscribe(Events.NewThoughtCreatedEvent.class, cognitiveCycle::onNewThoughtCreated);
-        eventBus.subscribe(Events.NewThoughtCreatedEvent.class, causalExplanationGenerator::onEvent);
+        eventBus.subscribe(Events.NewThoughtCreatedEvent.class, causalExplanationGenerator);
         eventBus.subscribe(Events.ActionExecutedEvent.class, schemaOptimizer::onActionExecuted);
         eventBus.subscribe(Events.CognitionStartEvent.class, effortTracker::onCognitionStart);
         eventBus.subscribe(Events.CognitionEndEvent.class, effortTracker::onCognitionEnd);
-        eventBus.subscribe(Events.SchemaOptimizedEvent.class, explanationGenerator::onEvent);
-        
+        eventBus.subscribe(Events.SchemaOptimizedEvent.class, explanationGenerator);
+
         // Subscribe to problem reports from the health monitor
         eventBus.subscribe(Events.NewThoughtCreatedEvent.class, event -> {
-            if (event.thought().metadata().type() == com.senars.core.ThoughtType.REPORT && 
-                event.thought().content().symbolic() != null && 
-                event.thought().content().symbolic().contains("health_monitor")) {
+            if (event.thought().metadata().type() == com.senars.core.ThoughtType.REPORT &&
+                    event.thought().content().symbolic() != null &&
+                    event.thought().content().symbolic().contains("health_monitor")) {
                 capabilityExpansion.processSystemicProblem(event.thought());
             }
         });

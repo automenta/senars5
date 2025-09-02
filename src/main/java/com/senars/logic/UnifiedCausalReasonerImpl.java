@@ -4,17 +4,15 @@ import com.senars.core.*;
 import com.senars.events.EventBus;
 import com.senars.events.Events;
 import com.senars.systems.Memory;
-import dev.langchain4j.model.chat.ChatLanguageModel;
 import dev.langchain4j.data.message.UserMessage;
+import dev.langchain4j.model.chat.ChatLanguageModel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.time.Instant;
 import java.util.*;
-import java.util.concurrent.ThreadLocalRandom;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 
 /**
  * Implementation of the Unified Causal Reasoner (UCR).
@@ -66,7 +64,7 @@ public class UnifiedCausalReasonerImpl implements UnifiedCausalReasoner {
     @Override
     public void processFeedback(Feedback feedback) {
         LOGGER.info("Processing feedback for tool '{}'", feedback.toolName());
-        
+
         // Adjust clarity of thoughts in the trace based on feedback
         List<String> traceIds = feedback.actionPlan().metadata().trace();
         if (traceIds != null && !traceIds.isEmpty()) {
@@ -74,7 +72,7 @@ public class UnifiedCausalReasonerImpl implements UnifiedCausalReasoner {
             double adjustment = isFailure ? -this.blameFactor : this.reinforcementFactor;
             adjustClarityInTrace(traceIds, adjustment, 0);
         }
-        
+
         // If this is a failure, create a goal to investigate and resolve it
         if (feedback.status() == ActionStatus.FAILURE) {
             createAndPublishFailureGoal(feedback);
@@ -94,7 +92,7 @@ public class UnifiedCausalReasonerImpl implements UnifiedCausalReasoner {
         if (options.isEstimateOnly()) {
             return performEffortEstimation(focusThought, options);
         }
-        
+
         // For simulation mode, we don't actually execute actions, just evaluate potential outcomes
         if (options.isSimulate()) {
             return performSimulation(focusThought, options);
@@ -119,7 +117,7 @@ public class UnifiedCausalReasonerImpl implements UnifiedCausalReasoner {
                 List<Thought> simulationResults = performSimulation(action, ReasoningOptions.simulation());
                 // For simplicity, we take the clarity of the first simulation result.
                 // A more complex model could analyze all results.
-                double clarity = simulationResults.isEmpty() ? 0.0 : simulationResults.get(0).state().clarity();
+                double clarity = simulationResults.isEmpty() ? 0.0 : simulationResults.getFirst().state().clarity();
                 simulatedOutcomes.put(action, clarity);
                 LOGGER.debug("Simulated action '{}' -> Predicted Clarity: {}", action.content().text(), clarity);
             }
@@ -162,7 +160,7 @@ public class UnifiedCausalReasonerImpl implements UnifiedCausalReasoner {
             if (focusThought.metadata().type() == ThoughtType.REPORT) {
                 return performRootCauseAnalysis(focusThought, options);
             }
-            
+
             // For other types, we might want to analyze why this thought exists
             // For now, we'll just return an empty list
             LOGGER.warn("Backward reasoning not implemented for thought type: {}", focusThought.metadata().type());
@@ -183,7 +181,7 @@ public class UnifiedCausalReasonerImpl implements UnifiedCausalReasoner {
                 .max(Map.Entry.comparingByValue())
                 .map(Map.Entry::getKey);
     }
-    
+
     /**
      * Performs effort estimation for a thought without full simulation.
      * This is a lightweight mode used by the Attention service.
@@ -194,14 +192,14 @@ public class UnifiedCausalReasonerImpl implements UnifiedCausalReasoner {
      */
     private List<Thought> performEffortEstimation(Thought focusThought, ReasoningOptions options) {
         LOGGER.info("Performing effort estimation for thought: {}", focusThought.id());
-        
+
         // Simple estimation based on text length and thought type
         String content = focusThought.content().text();
         int contentLength = content != null ? content.length() : 0;
-        
+
         // Base effort calculation
         double estimatedEffort = contentLength * 0.1;
-        
+
         // Adjust based on thought type
         switch (focusThought.metadata().type()) {
             case GOAL:
@@ -217,20 +215,20 @@ public class UnifiedCausalReasonerImpl implements UnifiedCausalReasoner {
                 // No adjustment for other types
                 break;
         }
-        
+
         // Create an estimation result
         String estimationText = String.format(
                 "Effort estimation for thought %s: %.2f units",
                 focusThought.id(),
                 estimatedEffort
         );
-        
+
         ThoughtContent contentResult = new ThoughtContent(
                 estimationText,
                 "ucr:effort_estimation",
                 null, null, null, null, null
         );
-        
+
         ThoughtMeta meta = new ThoughtMeta(
                 ThoughtType.REPORT,
                 ThoughtOrigin.UCR_FORWARD,
@@ -238,10 +236,10 @@ public class UnifiedCausalReasonerImpl implements UnifiedCausalReasoner {
                 Set.of(new CausalLink(focusThought.id(), UUID.randomUUID().toString(), CausalRelationType.COUNTERFACTUAL)),
                 Instant.now()
         );
-        
+
         ThoughtState state = new ThoughtState(1.0, 1.0, 1.0);
         Thought estimationResult = new Thought(UUID.randomUUID().toString(), contentResult, state, meta);
-        
+
         return List.of(estimationResult);
     }
 
@@ -256,23 +254,23 @@ public class UnifiedCausalReasonerImpl implements UnifiedCausalReasoner {
     private List<Thought> performSimulation(Thought focusThought, ReasoningOptions options) {
         // In simulation mode, we evaluate potential outcomes without executing actions
         // This is used for predictive grounding
-        
+
         LOGGER.info("Performing simulation for thought: {}", focusThought.id());
-        
+
         // Simulate potential issues by analyzing the action plan
         List<String> potentialIssues = analyzePotentialIssues(focusThought);
-        
+
         // Apply constraints if specified
         if (options.getConstraints() != null && options.getConstraints().contains("safety")) {
             // Additional safety checks
             List<String> safetyIssues = performSafetyAnalysis(focusThought);
             potentialIssues.addAll(safetyIssues);
         }
-        
+
         // Create a simulation result that indicates potential issues
         StringBuilder simulationText = new StringBuilder();
         simulationText.append("Simulation of action plan for thought ").append(focusThought.id()).append("\n");
-        
+
         if (potentialIssues.isEmpty()) {
             simulationText.append("Simulation result: No potential issues detected. Action plan appears safe to execute.");
         } else {
@@ -281,13 +279,13 @@ public class UnifiedCausalReasonerImpl implements UnifiedCausalReasoner {
                 simulationText.append((i + 1)).append(". ").append(potentialIssues.get(i)).append("\n");
             }
         }
-        
+
         ThoughtContent content = new ThoughtContent(
                 simulationText.toString(),
                 "ucr:simulation",
                 null, null, null, null, null
         );
-        
+
         ThoughtMeta meta = new ThoughtMeta(
                 ThoughtType.REPORT,
                 ThoughtOrigin.UCR_FORWARD,
@@ -295,15 +293,15 @@ public class UnifiedCausalReasonerImpl implements UnifiedCausalReasoner {
                 Set.of(new CausalLink(focusThought.id(), UUID.randomUUID().toString(), CausalRelationType.COUNTERFACTUAL)),
                 Instant.now()
         );
-        
+
         // Adjust clarity based on simulation results
         double clarity = potentialIssues.isEmpty() ? 1.0 : 0.5;
         ThoughtState state = new ThoughtState(clarity, 1.0, 1.0);
         Thought simulationResult = new Thought(UUID.randomUUID().toString(), content, state, meta);
-        
+
         return List.of(simulationResult);
     }
-    
+
     /**
      * Performs safety analysis on a thought based on governance constraints.
      *
@@ -312,7 +310,7 @@ public class UnifiedCausalReasonerImpl implements UnifiedCausalReasoner {
      */
     private List<String> performSafetyAnalysis(Thought thought) {
         List<String> safetyIssues = new ArrayList<>();
-        
+
         // Simple heuristic-based safety analysis
         String content = thought.content().text();
         if (content != null) {
@@ -323,10 +321,10 @@ public class UnifiedCausalReasonerImpl implements UnifiedCausalReasoner {
                 safetyIssues.add("Potential security bypass attempt detected");
             }
         }
-        
+
         return safetyIssues;
     }
-    
+
     /**
      * Analyzes a thought for potential issues during simulation.
      * This is a simplified version that would be replaced with full LLM integration.
@@ -336,7 +334,7 @@ public class UnifiedCausalReasonerImpl implements UnifiedCausalReasoner {
      */
     private List<String> analyzePotentialIssues(Thought thought) {
         List<String> issues = new ArrayList<>();
-        
+
         // Simple heuristic-based analysis
         String content = thought.content().text();
         if (content != null) {
@@ -350,10 +348,10 @@ public class UnifiedCausalReasonerImpl implements UnifiedCausalReasoner {
                 issues.add("Action may affect user data");
             }
         }
-        
+
         // In a real implementation, this would involve complex LLM analysis
         // of the action plan against safety principles and system constraints
-        
+
         return issues;
     }
 
@@ -363,49 +361,49 @@ public class UnifiedCausalReasonerImpl implements UnifiedCausalReasoner {
      */
     private List<Thought> performRootCauseAnalysis(Thought reportThought, ReasoningOptions options) {
         LOGGER.info("Performing root cause analysis for report: {}", reportThought.id());
-        
+
         // Get the causal chain leading to this report
         List<Thought> trace = memory.getTrace(reportThought.id());
-        
+
         if (trace.isEmpty()) {
             LOGGER.warn("No trace found for report {}. Cannot perform root cause analysis.", reportThought.id());
             return Collections.emptyList();
         }
-        
+
         // The root cause is typically the first thought in the trace that isn't a system-generated thought
         Thought rootCause = null;
         for (Thought thought : trace) {
             // Skip system-generated thoughts
-            if (thought.metadata().origin() != ThoughtOrigin.SYSTEM && 
-                thought.metadata().origin() != ThoughtOrigin.UCR_FORWARD &&
-                thought.metadata().origin() != ThoughtOrigin.UCR_BACKWARD) {
+            if (thought.metadata().origin() != ThoughtOrigin.SYSTEM &&
+                    thought.metadata().origin() != ThoughtOrigin.UCR_FORWARD &&
+                    thought.metadata().origin() != ThoughtOrigin.UCR_BACKWARD) {
                 rootCause = thought;
                 break;
             }
         }
-        
+
         if (rootCause == null) {
             // If we couldn't find a non-system root cause, use the first thought in the trace
-            rootCause = trace.get(0);
+            rootCause = trace.getFirst();
         }
-        
+
         // Create an analysis result
         StringBuilder analysisText = new StringBuilder();
         analysisText.append("Root cause analysis for report ").append(reportThought.id()).append("\n");
         analysisText.append("Identified root cause: ").append(rootCause.content().text()).append("\n");
         analysisText.append("Root cause type: ").append(rootCause.metadata().type()).append("\n");
         analysisText.append("Root cause origin: ").append(rootCause.metadata().origin()).append("\n");
-        
+
         ThoughtContent content = new ThoughtContent(
                 analysisText.toString(),
                 "ucr:root_cause_analysis",
                 null, null, null, null, null
         );
-        
+
         Set<CausalLink> causalLinks = Set.of(
                 new CausalLink(rootCause.id(), reportThought.id(), CausalRelationType.DIRECT_CAUSATION)
         );
-        
+
         ThoughtMeta meta = new ThoughtMeta(
                 ThoughtType.REPORT,
                 ThoughtOrigin.UCR_BACKWARD,
@@ -413,32 +411,32 @@ public class UnifiedCausalReasonerImpl implements UnifiedCausalReasoner {
                 causalLinks,
                 Instant.now()
         );
-        
+
         ThoughtState state = new ThoughtState(1.0, 1.0, 1.0);
         Thought analysisResult = new Thought(UUID.randomUUID().toString(), content, state, meta);
-        
+
         // Adjust clarity of the root cause based on the report outcome
         adjustClarityBasedOnReport(reportThought, rootCause);
-        
+
         return List.of(analysisResult);
     }
-    
+
     /**
      * Adjusts the clarity of a thought based on the outcome described in a report
      */
     private void adjustClarityBasedOnReport(Thought reportThought, Thought rootCause) {
         // Determine if this is a success or failure report
         String reportText = reportThought.content().text();
-        boolean isFailure = reportText != null && 
-                           (reportText.toLowerCase().contains("failed") || 
-                            reportText.toLowerCase().contains("error") ||
-                            reportText.toLowerCase().contains("problem"));
-        
+        boolean isFailure = reportText != null &&
+                (reportText.toLowerCase().contains("failed") ||
+                        reportText.toLowerCase().contains("error") ||
+                        reportText.toLowerCase().contains("problem"));
+
         double adjustment = isFailure ? -this.blameFactor : this.reinforcementFactor;
-        
+
         double currentClarity = rootCause.state().clarity();
         double newClarity = Math.max(0.0, Math.min(1.0, currentClarity + adjustment));
-        
+
         if (Math.abs(newClarity - currentClarity) > 1e-9) {
             Thought updatedThought = new Thought(
                     rootCause.id(),
@@ -506,13 +504,13 @@ public class UnifiedCausalReasonerImpl implements UnifiedCausalReasoner {
     private List<Thought> generatePotentialActions(Thought focusThought) {
         String prompt = String.format(
                 """
-                Given the current thought: '%s'
-
-                Brainstorm 3 potential, distinct, and actionable next steps. The output must be a valid JSON array of strings.
-
-                Example:
-                ["Step 1 text...", "Step 2 text...", "Step 3 text..."]
-                """,
+                        Given the current thought: '%s'
+                        
+                        Brainstorm 3 potential, distinct, and actionable next steps. The output must be a valid JSON array of strings.
+                        
+                        Example:
+                        ["Step 1 text...", "Step 2 text...", "Step 3 text..."]
+                        """,
                 focusThought.content().text()
         );
 

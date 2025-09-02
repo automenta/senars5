@@ -1,7 +1,6 @@
 package com.senars.salience;
 
 import com.senars.core.Thought;
-import com.senars.core.ThoughtContent;
 import com.senars.core.ThoughtType;
 import com.senars.effort.EffortPredictor;
 import com.senars.motive.MotiveHierarchy;

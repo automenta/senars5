@@ -15,8 +15,6 @@ import com.senars.systems.Memory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.PrintWriter;
-import java.io.StringWriter;
 import java.time.Instant;
 import java.util.*;
 
@@ -158,18 +156,18 @@ public class CognitiveCycle {
         try {
             // First, perform predictive grounding simulation to identify potential issues
             List<Thought> simulations = ucr.simulate(thought, UnifiedCausalReasoner.ReasoningOptions.simulation());
-            
+
             // Check if any simulations indicate potential problems
             boolean hasPotentialIssues = simulations.stream()
                     .anyMatch(sim -> sim.state().clarity() < 0.7); // Threshold for potential issues
-            
+
             if (hasPotentialIssues) {
                 LOGGER.warn("Predictive grounding simulation detected potential issues with action plan: {}", thought.id());
                 // Create a replan goal to address the potential issues
                 createReplanGoalForSimulation(thought, simulations);
                 return;
             }
-            
+
             // If no issues detected, proceed with governance review
             Optional<String> vetoReason = governor.reviewPlan(thought);
             if (vetoReason.isPresent()) {
@@ -188,7 +186,7 @@ public class CognitiveCycle {
             LOGGER.error("Error during action plan review or execution for thought: {}", thought.id(), e);
         }
     }
-    
+
     private void createReplanGoalForSimulation(Thought problematicPlan, List<Thought> simulations) {
         StringBuilder issuesText = new StringBuilder();
         for (Thought simulation : simulations) {
@@ -196,7 +194,7 @@ public class CognitiveCycle {
                 issuesText.append(simulation.content().text()).append("\n");
             }
         }
-        
+
         String newId = UUID.randomUUID().toString();
         Thought replanGoal = new Thought(
                 newId,
@@ -221,7 +219,7 @@ public class CognitiveCycle {
         if (feedback != null) {
             // First, let the UCR process the feedback for credit/blame assignment
             ucr.processFeedback(feedback);
-            
+
             // Then, let the MDR service check if any self-correction is needed
             mdrService.processFeedback(feedback).ifPresent(this::handleNewThought);
         }

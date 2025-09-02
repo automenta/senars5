@@ -17,7 +17,10 @@
           "description": "A new, concrete goal to break the cognitive loop."
         }
       },
-      "required": ["analysis", "new_goal"]
+      "required": [
+        "analysis",
+        "new_goal"
+      ]
     },
     "version": 1,
     "deprecated": false
@@ -40,7 +43,10 @@
           "description": "A new, concrete goal to attempt recovery."
         }
       },
-      "required": ["analysis", "recovery_goal"]
+      "required": [
+        "analysis",
+        "recovery_goal"
+      ]
     },
     "version": 1,
     "deprecated": false
@@ -63,7 +69,10 @@
           "description": "A specific, actionable refinement for the UCR heuristic."
         }
       },
-      "required": ["analysis", "heuristic_refinement_suggestion"]
+      "required": [
+        "analysis",
+        "heuristic_refinement_suggestion"
+      ]
     },
     "version": 1,
     "deprecated": false

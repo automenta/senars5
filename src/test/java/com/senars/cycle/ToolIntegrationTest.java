@@ -5,7 +5,6 @@ import com.senars.lm.ToolKit;
 import com.senars.logic.LogicEngine;
 import com.senars.systems.Memory;
 import com.senars.tools.LogicalInferenceTool;
-import dev.langchain4j.agent.tool.ToolExecutionRequest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -18,8 +17,7 @@ import java.util.UUID;
 
 import static java.util.Collections.emptyList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 public class ToolIntegrationTest {

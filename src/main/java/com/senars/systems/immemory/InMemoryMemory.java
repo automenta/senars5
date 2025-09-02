@@ -13,12 +13,7 @@ import com.senars.systems.graphdb.MapDBGraphStore;
 import com.senars.systems.vectorstore.DefaultVectorStore;
 import com.senars.systems.vectorstore.ScoredId;
 
-import java.util.Collections;
-import java.util.List;
-import java.util.Optional;
-import java.util.Set;
-import java.util.HashSet;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**

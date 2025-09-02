@@ -1,11 +1,6 @@
 package com.senars.explain;
 
-import com.senars.core.Thought;
-import com.senars.core.ThoughtContent;
-import com.senars.core.ThoughtMeta;
-import com.senars.core.ThoughtOrigin;
-import com.senars.core.ThoughtState;
-import com.senars.core.ThoughtType;
+import com.senars.core.*;
 import com.senars.events.EventBus;
 import com.senars.events.EventSubscriber;
 import com.senars.events.Events;
@@ -37,7 +32,7 @@ public class ExplanationGenerator implements EventSubscriber<Events.SchemaOptimi
 
         String goalText = String.format(
                 "The schema %s was recently replaced by a new version, %s, due to an automated optimization process. " +
-                "Generate a human-readable report explaining why this change was made. Use the causal links of the new schema to find the optimization goal and the original schema.",
+                        "Generate a human-readable report explaining why this change was made. Use the causal links of the new schema to find the optimization goal and the original schema.",
                 event.oldSchemaId(),
                 event.newSchemaId()
         );
