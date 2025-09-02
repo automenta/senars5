@@ -1,6 +1,7 @@
 package com.senars.salience;
 
 import com.senars.core.Thought;
+import com.senars.core.ThoughtContent;
 import com.senars.core.ThoughtType;
 import com.senars.effort.EffortPredictor;
 import com.senars.motive.MotiveHierarchy;
@@ -99,21 +100,24 @@ public class SalienceCalculator {
                 if (clarity < 1.0) {
                     totalDriveBonus += UNCERTAINTY_BONUS_MULTIPLIER * (1.0 - clarity);
                 }
-            } else if (ENRICH_KNOWLEDGE_DRIVE_ID.equals(drive.id())) {
-                // This drive adds a bonus to thoughts that have text but are missing an embedding.
-                boolean needsEmbedding = thought.content().text() != null &&
-                        !thought.content().text().isEmpty() &&
-                        (thought.content().embedding() == null || thought.content().embedding().isEmpty());
-                if (needsEmbedding) {
-                    totalDriveBonus += ENRICHMENT_BONUS;
-                }
             } else {
-                // For all other drives, the bonus is based on semantic similarity.
-                List<Double> thoughtEmbedding = thought.content().embedding();
-                List<Double> driveEmbedding = drive.content().embedding();
+                var thoughtContent = thought.content();
+                if (ENRICH_KNOWLEDGE_DRIVE_ID.equals(drive.id())) {
+                    // This drive adds a bonus to thoughts that have text but are missing an embedding.
+                    boolean needsEmbedding = thoughtContent.text() != null &&
+                            !thoughtContent.text().isEmpty() &&
+                            (thoughtContent.embedding() == null || thoughtContent.embedding().isEmpty());
+                    if (needsEmbedding) {
+                        totalDriveBonus += ENRICHMENT_BONUS;
+                    }
+                } else {
+                    // For all other drives, the bonus is based on semantic similarity.
+                    List<Double> thoughtEmbedding = thoughtContent.embedding();
+                    List<Double> driveEmbedding = drive.content().embedding();
 
-                if (thoughtEmbedding != null && !thoughtEmbedding.isEmpty() && driveEmbedding != null && !driveEmbedding.isEmpty()) {
-                    totalDriveBonus += VectorMath.cosineSimilarity(thoughtEmbedding, driveEmbedding);
+                    if (thoughtEmbedding != null && !thoughtEmbedding.isEmpty() && driveEmbedding != null && !driveEmbedding.isEmpty()) {
+                        totalDriveBonus += VectorMath.cosineSimilarity(thoughtEmbedding, driveEmbedding);
+                    }
                 }
             }
         }

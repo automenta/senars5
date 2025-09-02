@@ -9,7 +9,7 @@ import com.senars.db.DatabaseManager;
 import com.senars.events.EventBus;
 import com.senars.systems.Memory;
 import com.senars.systems.immemory.InMemoryMemory;
-import com.senars.xai.Explain;
+import com.senars.explain.Explain;
 import dev.langchain4j.data.message.AiMessage;
 import dev.langchain4j.model.chat.ChatLanguageModel;
 import dev.langchain4j.model.output.Response;
@@ -36,7 +36,7 @@ public class LLMPlanningIntegrationTest {
     Path tempDir;
     private Memory memory;
     private ChatLanguageModel chatModel;
-    private Langchain4JCognition cognition;
+    private LMCognition cognition;
     private DatabaseManager dbManager;
 
     @BeforeEach
@@ -53,7 +53,7 @@ public class LLMPlanningIntegrationTest {
         loadSchema("parsing-schema.json");
 
 
-        cognition = new Langchain4JCognition(
+        cognition = new LMCognition(
                 chatModel,
                 memory,
                 new PromptBuilder(),
@@ -121,7 +121,7 @@ public class LLMPlanningIntegrationTest {
                 .thenReturn(Response.from(AiMessage.from(llmPlanResponse))); // Cycle 2: LLM "parses" the text by returning the clean JSON.
 
         // 4. Process the GOAL thought
-        List<Thought> finalResult = cognition.process(goal);
+        List<Thought> finalResult = cognition.think(goal);
 
         // 5. Assert the final results
         assertNotNull(finalResult);

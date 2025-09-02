@@ -26,7 +26,7 @@ public class EventBus {
      * @param <T> The type of the event.
      */
     public <T extends Event> void subscribe(Class<T> eventType, EventSubscriber<T> subscriber) {
-        subscribers.computeIfAbsent(eventType, k -> new ArrayList<>()).add(subscriber);
+        subscribers.computeIfAbsent(eventType, k -> new ArrayList<>(1)).add(subscriber);
         LOGGER.info("New subscriber {} for event type {}", subscriber.getClass().getSimpleName(), eventType.getSimpleName());
     }
 

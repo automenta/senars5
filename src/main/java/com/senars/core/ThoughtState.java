@@ -9,7 +9,7 @@ import java.io.Serializable;
  *
  * @param clarity    [0, 1] System's confidence/truth value in this Thought.
  * @param salience   [0, ∞) Current attentional priority, dynamically calculated.
- * @param activation [0, 1] How "close to the surface" this Thought is in Memory Nexus.
+ * @param activation [0, 1] How "close to the surface" this Thought is in Memory.
  */
 public record ThoughtState(
         double clarity,

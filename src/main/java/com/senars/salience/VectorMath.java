@@ -21,7 +21,8 @@ public final class VectorMath {
      * @throws NullPointerException if either vector is null.
      */
     public static double cosineSimilarity(List<Double> vecA, List<Double> vecB) {
-        if (vecA.size() != vecB.size() || vecA.isEmpty()) {
+        var d = vecA.size();
+        if (d != vecB.size() || vecA.isEmpty()) {
             return 0.0;
         }
 
@@ -29,17 +30,18 @@ public final class VectorMath {
         double normA = 0.0;
         double normB = 0.0;
 
-        for (int i = 0; i < vecA.size(); i++) {
-            dotProduct += vecA.get(i) * vecB.get(i);
-            normA += vecA.get(i) * vecA.get(i);
-            normB += vecB.get(i) * vecB.get(i);
+        for (int i = 0; i < d; i++) {
+            var ai = vecA.get(i);
+            var bi = vecB.get(i);
+            dotProduct += ai * bi;
+            normA += ai * ai;
+            normB += bi * bi;
         }
 
-        if (normA == 0.0 || normB == 0.0) {
+        if (normA == 0.0 || normB == 0.0)
             return 0.0;
-        }
-
-        return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
+        else
+            return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
     }
 
     /**
@@ -64,11 +66,11 @@ public final class VectorMath {
      */
     public static List<Double> normalize(List<Double> vector) {
         double mag = magnitude(vector);
-        if (mag == 0.0) {
-            return vector; // Avoid division by zero
-        }
-        return vector.stream()
-                .map(val -> val / mag)
-                .toList();
+        if (mag == 0 /* Avoid division by zero */ || mag == 1)
+            return vector;
+        else
+            return vector.stream()
+                    .map(val -> val / mag)
+                    .toList();
     }
 }

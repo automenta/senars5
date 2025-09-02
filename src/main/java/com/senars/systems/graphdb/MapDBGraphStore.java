@@ -53,7 +53,7 @@ public class MapDBGraphStore implements GraphDB {
         Set<String> visited = new HashSet<>();
 
         // Use a stack for iterative depth-first traversal to build the path
-        Stack<String> stack = new Stack<>();
+        //Stack<String> stack = new Stack<>();
 
         Optional<Thought> startNode = getThoughtById(thoughtId);
         if (startNode.isEmpty()) {
@@ -91,10 +91,7 @@ public class MapDBGraphStore implements GraphDB {
     @Override
     public Optional<Thought> findSchemaBySymbolicName(String name) {
         String thoughtId = symbolicIndex.get(name);
-        if (thoughtId == null) {
-            return Optional.empty();
-        }
-        return getThoughtById(thoughtId);
+        return thoughtId == null ? Optional.empty() : getThoughtById(thoughtId);
     }
 
     @Override

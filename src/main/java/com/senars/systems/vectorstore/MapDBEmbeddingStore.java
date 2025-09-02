@@ -51,7 +51,8 @@ public class MapDBEmbeddingStore implements EmbeddingStore<TextSegment> {
     @Override
     public List<String> addAll(List<Embedding> list) {
         List<String> ids = list.stream().map(embedding -> UUID.randomUUID().toString()).collect(Collectors.toList());
-        for (int i = 0; i < list.size(); i++) {
+        var d = list.size();
+        for (int i = 0; i < d; i++) {
             embeddings.put(ids.get(i), list.get(i).vector());
         }
         dbManager.commit();
@@ -86,8 +87,8 @@ public class MapDBEmbeddingStore implements EmbeddingStore<TextSegment> {
         }
 
         return queue.stream()
-                .sorted((a, b) -> Double.compare(b.score(), a.score()))
-                .collect(Collectors.toList());
+            .sorted((a, b) -> Double.compare(b.score(), a.score()))
+            .toList();
     }
 
     public void clear() {
@@ -101,20 +102,23 @@ public class MapDBEmbeddingStore implements EmbeddingStore<TextSegment> {
     }
 
     private double cosineSimilarity(float[] v1, float[] v2) {
-        if (v1 == null || v2 == null || v1.length != v2.length || v1.length == 0) {
+        var d = v1.length;
+        if (v1 == null || v2 == null || d != v2.length || d == 0) {
             return 0.0;
         }
         double dotProduct = 0.0;
         double normA = 0.0;
         double normB = 0.0;
-        for (int i = 0; i < v1.length; i++) {
-            dotProduct += v1[i] * v2[i];
-            normA += v1[i] * v1[i];
-            normB += v2[i] * v2[i];
+        for (int i = 0; i < d; i++) {
+            var i1 = v1[i];
+            var i2 = v2[i];
+            dotProduct += i1 * i2;
+            normA += i1 * i1;
+            normB += i2 * i2;
         }
-        if (normA == 0.0 || normB == 0.0) {
+        if (normA == 0.0 || normB == 0.0)
             return 0.0;
-        }
-        return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
+        else
+            return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
     }
 }

@@ -10,7 +10,7 @@ import com.senars.optimizer.EffortModelOptimizer;
 import com.senars.optimizer.SchemaOptimizer;
 import com.senars.systems.Memory;
 import com.senars.systems.ScoredThought;
-import com.senars.xai.Explain;
+import com.senars.explain.Explain;
 import dev.langchain4j.agent.tool.ToolExecutionRequest;
 import dev.langchain4j.agent.tool.ToolSpecification;
 import dev.langchain4j.data.message.AiMessage;
@@ -29,9 +29,9 @@ import static java.util.Objects.requireNonNull;
  * An implementation of the ICognitiveProcessor that uses Langchain4j to interact with a large language model.
  * This class orchestrates the process of context assembly, prompt generation, LLM interaction, and output parsing.
  */
-public class Langchain4JCognition implements Cognition {
+public class LMCognition implements Cognition {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(Langchain4JCognition.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(LMCognition.class);
     private static final int SIMILAR_THOUGHTS_COUNT = 5;
     private static final int SCHEMA_COUNT = 5; // Fetch more schemas to choose from
     private static final String GENERATE_EMBEDDING_SCHEMA_SYMBOL = "senars:generate_embedding_schema";
@@ -59,7 +59,7 @@ public class Langchain4JCognition implements Cognition {
      * @param toolKit       The toolkit containing available tools.
      * @param eventBus      The event bus for publishing events.
      */
-    public Langchain4JCognition(
+    public LMCognition(
             ChatLanguageModel chat,
             Memory memory,
             PromptBuilder promptBuilder,
@@ -78,7 +78,7 @@ public class Langchain4JCognition implements Cognition {
     }
 
     @Override
-    public List<Thought> process(Thought focusThought) {
+    public List<Thought> think(Thought focusThought) {
         eventBus.publish(new Events.CognitionStartEvent(focusThought));
         try {
             LOGGER.info("Processing thought: {} of type {}", focusThought.id(), focusThought.metadata().type());

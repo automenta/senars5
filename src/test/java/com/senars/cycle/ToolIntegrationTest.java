@@ -1,7 +1,7 @@
 package com.senars.cycle;
 
 import com.senars.core.*;
-import com.senars.lm.Langchain4JCognition;
+import com.senars.lm.LMCognition;
 import com.senars.lm.ToolKit;
 import com.senars.logic.LogicEngine;
 import com.senars.systems.Memory;
@@ -14,10 +14,10 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.Instant;
-import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 
+import static java.util.Collections.emptyList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.Mockito.*;
@@ -34,7 +34,7 @@ public class ToolIntegrationTest {
     @Mock
     private com.senars.lm.StructuredOutputParser outputParser;
     @Mock
-    private com.senars.xai.Explain explain;
+    private com.senars.explain.Explain explain;
     @Mock
     private com.senars.events.EventBus eventBus;
 
@@ -51,7 +51,7 @@ public class ToolIntegrationTest {
         logicalInferenceTool = new LogicalInferenceTool(inference);
         toolKit = new ToolKit(logicalInferenceTool); // In a real scenario, more tools would be here.
         toolUsingAction = new ToolUsingAction(toolKit);
-        cognition = spy(new Langchain4JCognition(chatModel, memory, promptBuilder, outputParser, explain, toolKit, eventBus));
+        cognition = spy(new LMCognition(chatModel, memory, promptBuilder, outputParser, explain, toolKit, eventBus));
     }
 
     private Thought createActionPlan(String toolRequestJson) {
@@ -59,7 +59,7 @@ public class ToolIntegrationTest {
                 UUID.randomUUID().toString(),
                 new ThoughtContent("Execute tool", toolRequestJson, null, null, null, null, null),
                 new ThoughtState(1.0, 1.0, 1.0),
-                new ThoughtMeta(ThoughtType.ACTION, ThoughtOrigin.LLM_INFERENCE, Collections.emptyList(), Instant.now())
+                new ThoughtMeta(ThoughtType.ACTION, ThoughtOrigin.LLM_INFERENCE, emptyList(), Instant.now())
         );
     }
 
@@ -74,7 +74,7 @@ public class ToolIntegrationTest {
                 "fact-1",
                 new ThoughtContent("Darth Vader is Luke's father.", query + ".", null, null, null, null, null),
                 new ThoughtState(1.0, 1.0, 1.0),
-                new ThoughtMeta(ThoughtType.BELIEF, ThoughtOrigin.USER, Collections.emptyList(), Instant.now())
+                new ThoughtMeta(ThoughtType.BELIEF, ThoughtOrigin.USER, emptyList(), Instant.now())
         );
         when(memory.getAllThoughts()).thenReturn(List.of(fact));
 
@@ -98,7 +98,7 @@ public class ToolIntegrationTest {
                 "fact-1",
                 new ThoughtContent("Darth Vader is Luke's father.", "father('darth_vader', 'luke').", null, null, null, null, null),
                 new ThoughtState(1.0, 1.0, 1.0),
-                new ThoughtMeta(ThoughtType.BELIEF, ThoughtOrigin.USER, Collections.emptyList(), Instant.now())
+                new ThoughtMeta(ThoughtType.BELIEF, ThoughtOrigin.USER, emptyList(), Instant.now())
         );
         when(memory.getAllThoughts()).thenReturn(List.of(fact));
 
@@ -118,7 +118,7 @@ public class ToolIntegrationTest {
         String toolRequestJson = String.format("{\"name\":\"executeQuery\",\"arguments\":{\"query\":\"%s\"}}", query);
         Thought actionPlan = createActionPlan(toolRequestJson);
 
-        when(memory.getAllThoughts()).thenReturn(Collections.emptyList());
+        when(memory.getAllThoughts()).thenReturn(emptyList());
 
         // Act
         Feedback feedback = toolUsingAction.executePlan(actionPlan);
@@ -137,7 +137,7 @@ public class ToolIntegrationTest {
                 "failure-goal-1",
                 new ThoughtContent(failureText, null, List.of(1.0, 2.0, 3.0), null, null, null, null),
                 new ThoughtState(1.0, 100.0, 1.0),
-                new ThoughtMeta(ThoughtType.GOAL, ThoughtOrigin.SYSTEM, Collections.emptyList(), Instant.now())
+                new ThoughtMeta(ThoughtType.GOAL, ThoughtOrigin.SYSTEM, emptyList(), Instant.now())
         );
 
         // Arrange: Mock the memory to return the Failure Recovery Schema when requested.
@@ -154,11 +154,11 @@ public class ToolIntegrationTest {
                 .thenReturn(dev.langchain4j.model.output.Response.from(dev.langchain4j.data.message.AiMessage.from(newActionJson)));
 
         // Act: Process the failure goal.
-        List<Thought> newThoughts = cognition.process(failureGoal);
+        List<Thought> newThoughts = cognition.think(failureGoal);
 
         // Assert
         // 1. Verify that the findRelevantSchema method was called and returned our recovery schema.
-        verify((Langchain4JCognition) cognition).findRelevantSchema(failureGoal);
+        verify((LMCognition) cognition).findRelevantSchema(failureGoal);
 
         // 2. Assert that the result is a single new thought.
         assertEquals(1, newThoughts.size());

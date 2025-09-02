@@ -19,5 +19,5 @@ public interface Cognition {
      * @return A list of new Thoughts generated as a result of the processing.
      *         This can include BELIEFs, GOALs, ACTIONs, etc.
      */
-    List<Thought> process(Thought focusThought);
+    List<Thought> think(Thought focusThought);
 }

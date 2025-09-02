@@ -96,13 +96,13 @@ class CognitiveCycleTest {
 
         attentionFunnel.addCandidate(lowSalienceThought);
         attentionFunnel.addCandidate(highSalienceThought);
-        when(cognitiveProcessor.process(highSalienceThought)).thenReturn(List.of(newThought));
+        when(cognitiveProcessor.think(highSalienceThought)).thenReturn(List.of(newThought));
 
         cognitiveCycle.step();
 
         // Verify that the most salient thought was processed
-        verify(cognitiveProcessor).process(highSalienceThought);
-        verify(cognitiveProcessor, never()).process(lowSalienceThought);
+        verify(cognitiveProcessor).think(highSalienceThought);
+        verify(cognitiveProcessor, never()).think(lowSalienceThought);
 
         // Verify the new thought was saved and added back to the funnel
         verify(memory).saveThought(newThought);
@@ -114,7 +114,7 @@ class CognitiveCycleTest {
         Thought actionPlan = createTestThought(ThoughtType.ACTION, 0.9);
 
         attentionFunnel.addCandidate(goal);
-        when(cognitiveProcessor.process(goal)).thenReturn(List.of(actionPlan));
+        when(cognitiveProcessor.think(goal)).thenReturn(List.of(actionPlan));
 
         cognitiveCycle.step(); // First step processes the GOAL and produces the ACTION
 
@@ -135,7 +135,7 @@ class CognitiveCycleTest {
         String vetoReason = "This is unsafe!";
 
         attentionFunnel.addCandidate(goal);
-        when(cognitiveProcessor.process(goal)).thenReturn(List.of(actionPlan));
+        when(cognitiveProcessor.think(goal)).thenReturn(List.of(actionPlan));
         when(governor.reviewPlan(actionPlan)).thenReturn(Optional.of(vetoReason));
 
         cognitiveCycle.step(); // Process GOAL, create ACTION
@@ -163,7 +163,7 @@ class CognitiveCycleTest {
         // Verify the perception system was checked.
         verify(perceptionSystem).perceive();
         // Verify the thought was processed in the same cycle.
-        verify(cognitiveProcessor).process(perceivedThought);
+        verify(cognitiveProcessor).think(perceivedThought);
     }
 
     @Test

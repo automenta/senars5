@@ -1,4 +1,4 @@
-package com.senars.xai;
+package com.senars.explain;
 
 import com.senars.core.*;
 import com.senars.systems.Memory;

@@ -4,13 +4,13 @@ import com.senars.config.AppConfig;
 import com.senars.core.*;
 import com.senars.db.DatabaseManager;
 import com.senars.events.EventBus;
-import com.senars.lm.Langchain4JCognition;
+import com.senars.lm.LMCognition;
 import com.senars.lm.PromptBuilder;
 import com.senars.lm.StructuredOutputParser;
 import com.senars.lm.ToolKit;
 import com.senars.systems.Memory;
 import com.senars.systems.immemory.InMemoryMemory;
-import com.senars.xai.Explain;
+import com.senars.explain.Explain;
 import dev.langchain4j.model.chat.ChatLanguageModel;
 import dev.langchain4j.model.ollama.OllamaChatModel;
 import org.junit.jupiter.api.BeforeEach;
@@ -32,7 +32,7 @@ import static org.junit.jupiter.api.Assertions.*;
 @Disabled("Requires a running Ollama instance")
 public class IntegrationTest {
 
-    private Langchain4JCognition cognitiveProcessor;
+    private LMCognition cognitiveProcessor;
 
     @BeforeEach
     void setUp() {
@@ -56,7 +56,7 @@ public class IntegrationTest {
         // 4. Instantiate the real processor
         Explain explain = new Explain(memory);
         EventBus eventBus = new EventBus();
-        cognitiveProcessor = new Langchain4JCognition(
+        cognitiveProcessor = new LMCognition(
                 chatModel,
                 memory,
                 promptBuilder,
@@ -81,7 +81,7 @@ public class IntegrationTest {
         );
 
         // Act
-        List<Thought> resultThoughts = cognitiveProcessor.process(focusThought);
+        List<Thought> resultThoughts = cognitiveProcessor.think(focusThought);
 
         // Assert
         assertNotNull(resultThoughts);

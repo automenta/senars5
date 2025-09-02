@@ -17,7 +17,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 
-class Langchain4JCognitionIntegrationTest {
+class LMCognitionIntegrationTest {
 
     @Mock
     private ChatLanguageModel chatModel;
@@ -32,16 +32,16 @@ class Langchain4JCognitionIntegrationTest {
     @Mock
     private com.senars.events.EventBus eventBus;
 
-    private Langchain4JCognition cognition;
+    private LMCognition cognition;
 
     @Mock
-    private com.senars.xai.Explain explain;
+    private com.senars.explain.Explain explain;
 
 
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
-        cognition = new Langchain4JCognition(chatModel, memory, promptBuilder, outputParser, explain, toolKit, eventBus);
+        cognition = new LMCognition(chatModel, memory, promptBuilder, outputParser, explain, toolKit, eventBus);
     }
 
     @Test

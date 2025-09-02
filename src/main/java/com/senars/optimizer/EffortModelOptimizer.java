@@ -47,9 +47,10 @@ public class EffortModelOptimizer {
 
         double totalAbsolutePercentageError = 0.0;
         for (EffortRecord record : records) {
-            if (record.actualEffort() > 0) {
-                double error = Math.abs(record.predictedEffort() - record.actualEffort());
-                totalAbsolutePercentageError += error / record.actualEffort();
+            var actualEffort = record.actualEffort();
+            if (actualEffort > 0) {
+                double error = Math.abs(record.predictedEffort() - actualEffort);
+                totalAbsolutePercentageError += error / actualEffort;
             }
         }
         double meanAbsolutePercentageError = totalAbsolutePercentageError / records.size();
@@ -66,7 +67,7 @@ public class EffortModelOptimizer {
             }
         }
 
-        return Collections.emptyList();
+        return List.of();
     }
 
     private Thought createOptimizationGoal(List<EffortRecord> records, double error) {
@@ -105,13 +106,12 @@ public class EffortModelOptimizer {
 
         // 3. A future implementation could serialize the records to JSON and include them in the procedural content.
         // For now, we pass the old model's procedural content.
-        ThoughtContent content = new ThoughtContent(
+        return new ThoughtContent(
                 goalText,
                 REWRITE_EFFORT_MODEL_SYMBOLIC,
                 null, null,
                 effortModelSchema.content().procedural(), // Pass the old model's content
                 null, null
         );
-        return content;
     }
 }

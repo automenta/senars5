@@ -1,4 +1,4 @@
-package com.senars.xai;
+package com.senars.explain;
 
 import com.senars.core.Thought;
 import com.senars.core.ThoughtContent;
@@ -20,14 +20,14 @@ import java.util.UUID;
  * An event subscriber that listens for schema optimization events and
  * generates a new goal to create a human-readable report explaining the change.
  */
-public class XaiReportGenerator implements EventSubscriber<Events.SchemaOptimizedEvent> {
+public class ExplanationGenerator implements EventSubscriber<Events.SchemaOptimizedEvent> {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(XaiReportGenerator.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(ExplanationGenerator.class);
     private static final double GOAL_SALIENCE = 80.0; // High, but not critical
 
     private final EventBus eventBus;
 
-    public XaiReportGenerator(EventBus eventBus) {
+    public ExplanationGenerator(EventBus eventBus) {
         this.eventBus = eventBus;
     }
 

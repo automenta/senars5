@@ -10,7 +10,7 @@ import com.senars.effort.EffortTracker;
 import com.senars.events.EventBus;
 import com.senars.events.Events;
 import com.senars.events.LoggingEventSubscriber;
-import com.senars.lm.Langchain4JCognition;
+import com.senars.lm.LMCognition;
 import com.senars.lm.PromptBuilder;
 import com.senars.lm.StructuredOutputParser;
 import com.senars.lm.ToolKit;
@@ -31,8 +31,8 @@ import com.senars.systems.perception.FilePerceptionChannel;
 import com.senars.systems.rules.KeywordBlocklistRule;
 import com.senars.systems.rules.PreventDeprecatedSchemaUseRule;
 import com.senars.tools.*;
-import com.senars.xai.Explain;
-import com.senars.xai.XaiReportGenerator;
+import com.senars.explain.Explain;
+import com.senars.explain.ExplanationGenerator;
 import dev.langchain4j.model.chat.ChatLanguageModel;
 import dev.langchain4j.model.embedding.AllMiniLmL6V2EmbeddingModel;
 import dev.langchain4j.model.embedding.EmbeddingModel;
@@ -177,7 +177,7 @@ public class SystemFactory {
         StructuredOutputParser outputParser = new StructuredOutputParser();
         Explain explain = new Explain(memory);
 
-        Cognition cognitiveProcessor = new Langchain4JCognition(
+        Cognition cognitiveProcessor = new LMCognition(
                 chatModel,
                 memory,
                 promptBuilder,
@@ -205,12 +205,12 @@ public class SystemFactory {
         );
 
         // 8. Event Bus Subscriptions
-        XaiReportGenerator xaiReportGenerator = new XaiReportGenerator(eventBus);
+        ExplanationGenerator explanationGenerator = new ExplanationGenerator(eventBus);
         eventBus.subscribe(Events.NewThoughtCreatedEvent.class, cognitiveCycle::onNewThoughtCreated);
         eventBus.subscribe(Events.ActionExecutedEvent.class, schemaOptimizer::onActionExecuted);
         eventBus.subscribe(Events.CognitionStartEvent.class, effortTracker::onCognitionStart);
         eventBus.subscribe(Events.CognitionEndEvent.class, effortTracker::onCognitionEnd);
-        eventBus.subscribe(Events.SchemaOptimizedEvent.class, xaiReportGenerator::onEvent);
+        eventBus.subscribe(Events.SchemaOptimizedEvent.class, explanationGenerator::onEvent);
     }
 
     public CognitiveCycle getCognitiveCycle() {

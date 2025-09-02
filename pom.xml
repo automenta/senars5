@@ -13,11 +13,11 @@
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <maven.compiler.source>21</maven.compiler.source>
-        <maven.compiler.target>21</maven.compiler.target>
-        <junit.version>5.10.0</junit.version>
+        <maven.compiler.source>22</maven.compiler.source>
+        <maven.compiler.target>22</maven.compiler.target>
+        <junit.version>5.13.2</junit.version>
         <mockito.version>5.19.0</mockito.version>
-        <jackson.version>2.15.2</jackson.version>
+        <jackson.version>2.19.0</jackson.version>
         <langchain4j.version>0.32.0</langchain4j.version>
         <slf4j.version>2.0.17</slf4j.version>
     </properties>
@@ -149,7 +149,8 @@
         <dependency>
             <groupId>org.jetbrains.kotlin</groupId>
             <artifactId>kotlin-stdlib-jdk8</artifactId>
-            <version>1.8.22</version>
+<!--            1.8.22-->
+            <version>1.9.25</version>
         </dependency>
 
         <!--
@@ -188,7 +189,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.8.1</version>
+                <version>3.14.0</version>
                 <configuration>
                     <source>${maven.compiler.source}</source>
                     <target>${maven.compiler.target}</target>
@@ -197,17 +198,21 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
-                <version>3.1.2</version>
+                <version>3.5.3</version>
                 <configuration>
                     <parallel>all</parallel>
                     <forkCount>1C</forkCount>
                     <reuseForks>true</reuseForks>
+
+                    <argLine>-XX:+EnableDynamicAgentLoading -Xshare:off</argLine>
+                    <!--<argLine>@{argLine} -javaagent:${org.mockito:mockito-core:jar}</argLine>-->
+
                 </configuration>
             </plugin>
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>exec-maven-plugin</artifactId>
-                <version>3.2.0</version>
+                <version>3.5.0</version>
                 <configuration>
                     <mainClass>com.senars.Main</mainClass>
                 </configuration>
@@ -215,7 +220,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-jar-plugin</artifactId>
-                <version>3.3.0</version>
+                <version>3.4.2</version>
                 <configuration>
                     <archive>
                         <manifest>
@@ -227,7 +232,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-shade-plugin</artifactId>
-                <version>3.5.0</version>
+                <version>3.6.0</version>
                 <executions>
                     <execution>
                         <phase>package</phase>

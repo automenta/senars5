@@ -28,12 +28,12 @@ public class DefaultVectorStore implements VectorStore {
 
     @Override
     public void add(Thought thought) {
-        if (thought.content().embedding() == null || thought.content().embedding().isEmpty()) {
+        var e = thought.content().embedding();
+        if (e == null || e.isEmpty()) {
             return; // Cannot store a thought without an embedding
         }
 
-        Embedding embedding = Embedding.from(toFloatArray(thought.content().embedding()));
-        embeddingStore.add(thought.id(), embedding);
+        embeddingStore.add(thought.id(), Embedding.from(toFloatArray(e)));
     }
 
     @Override
@@ -69,8 +69,9 @@ public class DefaultVectorStore implements VectorStore {
         if (doubleList == null) {
             return null;
         }
-        float[] floatArray = new float[doubleList.size()];
-        for (int i = 0; i < doubleList.size(); i++) {
+        var d = doubleList.size();
+        float[] floatArray = new float[d];
+        for (int i = 0; i < d; i++) {
             floatArray[i] = doubleList.get(i).floatValue();
         }
         return floatArray;

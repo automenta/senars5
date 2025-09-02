@@ -89,10 +89,9 @@ public class CognitiveCycle {
             Thought focusThought = detectAndHandleCognitiveLoop(focusThoughtOpt.get())
                     .orElse(focusThoughtOpt.get());
 
-            LOGGER.info("Focusing on thought: {} - {}", focusThought.metadata().type(), focusThought.id());
+            LOGGER.trace("Focusing on thought: {} - {}", focusThought.metadata().type(), focusThought.id());
 
-            List<Thought> newThoughts = cognition.process(focusThought);
-            newThoughts.forEach(this::handleNewThought);
+            cognition.think(focusThought).forEach(this::handleNewThought);
 
         } catch (ShutdownException e) {
             throw e; // Propagate shutdown exception to the main loop
@@ -103,15 +102,16 @@ public class CognitiveCycle {
     }
 
     private void handleNewThought(Thought thought) {
-        LOGGER.info("New thought generated: {} - {}", thought.metadata().type(), thought.id());
+        var type = thought.metadata().type();
+        LOGGER.info("New thought generated: {} - {}", type, thought.id());
         memory.saveThought(thought);
         eventBus.publish(new Events.NewThoughtCreatedEvent(thought));
 
-        if (thought.metadata().type() == ThoughtType.ACTION) {
+        if (type == ThoughtType.ACTION) {
             handleActionPlan(thought);
         } else {
             // Check if this is a report generated from an explanation request
-            if (thought.metadata().type() == ThoughtType.REPORT) {
+            if (type == ThoughtType.REPORT) {
                 isExplanationReport(thought).ifPresent(isExplanation -> {
                     if (isExplanation) {
                         printExplanation(thought);
@@ -191,10 +191,10 @@ public class CognitiveCycle {
     }
 
     private void runPerception() throws ShutdownException {
-        List<Thought> perceivedThoughts = perception.perceive();
-        if (!perceivedThoughts.isEmpty()) {
-            LOGGER.info("Perceived {} new thoughts from external sources.", perceivedThoughts.size());
-            perceivedThoughts.forEach(this::handleNewThought);
+        List<Thought> perceived = perception.perceive();
+        if (!perceived.isEmpty()) {
+            LOGGER.info("Perceived {} new thoughts from external sources.", perceived.size());
+            perceived.forEach(this::handleNewThought);
         }
     }
 
@@ -265,8 +265,10 @@ public class CognitiveCycle {
                 Collections.emptyList(), // This is a root-level intervention
                 Instant.now()
         );
-        // Extremely high salience to ensure it's the absolute next focus
-        ThoughtState state = new ThoughtState(1.0, 999.0, 1.0);
-        return new Thought(UUID.randomUUID().toString(), content, state, meta);
+
+        return new Thought(UUID.randomUUID().toString(), content,
+            // Extremely high salience to ensure it's the absolute next focus
+            new ThoughtState(1.0, 999.0, 1.0),
+        meta);
     }
 }

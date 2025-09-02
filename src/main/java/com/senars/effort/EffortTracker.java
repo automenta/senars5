@@ -57,8 +57,9 @@ public class EffortTracker {
      */
     public List<EffortRecord> drainRecords() {
         List<EffortRecord> records = new ArrayList<>();
-        while (!effortRecords.isEmpty()) {
-            records.add(effortRecords.poll());
+        EffortRecord next = null;
+        while ((next = effortRecords.poll())!=null) {
+            records.add(next);
         }
         return records;
     }
