@@ -37,13 +37,13 @@ public class DefaultVectorStore implements VectorStore {
     }
 
     @Override
-    public List<String> findSimilar(List<Double> embedding, int topK) {
+    public List<ScoredId> findSimilar(List<Double> embedding, int topK) {
         Embedding queryEmbedding = Embedding.from(toFloatArray(embedding));
 
         List<EmbeddingMatch<TextSegment>> relevant = embeddingStore.findRelevant(queryEmbedding, topK);
 
         return relevant.stream()
-                .map(EmbeddingMatch::embeddingId)
+                .map(match -> new ScoredId(match.embeddingId(), match.score()))
                 .collect(Collectors.toList());
     }
 

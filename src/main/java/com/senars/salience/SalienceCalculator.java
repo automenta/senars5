@@ -14,7 +14,9 @@ import java.util.Optional;
 public class SalienceCalculator {
 
     private static final String REDUCE_UNCERTAINTY_DRIVE_ID = "drive-reduceuncertainty";
+    private static final String ENRICH_KNOWLEDGE_DRIVE_ID = "drive-enrichknowledge";
     private static final double UNCERTAINTY_BONUS_MULTIPLIER = 50.0;
+    private static final double ENRICHMENT_BONUS = 25.0; // A fixed bonus for thoughts that need enrichment
 
     private final EffortPredictor effortPredictor;
 
@@ -97,7 +99,16 @@ public class SalienceCalculator {
                 if (clarity < 1.0) {
                     totalDriveBonus += UNCERTAINTY_BONUS_MULTIPLIER * (1.0 - clarity);
                 }
-            } else {
+            } else if (ENRICH_KNOWLEDGE_DRIVE_ID.equals(drive.id())) {
+                // This drive adds a bonus to thoughts that have text but are missing an embedding.
+                boolean needsEmbedding = thought.content().text() != null &&
+                                         !thought.content().text().isEmpty() &&
+                                         (thought.content().embedding() == null || thought.content().embedding().isEmpty());
+                if (needsEmbedding) {
+                    totalDriveBonus += ENRICHMENT_BONUS;
+                }
+            }
+            else {
                 // For all other drives, the bonus is based on semantic similarity.
                 List<Double> thoughtEmbedding = thought.content().embedding();
                 List<Double> driveEmbedding = drive.content().embedding();

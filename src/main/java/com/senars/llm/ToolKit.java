@@ -1,10 +1,7 @@
 package com.senars.llm;
 
 import com.google.gson.Gson;
-import com.senars.tools.CodeExecutionTool;
-import com.senars.tools.FileSystemTools;
-import com.senars.tools.SearchTools;
-import com.senars.tools.WebTools;
+import com.senars.tools.*;
 import dev.langchain4j.agent.tool.ToolExecutionRequest;
 import dev.langchain4j.agent.tool.ToolSpecification;
 import dev.langchain4j.agent.tool.ToolSpecifications;
@@ -23,13 +20,8 @@ public class ToolKit {
     private final List<Object> tools;
     private final Gson gson = new Gson();
 
-    public ToolKit() {
-        this.tools = Arrays.asList(
-                new SearchTools(),
-                new WebTools(),
-                new FileSystemTools(),
-                new CodeExecutionTool()
-        );
+    public ToolKit(Object... tools) {
+        this.tools = Arrays.asList(tools);
     }
 
     /**

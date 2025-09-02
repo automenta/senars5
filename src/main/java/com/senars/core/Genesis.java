@@ -184,6 +184,8 @@ public class Genesis {
                     "The drive to explore novel information and synthesize new BELIEF or SCHEMA Thoughts.";
             case MAINTAIN_COGNITIVE_INTEGRITY ->
                     "The meta-drive for self-improvement, making Thoughts about the system's own performance, health, and SCHEMA efficacy inherently salient.";
+            case ENRICH_KNOWLEDGE ->
+                    "The drive to complete and enrich existing knowledge, for example by generating missing vector embeddings for thoughts that have text content.";
         };
     }
 

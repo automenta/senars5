@@ -3,7 +3,9 @@ package com.senars.systems;
 import com.senars.core.*;
 import com.senars.db.DatabaseManager;
 import com.senars.systems.graphdb.MapDBGraphStore;
+import com.senars.systems.graphdb.MapDBGraphStore;
 import com.senars.systems.vectorstore.DefaultVectorStore;
+import com.senars.systems.vectorstore.ScoredId;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -64,8 +66,8 @@ class PersistenceTest {
         assertEquals("Test content", retrievedThought.get().content().text());
 
         // 5. Verify the vector is still there
-        List<String> similarIds = vectorStore.findSimilar(List.of(0.1, 0.2), 1);
+        List<ScoredId> similarIds = vectorStore.findSimilar(List.of(0.1, 0.2), 1);
         assertFalse(similarIds.isEmpty(), "Vector search should find the thought");
-        assertEquals("thought1", similarIds.getFirst());
+        assertEquals("thought1", similarIds.getFirst().id());
     }
 }

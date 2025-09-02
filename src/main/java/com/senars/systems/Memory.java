@@ -41,9 +41,9 @@ public interface Memory {
      *
      * @param embedding The vector embedding to search against.
      * @param topK      The maximum number of similar Thoughts to return.
-     * @return A list of the most similar Thoughts found.
+     * @return A list of the most similar Thoughts found, paired with their relevance score.
      */
-    List<Thought> retrieveSimilar(List<Double> embedding, int topK);
+    List<ScoredThought> retrieveSimilar(List<Double> embedding, int topK);
 
     /**
      * Performs a semantic search filtered by a specific ThoughtType.
@@ -51,9 +51,9 @@ public interface Memory {
      * @param embedding The vector embedding to search against.
      * @param topK      The maximum number of similar Thoughts to return.
      * @param type      The ThoughtType to filter by.
-     * @return A list of the most similar Thoughts of the specified type.
+     * @return A list of the most similar Thoughts of the specified type, paired with their relevance score.
      */
-    List<Thought> retrieveSimilar(List<Double> embedding, int topK, com.senars.core.ThoughtType type);
+    List<ScoredThought> retrieveSimilar(List<Double> embedding, int topK, com.senars.core.ThoughtType type);
 
     /**
      * Traverses the provenance graph to retrieve the chain of Thoughts that led

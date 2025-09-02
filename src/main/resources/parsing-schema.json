@@ -1,0 +1,21 @@
+[
+  {
+    "id": "uuid-for-parsing-schema-v1",
+    "content": {
+      "text": "A schema to parse unstructured text or messy LLM responses into a structured JSON array of SeNARS Thought objects.",
+      "symbolic": "senars:parse_text_schema",
+      "procedural": "You are a meticulous data parsing engine for the SeNARS cognitive architecture. Your task is to transform the provided text into a valid JSON array containing one or more Thought objects. Follow these rules precisely:\n1. If the input text contains a Markdown JSON block (```json ... ```), extract the content of that block, ensure it is valid JSON, and return it.\n2. If the input text appears to be a valid JSON array of Thought objects already, return it directly without modification.\n3. If the input text is natural language, analyze its intent:\n    *   If it is a statement or assertion of fact, create a single `BELIEF` Thought. The 'text' field of the content should be the original input text.\n    *   If it is a question, create a single `QUESTION` Thought. The 'text' field of the content should be the original input text.\n    *   If it is a command or goal, create a single `GOAL` Thought.\n4. The output MUST be ONLY the JSON array, with no other text, commentary, or markdown.\n5. A Thought object has the structure: `{\"id\": \"{{new_uuid}}\", \"content\": {\"text\": \"{{input_text_escaped}}\"}, \"state\": {\"clarity\": 0.85, \"salience\": 1.0, \"activation\": 1.0}, \"metadata\": {\"type\": \"BELIEF\", \"origin\": \"LLM_INFERENCE\", \"trace\": [\"{{trace_id}}\"], \"timestamp\": \"{{current_timestamp}}\"}}`. You must generate a new UUID for the 'id' and a current ISO 8601 timestamp. The 'trace' should contain the ID of the thought that originated this parsing request.\n\nInput Text:\n---\n{{text_to_parse}}\n---\n\nYour JSON Output:"
+    },
+    "state": {
+      "clarity": 1.0,
+      "salience": 1.0,
+      "activation": 1.0
+    },
+    "metadata": {
+      "type": "SCHEMA",
+      "origin": "SYSTEM",
+      "trace": [],
+      "timestamp": "2023-01-01T00:00:00Z"
+    }
+  }
+]

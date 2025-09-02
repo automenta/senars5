@@ -1,6 +1,7 @@
 package com.senars.systems;
 
 import com.senars.core.Thought;
+import com.senars.systems.vectorstore.ScoredId;
 
 import java.util.List;
 
@@ -24,9 +25,9 @@ public interface VectorStore {
      *
      * @param embedding The vector embedding to search against.
      * @param topK      The maximum number of similar Thought IDs to return.
-     * @return A list of the most similar Thought IDs found, ordered by similarity.
+     * @return A list of the most similar Thought IDs found, paired with their score and ordered by similarity.
      */
-    List<String> findSimilar(List<Double> embedding, int topK);
+    List<ScoredId> findSimilar(List<Double> embedding, int topK);
 
     /**
      * Removes a thought's embedding from the store.

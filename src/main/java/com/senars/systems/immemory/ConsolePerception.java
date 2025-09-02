@@ -1,7 +1,7 @@
 package com.senars.systems.immemory;
 
 import com.senars.core.*;
-import com.senars.cycle.Perception;
+import com.senars.cycle.PerceptionChannel;
 import dev.langchain4j.data.embedding.Embedding;
 import dev.langchain4j.model.embedding.EmbeddingModel;
 import org.slf4j.Logger;

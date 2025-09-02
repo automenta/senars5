@@ -20,6 +20,7 @@ import com.senars.llm.ToolKit;
 import com.senars.motive.MotiveHierarchy;
 import com.senars.salience.SalienceCalculator;
 import com.senars.systems.Governor;
+import com.senars.tools.*;
 import com.senars.systems.Grounding;
 import com.senars.systems.Memory;
 import com.senars.systems.Rule;
@@ -75,17 +76,27 @@ public class Main {
         List<Thought> genesisBeliefs = Genesis.loadKnowledgeFromFile("genesis_knowledge.json", embeddingModel);
         List<Thought> genesisSchemas = Genesis.loadSchemasFromFile("genesis_schemas.json", embeddingModel);
         List<Thought> reasoningSchemas = Genesis.loadSchemasFromFile("reasoning_schemas.json", embeddingModel);
+        List<Thought> parsingSchemas = Genesis.loadSchemasFromFile("parsing-schema.json", embeddingModel);
+        List<Thought> embeddingSchemas = Genesis.loadSchemasFromFile("embedding-generation-schema.json", embeddingModel);
 
 
         genesisDrives.forEach(memory::saveThought);
         genesisBeliefs.forEach(memory::saveThought);
         genesisSchemas.forEach(memory::saveThought);
         reasoningSchemas.forEach(memory::saveThought);
-        LOGGER.info("Loaded {} Genesis Drives, {} Beliefs, and {} Schemas into Memory Nexus.", genesisDrives.size(), genesisBeliefs.size(), genesisSchemas.size() + reasoningSchemas.size());
+        parsingSchemas.forEach(memory::saveThought);
+        embeddingSchemas.forEach(memory::saveThought);
+        LOGGER.info("Loaded {} Genesis Drives, {} Beliefs, and {} Schemas into Memory Nexus.", genesisDrives.size(), genesisBeliefs.size(), genesisSchemas.size() + reasoningSchemas.size() + parsingSchemas.size() + embeddingSchemas.size());
 
 
         // 4. Cognitive Cycle Components
-        ToolKit toolKit = new ToolKit();
+        ToolKit toolKit = new ToolKit(
+                new SearchTools(),
+                new WebTools(),
+                new FileSystemTools(),
+                new CodeExecutionTool(),
+                new EmbeddingGenerationTool(memory, embeddingModel)
+        );
         Action action = new ToolUsingAction(toolKit);
 
         LOGGER.info("Initializing Perception System...");

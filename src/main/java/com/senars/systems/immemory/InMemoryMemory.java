@@ -5,14 +5,14 @@ import com.senars.core.*;
 import com.senars.db.DatabaseManager;
 import com.senars.effort.EffortPredictor;
 import com.senars.effort.LinearTextEffortModel;
-import com.senars.systems.GraphDB;
-import com.senars.systems.Memory;
-import com.senars.systems.VectorStore;
+import com.senars.systems.*;
 import com.senars.systems.graphdb.MapDBGraphStore;
 import com.senars.systems.vectorstore.DefaultVectorStore;
+import com.senars.systems.vectorstore.ScoredId;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -85,32 +85,34 @@ public class InMemoryMemory implements Memory {
     }
 
     @Override
-    public List<Thought> retrieveSimilar(List<Double> embedding, int topK) {
+    public List<ScoredThought> retrieveSimilar(List<Double> embedding, int topK) {
         if (embedding == null || embedding.isEmpty()) {
             return Collections.emptyList();
         }
-        List<String> similarIds = vectorStore.findSimilar(embedding, topK);
+        List<ScoredId> similarIds = vectorStore.findSimilar(embedding, topK);
         return similarIds.stream()
-                .map(this::getThoughtById)
+                .map(scoredId -> getThoughtById(scoredId.id())
+                        .map(thought -> new ScoredThought(thought, scoredId.score())))
                 .filter(Optional::isPresent)
                 .map(Optional::get)
                 .collect(Collectors.toList());
     }
 
     @Override
-    public List<Thought> retrieveSimilar(List<Double> embedding, int topK, ThoughtType type) {
+    public List<ScoredThought> retrieveSimilar(List<Double> embedding, int topK, ThoughtType type) {
         if (embedding == null || embedding.isEmpty()) {
             return Collections.emptyList();
         }
         // Fetch more candidates to account for filtering.
         int candidatesToFetch = topK * 5;
-        List<String> similarIds = vectorStore.findSimilar(embedding, candidatesToFetch);
+        List<ScoredId> similarIds = vectorStore.findSimilar(embedding, candidatesToFetch);
 
         return similarIds.stream()
-                .map(this::getThoughtById)
+                .map(scoredId -> getThoughtById(scoredId.id())
+                        .map(thought -> new ScoredThought(thought, scoredId.score())))
                 .filter(Optional::isPresent)
                 .map(Optional::get)
-                .filter(thought -> thought.metadata().type() == type)
+                .filter(scoredThought -> scoredThought.thought().metadata().type() == type)
                 .limit(topK)
                 .collect(Collectors.toList());
     }

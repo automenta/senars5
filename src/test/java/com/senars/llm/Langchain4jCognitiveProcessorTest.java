@@ -61,6 +61,8 @@ class Langchain4jCognitiveProcessorTest {
     private ThoughtMeta mockThoughtMeta;
     @Mock
     private Thought mockSchemaThought;
+    @Mock
+    private com.senars.core.ThoughtState mockThoughtState;
 
 
     private Cognition cognitiveProcessor;
@@ -93,23 +95,25 @@ class Langchain4jCognitiveProcessorTest {
         String focusThoughtId = "focus-id";
         List<Double> embedding = List.of(0.1, 0.2, 0.3);
         setupFocusThought(focusThoughtId, embedding);
+        when(mockSchemaThought.state()).thenReturn(mockThoughtState);
+        when(mockSchemaThought.content()).thenReturn(mock(ThoughtContent.class));
 
         when(mockMemory.retrieveSimilar(embedding, 5)).thenReturn(new ArrayList<>());
-        when(mockMemory.retrieveSimilar(embedding, 1, com.senars.core.ThoughtType.SCHEMA))
-                .thenReturn(List.of(mockSchemaThought));
+        when(mockMemory.retrieveSimilar(embedding, 5, com.senars.core.ThoughtType.SCHEMA))
+                .thenReturn(List.of(new com.senars.systems.ScoredThought(mockSchemaThought, 1.0)));
         when(mockPromptBuilder.build(eq(mockSchemaThought), eq(mockFocusThought), anyList(), anyList())).thenReturn("schema_prompt");
         when(mockChatModel.generate(any(UserMessage.class))).thenReturn(Response.from(AiMessage.from("response")));
-        when(mockOutputParser.parse(anyString())).thenReturn(List.of(mockResultThought));
-
+        when(mockToolKit.parse(anyString())).thenReturn(null);
 
         // Act
         List<Thought> result = cognitiveProcessor.process(mockFocusThought);
 
-        // Assert
+        // Assert: The result should now be a goal to parse the response.
         assertNotNull(result);
-        assertEquals(List.of(mockResultThought), result);
-        verify(mockMemory).retrieveSimilar(embedding, 1, com.senars.core.ThoughtType.SCHEMA);
-        verify(mockPromptBuilder).build(eq(mockSchemaThought), eq(mockFocusThought), anyList(), anyList());
+        assertEquals(1, result.size());
+        assertEquals(com.senars.core.ThoughtType.GOAL, result.getFirst().metadata().type());
+        assertEquals("senars:parse_text", result.getFirst().content().symbolic());
+        assertEquals("response", result.getFirst().content().text());
     }
 
     @Test
@@ -120,20 +124,21 @@ class Langchain4jCognitiveProcessorTest {
         setupFocusThought(focusThoughtId, embedding);
 
         when(mockMemory.retrieveSimilar(embedding, 5)).thenReturn(new ArrayList<>());
-        when(mockMemory.retrieveSimilar(embedding, 1, com.senars.core.ThoughtType.SCHEMA))
+        when(mockMemory.retrieveSimilar(embedding, 5, com.senars.core.ThoughtType.SCHEMA))
                 .thenReturn(List.of()); // No schema found
         when(mockPromptBuilder.build(isNull(), eq(mockFocusThought), anyList(), anyList())).thenReturn("fallback_prompt");
         when(mockChatModel.generate(any(UserMessage.class))).thenReturn(Response.from(AiMessage.from("response")));
-        when(mockOutputParser.parse(anyString())).thenReturn(List.of(mockResultThought));
+        when(mockToolKit.parse(anyString())).thenReturn(null);
 
         // Act
         List<Thought> result = cognitiveProcessor.process(mockFocusThought);
 
-        // Assert
+        // Assert: The result should now be a goal to parse the response.
         assertNotNull(result);
-        assertEquals(List.of(mockResultThought), result);
-        verify(mockMemory).retrieveSimilar(embedding, 1, com.senars.core.ThoughtType.SCHEMA);
-        verify(mockPromptBuilder).build(isNull(), eq(mockFocusThought), anyList(), anyList());
+        assertEquals(1, result.size());
+        assertEquals(com.senars.core.ThoughtType.GOAL, result.getFirst().metadata().type());
+        assertEquals("senars:parse_text", result.getFirst().content().symbolic());
+        assertEquals("response", result.getFirst().content().text());
     }
 
 
@@ -147,31 +152,37 @@ class Langchain4jCognitiveProcessorTest {
 
         String expectedPrompt = "This is a test prompt.";
         String expectedResponseText = "This is the LLM response.";
-        List<Thought> expectedThoughts = List.of(mockResultThought);
         Response<AiMessage> mockResponse = Response.from(AiMessage.from(expectedResponseText));
 
         // Setup context lists
         List<Thought> traceContext = List.of(mockTraceThought);
-        List<Thought> similarContext = List.of(mockSimilarThought);
+        List<com.senars.systems.ScoredThought> similarContext = List.of(new com.senars.systems.ScoredThought(mockSimilarThought, 1.0));
 
         // Stubbing the memory nexus
         when(mockMemory.getTrace(focusThoughtId)).thenReturn(traceContext);
         when(mockMemory.retrieveSimilar(focusThoughtEmbedding, 5)).thenReturn(similarContext);
-        when(mockMemory.retrieveSimilar(focusThoughtEmbedding, 1, com.senars.core.ThoughtType.SCHEMA)).thenReturn(List.of());
+        when(mockMemory.retrieveSimilar(focusThoughtEmbedding, 5, com.senars.core.ThoughtType.SCHEMA)).thenReturn(List.of());
+        when(mockToolKit.parse(anyString())).thenReturn(null);
 
 
         // Stubbing the prompt builder and output parser
         ArgumentCaptor<List<Thought>> contextCaptor = ArgumentCaptor.forClass(List.class);
         when(mockPromptBuilder.build(isNull(), eq(mockFocusThought), contextCaptor.capture(), anyList())).thenReturn(expectedPrompt);
         when(mockChatModel.generate(ArgumentMatchers.<UserMessage>any())).thenReturn(mockResponse);
-        when(mockOutputParser.parse(expectedResponseText)).thenReturn(expectedThoughts);
 
         // Act
         List<Thought> result = cognitiveProcessor.process(mockFocusThought);
 
         // Assert
         assertNotNull(result);
-        assertEquals(expectedThoughts, result);
+        // The process now returns a "parse" goal instead of directly parsing.
+        assertEquals(1, result.size());
+        Thought parseGoal = result.getFirst();
+        assertEquals(com.senars.core.ThoughtType.GOAL, parseGoal.metadata().type());
+        assertEquals("senars:parse_text", parseGoal.content().symbolic());
+        assertEquals(expectedResponseText, parseGoal.content().text());
+        assertEquals(focusThoughtId, parseGoal.metadata().trace().getFirst());
+
 
         // Verify that context was assembled correctly
         List<Thought> capturedContext = contextCaptor.getValue();
@@ -184,6 +195,7 @@ class Langchain4jCognitiveProcessorTest {
         verify(mockMemory).retrieveSimilar(focusThoughtEmbedding, 5);
         verify(mockPromptBuilder).build(isNull(), eq(mockFocusThought), anyList(), anyList());
         verify(mockChatModel).generate(ArgumentMatchers.<UserMessage>any());
-        verify(mockOutputParser).parse(expectedResponseText);
+        // Verify outputParser is no longer called directly
+        verify(mockOutputParser, never()).parse(anyString());
     }
 }

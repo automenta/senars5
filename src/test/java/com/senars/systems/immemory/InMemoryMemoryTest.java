@@ -51,9 +51,9 @@ class InMemoryMemoryTest {
         assertEquals("T1", retrievedById.get().id());
 
         // Test retrieval from vector component
-        List<Thought> similar = memory.retrieveSimilar(List.of(1.0, 0.1), 1); // Slightly different vector
+        List<com.senars.systems.ScoredThought> similar = memory.retrieveSimilar(List.of(1.0, 0.1), 1); // Slightly different vector
         assertFalse(similar.isEmpty());
-        assertEquals("T1", similar.getFirst().id());
+        assertEquals("T1", similar.getFirst().thought().id());
     }
 
     @Test
@@ -68,9 +68,9 @@ class InMemoryMemoryTest {
         Thought thoughtWithEmbedding = createTestThoughtWithEmbedding("T3", "With embedding", List.of(0.5, 0.5), Collections.emptyList());
         memory.saveThought(thoughtWithEmbedding);
 
-        List<Thought> similar = memory.retrieveSimilar(List.of(0.5, 0.5), 5);
+        List<com.senars.systems.ScoredThought> similar = memory.retrieveSimilar(List.of(0.5, 0.5), 5);
         assertEquals(1, similar.size());
-        assertEquals("T3", similar.getFirst().id());
+        assertEquals("T3", similar.getFirst().thought().id());
     }
 
     @Test

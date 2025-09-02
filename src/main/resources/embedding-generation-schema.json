@@ -1,0 +1,21 @@
+[
+  {
+    "id": "uuid-for-embedding-schema-v1",
+    "content": {
+      "text": "A schema that triggers the generation of a vector embedding for a thought that is missing one.",
+      "symbolic": "senars:generate_embedding_schema",
+      "procedural": "This schema's purpose is to trigger an internal tool to generate a missing embedding. The focus thought's text will be used for the embedding generation."
+    },
+    "state": {
+      "clarity": 1.0,
+      "salience": 1.0,
+      "activation": 1.0
+    },
+    "metadata": {
+      "type": "SCHEMA",
+      "origin": "GENESIS",
+      "trace": [],
+      "timestamp": "2023-01-01T00:00:00Z"
+    }
+  }
+]

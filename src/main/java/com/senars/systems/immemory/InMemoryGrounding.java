@@ -67,8 +67,11 @@ public class InMemoryGrounding implements Grounding {
         LOGGER.info("Processing feedback for action {}. Status: {}. Adjusting clarity for {} thoughts with initial factor {}.",
                 actionPlan.id(), feedback.status(), traceIds.size(), String.format("%.4f", initialAdjustment));
 
-        // Adjust clarity of thoughts in the provenance trace
-        adjustClarityInTrace(traceIds, initialAdjustment);
+        // Adjust clarity of the action plan itself, as it's the most direct cause.
+        adjustClarityOfSingleThought(actionPlan, initialAdjustment, 0);
+
+        // Adjust clarity of the other thoughts in the provenance trace
+        adjustClarityInTrace(traceIds, initialAdjustment, 1); // Start decay from 1 step away
 
         // If the action failed, create a new goal to investigate
         if (feedback.status() == ActionStatus.FAILURE) {
@@ -76,31 +79,33 @@ public class InMemoryGrounding implements Grounding {
         }
     }
 
-    private void adjustClarityInTrace(List<String> traceIds, double initialAdjustment) {
+    private void adjustClarityInTrace(List<String> traceIds, double initialAdjustment, int startDecay) {
         int traceSize = traceIds.size();
         for (int i = 0; i < traceSize; i++) {
             String thoughtId = traceIds.get(i);
-            // The last thought in the trace is the most recent, so it gets the highest adjustment.
-            int distanceFromEnd = traceSize - 1 - i;
-            double decayedAdjustment = initialAdjustment * Math.pow(DECAY_FACTOR, distanceFromEnd);
+            int decaySteps = startDecay + (traceSize - 1 - i);
+            memory.getThoughtById(thoughtId).ifPresent(thoughtToUpdate ->
+                    adjustClarityOfSingleThought(thoughtToUpdate, initialAdjustment, decaySteps));
+        }
+    }
 
-            memory.getThoughtById(thoughtId).ifPresent(thoughtToUpdate -> {
-                double currentClarity = thoughtToUpdate.state().clarity();
-                double newClarity = Math.max(0.0, Math.min(1.0, currentClarity + decayedAdjustment));
+    private void adjustClarityOfSingleThought(Thought thoughtToUpdate, double initialAdjustment, int decaySteps) {
+        double decayedAdjustment = initialAdjustment * Math.pow(DECAY_FACTOR, decaySteps);
 
-                if (Math.abs(newClarity - currentClarity) > 1e-9) {
-                    Thought updatedThought = new Thought(
-                            thoughtToUpdate.id(),
-                            thoughtToUpdate.content(),
-                            new ThoughtState(newClarity, thoughtToUpdate.state().salience(), thoughtToUpdate.state().activation()),
-                            thoughtToUpdate.metadata()
-                    );
-                    memory.saveThought(updatedThought);
-                    eventBus.publish(new Events.ClarityUpdatedEvent(updatedThought.id(), currentClarity, newClarity));
-                    LOGGER.debug("Updated clarity of thought {} (distance from end: {}) from {} to {} (adjustment: {})",
-                            updatedThought.id(), distanceFromEnd, String.format("%.4f", currentClarity), String.format("%.4f", newClarity), String.format("%.4f", decayedAdjustment));
-                }
-            });
+        double currentClarity = thoughtToUpdate.state().clarity();
+        double newClarity = Math.max(0.0, Math.min(1.0, currentClarity + decayedAdjustment));
+
+        if (Math.abs(newClarity - currentClarity) > 1e-9) {
+            Thought updatedThought = new Thought(
+                    thoughtToUpdate.id(),
+                    thoughtToUpdate.content(),
+                    new ThoughtState(newClarity, thoughtToUpdate.state().salience(), thoughtToUpdate.state().activation()),
+                    thoughtToUpdate.metadata()
+            );
+            memory.saveThought(updatedThought);
+            eventBus.publish(new Events.ClarityUpdatedEvent(updatedThought.id(), currentClarity, newClarity));
+            LOGGER.debug("Updated clarity of thought {} (decay steps: {}) from {} to {} (adjustment: {})",
+                    updatedThought.id(), decaySteps, String.format("%.4f", currentClarity), String.format("%.4f", newClarity), String.format("%.4f", decayedAdjustment));
         }
     }
 
