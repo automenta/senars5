@@ -19,7 +19,7 @@ import java.util.stream.Collectors;
  * An implementation of the Perception system that reads user input from the console.
  * It parses the input to create different types of Thoughts and generates embeddings for them.
  */
-public class ConsolePerception implements Perception {
+public class ConsolePerception implements PerceptionChannel {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ConsolePerception.class);
     private final Scanner scanner;

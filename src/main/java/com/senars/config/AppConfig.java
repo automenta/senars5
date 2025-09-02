@@ -57,6 +57,10 @@ public class AppConfig {
         return properties.getProperty("graphdb.filepath", "./data/graph_db.json");
     }
 
+    public String getPerceptionFileDirectory() {
+        return properties.getProperty("perception.file.directory", "./data/perception_inbox");
+    }
+
     // Singleton holder
     private static class ConfigHolder {
         private static final AppConfig INSTANCE = new AppConfig();

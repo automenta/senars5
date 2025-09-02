@@ -25,6 +25,7 @@ import com.senars.systems.Memory;
 import com.senars.systems.Rule;
 import com.senars.cycle.ToolUsingAction;
 import com.senars.systems.immemory.*;
+import com.senars.systems.perception.FilePerceptionChannel;
 import com.senars.systems.rules.KeywordBlocklistRule;
 import com.senars.xai.Explain;
 import dev.langchain4j.model.embedding.AllMiniLmL6V2EmbeddingModel;
@@ -85,8 +86,15 @@ public class Main {
 
         // 4. Cognitive Cycle Components
         ToolKit toolKit = new ToolKit();
-        Perception perception = new ConsolePerception(embeddingModel);
         Action action = new ToolUsingAction(toolKit);
+
+        LOGGER.info("Initializing Perception System...");
+        List<PerceptionChannel> perceptionChannels = List.of(
+                new ConsolePerception(embeddingModel),
+                new FilePerceptionChannel(config.getPerceptionFileDirectory(), embeddingModel)
+        );
+        Perception perception = new CompositePerception(perceptionChannels);
+        LOGGER.info("Perception System Initialized with {} channel(s).", perceptionChannels.size());
 
         // 5. Attention and Salience
         MotiveHierarchy motives = new MotiveHierarchy(genesisDrives);
