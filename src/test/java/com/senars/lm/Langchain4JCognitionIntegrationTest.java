@@ -103,7 +103,14 @@ class Langchain4JCognitionIntegrationTest {
         );
 
         when(toolKit.parse(unparsableText)).thenReturn(null);
-        when(outputParser.parse(unparsableText)).thenReturn(List.of()); // Simulate parsing failure
+        // Simulate parsing failure, which the parser signals by returning a single REPORT thought
+        Thought reportThought = new Thought(
+                "report-id",
+                new ThoughtContent(unparsableText, null, null, null, null, null, null),
+                new ThoughtState(1.0, 1.0, 1.0),
+                new ThoughtMeta(ThoughtType.REPORT, ThoughtOrigin.LLM_INFERENCE, List.of(), Instant.now())
+        );
+        when(outputParser.parse(unparsableText)).thenReturn(List.of(reportThought));
 
         // WHEN
         List<Thought> newThoughts = cognition.parseResponse(unparsableText, parseGoal, parsingSchema);

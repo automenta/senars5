@@ -67,6 +67,10 @@ public class SystemFactory {
     }
 
     public SystemFactory(ChatLanguageModel chatModel) {
+        this(chatModel, Paths.get(AppConfig.getInstance().getGraphDbFilePath()));
+    }
+
+    public SystemFactory(ChatLanguageModel chatModel, Path dbPath) {
         // 1. Configuration
         AppConfig config = AppConfig.getInstance();
         EmbeddingModel embeddingModel = new AllMiniLmL6V2EmbeddingModel();
@@ -75,7 +79,6 @@ public class SystemFactory {
         loggingSubscriber.subscribeToAll(eventBus);
 
         // 2. Foundational Systems
-        Path dbPath = Paths.get(config.getGraphDbFilePath());
         DatabaseManager dbManager = new DatabaseManager(dbPath);
 
         this.memory = new InMemoryMemory(config, dbManager);

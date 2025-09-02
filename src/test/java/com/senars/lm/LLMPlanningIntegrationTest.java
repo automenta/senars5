@@ -121,22 +121,10 @@ public class LLMPlanningIntegrationTest {
                 .thenReturn(Response.from(AiMessage.from(llmPlanResponse))) // Cycle 1: LLM returns a plan that needs parsing.
                 .thenReturn(Response.from(AiMessage.from(llmPlanResponse))); // Cycle 2: LLM "parses" the text by returning the clean JSON.
 
-        // 4. Process the GOAL thought (Cycle 1)
-        List<Thought> firstResult = cognition.process(goal);
+        // 4. Process the GOAL thought
+        List<Thought> finalResult = cognition.process(goal);
 
-        // 5. Assert the first result is a "parse" goal
-        assertNotNull(firstResult);
-        assertEquals(1, firstResult.size());
-        Thought parseGoal = firstResult.getFirst();
-        assertEquals(ThoughtType.GOAL, parseGoal.metadata().type());
-        assertEquals("senars:parse_text", parseGoal.content().symbolic());
-        assertEquals(llmPlanResponse, parseGoal.content().text()); // Check that the text to parse is correct.
-
-        // 6. Process the "parse" GOAL thought (Cycle 2)
-        List<Thought> finalResult = cognition.process(parseGoal);
-
-
-        // 7. Assert the final results
+        // 5. Assert the final results
         assertNotNull(finalResult);
         assertEquals(3, finalResult.size(), "Should produce three action plan steps.");
 

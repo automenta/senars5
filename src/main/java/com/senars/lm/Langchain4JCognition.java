@@ -172,17 +172,17 @@ public class Langchain4JCognition implements Cognition {
 
         if (parseFailed) {
             LOGGER.warn("Parsing response failed or produced an unexpected report. Creating a replan goal.");
-            return createReplanningGoal(focusThought.id(), responseText);
+            return createReplanningGoal(focusThought, responseText);
         }
 
         LOGGER.info("Successfully parsed {} new thought(s) from LLM response.", newThoughts.size());
         return newThoughts;
     }
 
-    private List<Thought> createReplanningGoal(String failedThoughtId, String failedResponse) {
+    private List<Thought> createReplanningGoal(Thought failedThought, String failedResponse) {
         String goalText = String.format(
                 "The previous attempt to process thought %s failed. The LLM response could not be parsed. A new approach is needed. Faulty response: %s",
-                failedThoughtId,
+                failedThought.id(),
                 failedResponse
         );
 
@@ -192,10 +192,15 @@ public class Langchain4JCognition implements Cognition {
                 null, null, null, null, null
         );
 
+        // The new goal should trace back to the original thought that started the failed chain.
+        List<String> newTrace = new ArrayList<>(failedThought.metadata().trace());
+        newTrace.add(failedThought.id());
+
+
         ThoughtMeta meta = new ThoughtMeta(
                 ThoughtType.GOAL,
                 ThoughtOrigin.SYSTEM,
-                List.of(failedThoughtId), // Trace back to the thought that we failed to process
+                newTrace,
                 Instant.now()
         );
 
