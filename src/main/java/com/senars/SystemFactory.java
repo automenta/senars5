@@ -18,6 +18,7 @@ import com.senars.lm.ToolKit;
 import com.senars.logic.LogicEngine;
 import com.senars.logic.MetaCognitiveService;
 import com.senars.logic.GoalOrientedPlanner;
+import com.senars.logic.mdr.MDRService;
 import com.senars.systems.GoalGraph;
 import com.senars.logic.UCRFactory;
 import com.senars.logic.UnifiedCausalReasoner;
@@ -182,6 +183,9 @@ public class SystemFactory {
         // 7. The Cognitive Cycle itself
         ActionFeedbackQueue feedbackQueue = new ActionFeedbackQueue();
         MetaCognitiveService metaCognitiveService = new MetaCognitiveService(chatModel);
+        MDRService mdrService = new MDRService(ucr, memory, chatModel);
+        // Register the schema optimization monitor
+        mdrService.addMonitor(new com.senars.logic.mdr.SchemaOptimizationMonitorConfig(memory));
         GoalGraph goalGraph = new GoalGraph(dbManager);
         GoalOrientedPlanner goalOrientedPlanner = new GoalOrientedPlanner(goalGraph, ucr);
 
@@ -198,6 +202,7 @@ public class SystemFactory {
                 effortTracker,
                 eventBus,
                 metaCognitiveService,
+                mdrService,
                 goalOrientedPlanner
         );
 

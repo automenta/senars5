@@ -7,6 +7,7 @@ import com.senars.events.EventBus;
 import com.senars.logic.GoalOrientedPlanner;
 import com.senars.logic.MetaCognitiveService;
 import com.senars.logic.UnifiedCausalReasoner;
+import com.senars.logic.mdr.MDRService;
 import com.senars.motive.MotiveHierarchy;
 import com.senars.optimizer.EffortModelOptimizer;
 import com.senars.optimizer.SchemaOptimizer;
@@ -53,6 +54,8 @@ class CognitiveCycleTest {
     @Mock
     private MetaCognitiveService metaCognitiveService;
     @Mock
+    private MDRService mdrService;
+    @Mock
     private GoalOrientedPlanner goalOrientedPlanner;
 
     private Attention attentionFunnel;
@@ -80,6 +83,7 @@ class CognitiveCycleTest {
                 effortTracker,
                 eventBus,
                 metaCognitiveService,
+                mdrService,
                 goalOrientedPlanner
         );
     }

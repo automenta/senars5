@@ -7,6 +7,7 @@ import com.senars.events.Events;
 import com.senars.logic.GoalOrientedPlanner;
 import com.senars.logic.MetaCognitiveService;
 import com.senars.logic.UnifiedCausalReasoner;
+import com.senars.logic.mdr.MDRService;
 import com.senars.optimizer.EffortModelOptimizer;
 import com.senars.optimizer.SchemaOptimizer;
 import com.senars.systems.Governor;
@@ -41,6 +42,7 @@ public class CognitiveCycle {
     private final EffortTracker effortTracker;
     private final EventBus eventBus;
     private final MetaCognitiveService metaCognitiveService;
+    private final MDRService mdrService;
     private final GoalOrientedPlanner goalOrientedPlanner;
     private final List<Thought> focusHistory = new ArrayList<>();
     private long cycleCount = 0;
@@ -59,6 +61,7 @@ public class CognitiveCycle {
             EffortTracker effortTracker,
             EventBus eventBus,
             MetaCognitiveService metaCognitiveService,
+            MDRService mdrService,
             GoalOrientedPlanner goalOrientedPlanner
     ) {
         this.perception = Objects.requireNonNull(perception);
@@ -73,6 +76,7 @@ public class CognitiveCycle {
         this.effortTracker = Objects.requireNonNull(effortTracker);
         this.eventBus = Objects.requireNonNull(eventBus);
         this.metaCognitiveService = Objects.requireNonNull(metaCognitiveService);
+        this.mdrService = Objects.requireNonNull(mdrService);
         this.goalOrientedPlanner = Objects.requireNonNull(goalOrientedPlanner);
     }
 
@@ -215,7 +219,11 @@ public class CognitiveCycle {
     private void processActionFeedback() {
         Feedback feedback = feedbackQueue.poll();
         if (feedback != null) {
+            // First, let the UCR process the feedback for credit/blame assignment
             ucr.processFeedback(feedback);
+            
+            // Then, let the MDR service check if any self-correction is needed
+            mdrService.processFeedback(feedback).ifPresent(this::handleNewThought);
         }
     }
 
