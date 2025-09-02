@@ -1,6 +1,7 @@
 package com.senars.cycle;
 
 import com.senars.core.*;
+import com.senars.logic.LogicEngine;
 import com.senars.systems.Memory;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -27,7 +28,7 @@ class InferenceTest {
 
     @BeforeEach
     void setUp() {
-        inference = new Inference(memory);
+        inference = new Inference(memory, new LogicEngine());
     }
 
     private Thought createBelief(String symbolic) {

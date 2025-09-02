@@ -49,4 +49,7 @@ public final class Events {
 
     public record CognitionErrorEvent(Thought thought, Throwable error) implements Event {
     }
+
+    public record SchemaOptimizedEvent(String oldSchemaId, String newSchemaId) implements Event {
+    }
 }

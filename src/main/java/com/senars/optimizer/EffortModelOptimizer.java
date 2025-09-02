@@ -14,6 +14,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.time.Instant;
+import java.util.Optional;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
@@ -64,33 +65,51 @@ public class EffortModelOptimizer {
         if (meanAbsolutePercentageError > ERROR_THRESHOLD) {
             LOGGER.warn("Effort prediction MAPE ({}) exceeds threshold ({}). Creating goal to optimize model.",
                     String.format("%.2f", meanAbsolutePercentageError), String.format("%.2f", ERROR_THRESHOLD));
-            return List.of(createOptimizationGoal(records, meanAbsolutePercentageError));
+            Thought optimizationGoal = createOptimizationGoal(records, meanAbsolutePercentageError);
+            if (optimizationGoal != null) {
+                return List.of(optimizationGoal);
+            }
         }
 
         return Collections.emptyList();
     }
 
     private Thought createOptimizationGoal(List<EffortRecord> records, double error) {
-        // For now, we'll just put a summary in the goal text.
-        // A more advanced implementation could store the full record data in a structured format.
+        // 1. Find the current effort model schema
+        Optional<Thought> effortModelOpt = memory.findSchemaBySymbolicName(com.senars.effort.EffortPredictor.EFFORT_MODEL_SCHEMA_NAME);
+        if (effortModelOpt.isEmpty()) {
+            LOGGER.error("Could not find the effort model schema '{}' to create an optimization goal.", com.senars.effort.EffortPredictor.EFFORT_MODEL_SCHEMA_NAME);
+            // In a real system, we might create a goal to *create* the schema, but for now we'll just log.
+            return null;
+        }
+        Thought effortModelSchema = effortModelOpt.get();
+
+        // 2. Create the goal text
         String goalText = String.format(
-                "The effort prediction model is performing poorly with an average error of %.2f%%. " +
-                "Analyze the recent performance data and generate a new, more accurate effort prediction model schema. " +
-                "There are %d records to analyze.",
+                "The effort prediction model '%s' is performing poorly with an average error of %.2f%%. " +
+                "Analyze its procedural content and the %d recent performance records to generate a new, more accurate model.",
+                effortModelSchema.content().text(),
                 error * 100,
                 records.size()
         );
 
-        // A future implementation could serialize the records to JSON and include them.
-        ThoughtContent content = new ThoughtContent(goalText, REWRITE_EFFORT_MODEL_SYMBOLIC, null, null, null, null, null);
+        // 3. A future implementation could serialize the records to JSON and include them in the procedural content.
+        // For now, we pass the old model's procedural content.
+        ThoughtContent content = new ThoughtContent(
+                goalText,
+                REWRITE_EFFORT_MODEL_SYMBOLIC,
+                null, null,
+                effortModelSchema.content().procedural(), // Pass the old model's content
+                null, null
+        );
+
         ThoughtMeta meta = new ThoughtMeta(
                 ThoughtType.GOAL,
                 ThoughtOrigin.SYSTEM,
-                Collections.emptyList(),
+                List.of(effortModelSchema.id()), // Trace back to the old model
                 Instant.now()
         );
-        // High salience to prioritize self-improvement
-        ThoughtState state = new ThoughtState(1.0, 120.0, 1.0);
+        ThoughtState state = new ThoughtState(1.0, 120.0, 1.0); // High salience
 
         return new Thought(UUID.randomUUID().toString(), content, state, meta);
     }

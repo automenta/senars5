@@ -4,6 +4,7 @@ import com.senars.config.AppConfig;
 import com.senars.core.*;
 import com.senars.cycle.Inference;
 import com.senars.db.DatabaseManager;
+import com.senars.logic.LogicEngine;
 import com.senars.systems.Memory;
 import com.senars.systems.immemory.InMemoryMemory;
 import org.junit.jupiter.api.AfterEach;
@@ -31,7 +32,7 @@ public class InferenceIntegrationTest {
         Path dbFile = tempDir.resolve("test-inference.db");
         dbManager = new DatabaseManager(dbFile);
         memory = new InMemoryMemory(AppConfig.getInstance(), dbManager);
-        inference = new Inference(memory);
+        inference = new Inference(memory, new LogicEngine());
     }
 
     @AfterEach

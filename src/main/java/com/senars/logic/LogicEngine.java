@@ -18,11 +18,42 @@ public class LogicEngine {
 
     private final Prolog prolog;
 
-    public LogicEngine(String theory) {
+    /**
+     * Default constructor for creating an empty LogicEngine.
+     */
+    public LogicEngine() {
         this.prolog = new Prolog();
+    }
+
+    public LogicEngine(String theory) {
+        this();
         try {
             prolog.setTheory(new Theory(theory));
         } catch (Exception e) { // Catching generic Exception to be refined later
+            throw new RuntimeException("Invalid Prolog theory", e);
+        }
+    }
+
+    /**
+     * Adds a new fact or rule to the existing theory.
+     * @param fact The fact or rule to add, e.g., "is_deprecated('schema-123')."
+     */
+    public void assertFact(String fact) {
+        try {
+            prolog.addTheory(new Theory(fact));
+        } catch (Exception e) { // TODO: Use a more specific exception
+            throw new RuntimeException("Invalid fact or rule: " + fact, e);
+        }
+    }
+
+    /**
+     * Replaces the entire current theory with a new one.
+     * @param theory The new theory to load.
+     */
+    public void setTheory(String theory) {
+        try {
+            prolog.setTheory(new Theory(theory));
+        } catch (Exception e) { // TODO: Use a more specific exception
             throw new RuntimeException("Invalid Prolog theory", e);
         }
     }

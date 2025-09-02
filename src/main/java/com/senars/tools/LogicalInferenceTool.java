@@ -1,7 +1,6 @@
 package com.senars.tools;
 
 import com.senars.cycle.Inference;
-import com.senars.systems.Memory;
 import dev.langchain4j.agent.tool.Tool;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -11,8 +10,8 @@ public class LogicalInferenceTool {
     private static final Logger LOGGER = LoggerFactory.getLogger(LogicalInferenceTool.class);
     private final Inference inference;
 
-    public LogicalInferenceTool(Memory memory) {
-        this.inference = new Inference(memory);
+    public LogicalInferenceTool(Inference inference) {
+        this.inference = inference;
     }
 
     @Tool("Executes a formal logical query against the system's knowledge base of beliefs and rules. The query must be in Prolog format.")

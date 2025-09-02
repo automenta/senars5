@@ -14,6 +14,7 @@ import com.senars.lm.Langchain4JCognition;
 import com.senars.lm.PromptBuilder;
 import com.senars.lm.StructuredOutputParser;
 import com.senars.lm.ToolKit;
+import com.senars.logic.LogicEngine;
 import com.senars.motive.MotiveHierarchy;
 import com.senars.optimizer.EffortModelOptimizer;
 import com.senars.optimizer.SchemaOptimizer;
@@ -25,8 +26,11 @@ import com.senars.systems.Rule;
 import com.senars.systems.immemory.*;
 import com.senars.systems.perception.FilePerceptionChannel;
 import com.senars.systems.rules.KeywordBlocklistRule;
+import com.senars.systems.rules.PreventDeprecatedSchemaUseRule;
 import com.senars.tools.*;
+import com.senars.xai.XaiReportGenerator;
 import com.senars.xai.Explain;
+import dev.langchain4j.model.chat.ChatLanguageModel;
 import dev.langchain4j.model.embedding.AllMiniLmL6V2EmbeddingModel;
 import dev.langchain4j.model.embedding.EmbeddingModel;
 import dev.langchain4j.model.ollama.OllamaChatModel;
@@ -51,8 +55,18 @@ public class SystemFactory {
     public final EventBus eventBus;
 
     private final CognitiveCycle cognitiveCycle;
+    public final SchemaOptimizer schemaOptimizer; // Made public for test access
+    public final LogicEngine logicEngine; // Made public for test access
 
     public SystemFactory() {
+        this(OllamaChatModel.builder()
+                .baseUrl(AppConfig.getInstance().getLlmApiUrl())
+                .modelName(AppConfig.getInstance().getLlmModelName())
+                .timeout(Duration.ofSeconds(AppConfig.getInstance().getLlmApiTimeout()))
+                .build());
+    }
+
+    public SystemFactory(ChatLanguageModel chatModel) {
         // 1. Configuration
         AppConfig config = AppConfig.getInstance();
         EmbeddingModel embeddingModel = new AllMiniLmL6V2EmbeddingModel();
@@ -65,6 +79,7 @@ public class SystemFactory {
         DatabaseManager dbManager = new DatabaseManager(dbPath);
 
         this.memory = new InMemoryMemory(config, dbManager);
+        this.logicEngine = new LogicEngine();
 
         // Create the two-stage governor
         LOGGER.info("Initializing Governance Layer...");
@@ -76,14 +91,15 @@ public class SystemFactory {
                 .build();
 
         List<Rule> rules = List.of(
-                new KeywordBlocklistRule(List.of("delete all files", "shutdown", "rm -rf"))
+                new KeywordBlocklistRule(List.of("delete all files", "shutdown", "rm -rf")),
+                new PreventDeprecatedSchemaUseRule(memory, logicEngine)
         );
         Governor governance = new InMemoryGovernor(rules, constitution, vettingModel);
         LOGGER.info("Governance Layer initialized with {} rules and constitutional vetting.", rules.size());
 
 
         Grounding grounding = new InMemoryGrounding(memory, eventBus);
-        SchemaOptimizer schemaOptimizer = new SchemaOptimizer(memory, eventBus);
+        this.schemaOptimizer = new SchemaOptimizer(memory, eventBus);
         EffortModelOptimizer effortOptimizer = new EffortModelOptimizer(memory, eventBus);
 
         // 3. Genesis & Bootstrapping
@@ -94,6 +110,8 @@ public class SystemFactory {
         List<Thought> reasoningSchemas = Genesis.loadSchemasFromFile("reasoning_schemas.json", embeddingModel);
         List<Thought> parsingSchemas = Genesis.loadSchemasFromFile("parsing-schema.json", embeddingModel);
         List<Thought> embeddingSchemas = Genesis.loadSchemasFromFile("embedding-generation-schema.json", embeddingModel);
+        List<Thought> optimizationSchemas = Genesis.loadSchemasFromFile("schema_optimizer_schema.json", embeddingModel);
+        optimizationSchemas.addAll(Genesis.loadSchemasFromFile("effort_model_optimizer_schema.json", embeddingModel));
         Thought logicalActionSchema = Genesis.createLogicalActionSchema(embeddingModel);
         Thought failureRecoverySchema = Genesis.createFailureRecoverySchema(embeddingModel);
 
@@ -103,18 +121,21 @@ public class SystemFactory {
         reasoningSchemas.forEach(memory::saveThought);
         parsingSchemas.forEach(memory::saveThought);
         embeddingSchemas.forEach(memory::saveThought);
+        optimizationSchemas.forEach(memory::saveThought);
         memory.saveThought(logicalActionSchema);
         memory.saveThought(failureRecoverySchema);
-        LOGGER.info("Loaded {} Genesis Drives, {} Beliefs, and {} Schemas into Memory Nexus.", genesisDrives.size(), genesisBeliefs.size(), genesisSchemas.size() + reasoningSchemas.size() + parsingSchemas.size() + embeddingSchemas.size() + 2);
+        LOGGER.info("Loaded {} Genesis Drives, {} Beliefs, and {} Schemas into Memory Nexus.", genesisDrives.size(), genesisBeliefs.size(), genesisSchemas.size() + reasoningSchemas.size() + parsingSchemas.size() + embeddingSchemas.size() + optimizationSchemas.size() + 2);
 
         // 4. Cognitive Cycle Components
+        Inference inference = new Inference(memory, logicEngine);
         ToolKit toolKit = new ToolKit(
                 new SearchTools(),
                 new WebTools(),
                 new FileSystemTools(),
                 new CodeExecutionTool(),
                 new EmbeddingGenerationTool(memory, embeddingModel),
-                new LogicalInferenceTool(memory)
+                new LogicalInferenceTool(inference),
+                new SchemaManagementTool(memory, logicEngine, eventBus)
         );
         Action action = new ToolUsingAction(toolKit);
 
@@ -149,12 +170,6 @@ public class SystemFactory {
         attention.addCandidate(researchGoal);
 
         // 6. LLM-based Cognitive Processor
-        OllamaChatModel chatModel = OllamaChatModel.builder()
-                .baseUrl(config.getLlmApiUrl())
-                .modelName(config.getLlmModelName())
-                .timeout(Duration.ofSeconds(config.getLlmApiTimeout()))
-                .build();
-
         PromptBuilder promptBuilder = new PromptBuilder();
         StructuredOutputParser outputParser = new StructuredOutputParser();
         Explain explain = new Explain(memory);
@@ -187,10 +202,12 @@ public class SystemFactory {
         );
 
         // 8. Event Bus Subscriptions
+        XaiReportGenerator xaiReportGenerator = new XaiReportGenerator(eventBus);
         eventBus.subscribe(Events.NewThoughtCreatedEvent.class, cognitiveCycle::onNewThoughtCreated);
         eventBus.subscribe(Events.ActionExecutedEvent.class, schemaOptimizer::onActionExecuted);
         eventBus.subscribe(Events.CognitionStartEvent.class, effortTracker::onCognitionStart);
         eventBus.subscribe(Events.CognitionEndEvent.class, effortTracker::onCognitionEnd);
+        eventBus.subscribe(Events.SchemaOptimizedEvent.class, xaiReportGenerator::onEvent);
     }
 
     public CognitiveCycle getCognitiveCycle() {

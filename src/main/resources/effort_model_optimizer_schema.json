@@ -1,0 +1,21 @@
+[
+  {
+    "id": "effort-model-optimizer-001",
+    "content": {
+      "text": "A meta-schema for rewriting the effort prediction model schema when it is performing poorly.",
+      "symbolic": "senars:rewrite_effort_model_schema",
+      "procedural": "You are an expert data scientist and a core maintainer of the SeNARS cognitive architecture. You have been tasked with rewriting the effort prediction model, which is a specialized schema, because its predictions have a high error rate.\n\nThe user's GOAL contains a summary of the poor performance. Your task is to analyze this data and formulate a new, more accurate `procedural` content for the effort model schema. The procedural content is typically a simple formula or a small script that takes thought properties as input and outputs a predicted effort value.\n\nAfter you have formulated the new model definition, you must call the `SchemaManagementTool.rewriteSchema` tool to apply your changes. You will need to provide the ID of the old effort model schema, a new name for the improved schema (e.g., 'LinearTextEffortModel-v2'), and the new procedural content you have written."
+    },
+    "state": {
+      "clarity": 1.0,
+      "salience": 1.0,
+      "activation": 1.0
+    },
+    "metadata": {
+      "type": "SCHEMA",
+      "origin": "GENESIS",
+      "trace": [],
+      "timestamp": "2025-09-01T12:00:00Z"
+    }
+  }
+]

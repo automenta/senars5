@@ -13,14 +13,15 @@ import java.util.stream.Collectors;
 public class Inference {
     private static final Logger LOGGER = LoggerFactory.getLogger(Inference.class);
     private final Memory memory;
+    private final LogicEngine logicEngine;
 
-    public Inference(Memory memory) {
+    public Inference(Memory memory, LogicEngine logicEngine) {
         this.memory = memory;
+        this.logicEngine = logicEngine;
     }
 
-    public String executeQuery(String query) {
-        LOGGER.info("Executing logical query: {}", query);
-
+    public boolean syncTheory() {
+        LOGGER.debug("Syncing theory from Memory Nexus to Logic Engine...");
         // 1. Gather all facts (from BELIEFS) and rules (from SCHEMAS) from memory.
         String facts = memory.getAllThoughts().stream()
                 .filter(t -> t.metadata().type() == ThoughtType.BELIEF && t.content().symbolic() != null && !t.content().symbolic().isBlank())
@@ -35,14 +36,26 @@ public class Inference {
 
         String theory = facts + "\n" + rules;
         if (theory.isBlank()) {
-            LOGGER.warn("Cannot perform inference with an empty theory.");
+            LOGGER.warn("Theory from memory is blank. Clearing logic engine theory.");
+            logicEngine.setTheory("");
+            return false;
+        }
+        logicEngine.setTheory(theory);
+        LOGGER.debug("Logic Engine theory synced.");
+        return true;
+    }
+
+    public String executeQuery(String query) {
+        LOGGER.info("Executing logical query: {}", query);
+
+        // For now, we will perform a full sync before each query.
+        // A more advanced implementation would sync based on events.
+        boolean theoryExists = syncTheory();
+        if (!theoryExists) {
             return "Error: The knowledge base is empty. No facts or rules are available.";
         }
 
-        // 2. Initialize the logic engine with the combined theory.
-        LogicEngine logicEngine = new LogicEngine(theory);
 
-        // 3. Get the query from the input thought.
         if (query == null || query.isBlank()) {
             return "Error: Query string cannot be empty.";
         }

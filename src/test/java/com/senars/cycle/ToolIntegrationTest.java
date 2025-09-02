@@ -10,6 +10,7 @@ import com.senars.core.ThoughtState;
 import com.senars.core.ThoughtType;
 import com.senars.lm.Langchain4JCognition;
 import com.senars.lm.ToolKit;
+import com.senars.logic.LogicEngine;
 import com.senars.tools.LogicalInferenceTool;
 import com.senars.systems.Memory;
 import dev.langchain4j.agent.tool.ToolExecutionRequest;
@@ -48,7 +49,9 @@ public class ToolIntegrationTest {
 
     @BeforeEach
     void setUp() {
-        logicalInferenceTool = new LogicalInferenceTool(memory);
+        LogicEngine logicEngine = new LogicEngine();
+        Inference inference = new Inference(memory, logicEngine);
+        logicalInferenceTool = new LogicalInferenceTool(inference);
         toolKit = new ToolKit(logicalInferenceTool); // In a real scenario, more tools would be here.
         toolUsingAction = new ToolUsingAction(toolKit);
         cognition = spy(new Langchain4JCognition(chatModel, memory, promptBuilder, outputParser, explain, toolKit, eventBus));
