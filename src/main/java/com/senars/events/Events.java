@@ -40,4 +40,13 @@ public final class Events {
     public record GoalFailedEvent(Thought goal) implements Event {
     }
 
+    // Events for tracking cognitive processing time and effort
+    public record CognitionStartEvent(Thought thought) implements Event {
+    }
+
+    public record CognitionEndEvent(Thought thought) implements Event {
+    }
+
+    public record CognitionErrorEvent(Thought thought, Throwable error) implements Event {
+    }
 }

@@ -94,4 +94,14 @@ public class PromptBuilder {
                 originalPrompt + "\n---\n" +
                 "REWRITTEN PROMPT:";
     }
+
+    public String buildEffortModelRewritePrompt(String analysis) {
+        return "You are a data scientist AI. You are tasked with improving a simple linear effort prediction model.\n" +
+                "The model is: effort = (coefficient * textLength) + intercept.\n" +
+                "Based on the following analysis of the model's recent performance, provide new values for 'coefficient' and 'intercept'.\n" +
+                "Return ONLY the two numbers, separated by a comma. Example: 0.05,1.5\n\n" +
+                "PERFORMANCE ANALYSIS:\n---\n" +
+                analysis + "\n---\n" +
+                "NEW PARAMETERS (coefficient, intercept):";
+    }
 }

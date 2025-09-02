@@ -38,6 +38,7 @@ public class ToolIntegrationTest {
     @Mock private com.senars.lm.PromptBuilder promptBuilder;
     @Mock private com.senars.lm.StructuredOutputParser outputParser;
     @Mock private com.senars.xai.Explain explain;
+    @Mock private com.senars.events.EventBus eventBus;
 
 
     private ToolKit toolKit;
@@ -50,7 +51,7 @@ public class ToolIntegrationTest {
         logicalInferenceTool = new LogicalInferenceTool(memory);
         toolKit = new ToolKit(logicalInferenceTool); // In a real scenario, more tools would be here.
         toolUsingAction = new ToolUsingAction(toolKit);
-        cognition = spy(new Langchain4JCognition(chatModel, memory, promptBuilder, outputParser, explain, toolKit));
+        cognition = spy(new Langchain4JCognition(chatModel, memory, promptBuilder, outputParser, explain, toolKit, eventBus));
     }
 
     private Thought createActionPlan(String toolRequestJson) {

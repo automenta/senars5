@@ -2,7 +2,9 @@ package com.senars.cycle;
 
 import com.senars.core.*;
 import com.senars.effort.EffortPredictor;
+import com.senars.effort.EffortTracker;
 import com.senars.events.EventBus;
+import com.senars.optimizer.EffortModelOptimizer;
 import com.senars.motive.MotiveHierarchy;
 import com.senars.optimizer.SchemaOptimizer;
 import com.senars.salience.SalienceCalculator;
@@ -43,6 +45,10 @@ class CognitiveCycleTest {
     @Mock
     private SchemaOptimizer schemaOptimizer;
     @Mock
+    private EffortModelOptimizer effortOptimizer;
+    @Mock
+    private EffortTracker effortTracker;
+    @Mock
     private ActionFeedbackQueue feedbackQueue;
 
     private Attention attentionFunnel;
@@ -67,6 +73,8 @@ class CognitiveCycleTest {
                 groundingSystem,
                 feedbackQueue,
                 schemaOptimizer,
+                effortOptimizer,
+                effortTracker,
                 eventBus
         );
     }

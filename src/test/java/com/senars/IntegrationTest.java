@@ -7,6 +7,7 @@ import com.senars.db.DatabaseManager;
 import com.senars.lm.Langchain4JCognition;
 import com.senars.lm.PromptBuilder;
 import com.senars.lm.StructuredOutputParser;
+import com.senars.events.EventBus;
 import com.senars.lm.ToolKit;
 import com.senars.systems.Memory;
 import com.senars.systems.immemory.InMemoryMemory;
@@ -55,13 +56,15 @@ public class IntegrationTest {
 
         // 4. Instantiate the real processor
         Explain explain = new Explain(memory);
+        EventBus eventBus = new EventBus();
         cognitiveProcessor = new Langchain4JCognition(
                 chatModel,
                 memory,
                 promptBuilder,
                 outputParser,
                 explain,
-                toolKit
+                toolKit,
+                eventBus
         );
     }
 

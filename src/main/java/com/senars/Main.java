@@ -7,6 +7,7 @@ import com.senars.core.Thought;
 import com.senars.cycle.*;
 import com.senars.db.DatabaseManager;
 import com.senars.effort.EffortPredictor;
+import com.senars.effort.EffortTracker;
 import com.senars.events.EventBus;
 import com.senars.events.Events;
 import com.senars.events.LoggingEventSubscriber;
@@ -15,6 +16,7 @@ import com.senars.lm.PromptBuilder;
 import com.senars.lm.StructuredOutputParser;
 import com.senars.lm.ToolKit;
 import com.senars.motive.MotiveHierarchy;
+import com.senars.optimizer.EffortModelOptimizer;
 import com.senars.optimizer.SchemaOptimizer;
 import com.senars.salience.SalienceCalculator;
 import com.senars.systems.Governor;
@@ -68,6 +70,7 @@ public class Main {
         Governor governance = new InMemoryGovernor(rules);
         Grounding grounding = new InMemoryGrounding(memory, eventBus);
         SchemaOptimizer schemaOptimizer = new SchemaOptimizer(memory, eventBus);
+        EffortModelOptimizer effortOptimizer = new EffortModelOptimizer(memory, eventBus);
 
         // 3. Genesis & Bootstrapping
         LOGGER.info("Executing Genesis Protocol...");
@@ -133,6 +136,7 @@ public class Main {
         LOGGER.info("---------------------------------");
 
         EffortPredictor effortPredictor = new EffortPredictor(memory);
+        EffortTracker effortTracker = new EffortTracker(effortPredictor);
         SalienceCalculator salienceCalculator = new SalienceCalculator(effortPredictor);
         Attention attention = new SalienceAttention(salienceCalculator, motives, eventBus);
         attention.addCandidate(researchGoal); // Ensure the new goal is considered on the first cycle
@@ -154,7 +158,8 @@ public class Main {
                 promptBuilder,
                 outputParser,
                 explain,
-                toolKit
+                toolKit,
+                eventBus
         );
 
         // 6. The Cognitive Cycle itself
@@ -169,12 +174,19 @@ public class Main {
                 grounding,
                 feedbackQueue,
                 schemaOptimizer,
+                effortOptimizer,
+                effortTracker,
                 eventBus
         );
 
         // Subscribe the cognitive cycle to events it needs to handle directly
         eventBus.subscribe(Events.NewThoughtCreatedEvent.class, cognitiveCycle::onNewThoughtCreated);
         eventBus.subscribe(Events.ActionExecutedEvent.class, schemaOptimizer::onActionExecuted);
+
+        // Subscribe the effort tracker to cognition events
+        eventBus.subscribe(Events.CognitionStartEvent.class, effortTracker::onCognitionStart);
+        eventBus.subscribe(Events.CognitionEndEvent.class, effortTracker::onCognitionEnd);
+
 
         LOGGER.info("SeNARS Cognitive System Initialized. Starting cognitive cycle.");
 

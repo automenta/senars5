@@ -1,8 +1,10 @@
 package com.senars.cycle;
 
 import com.senars.core.*;
+import com.senars.effort.EffortTracker;
 import com.senars.events.EventBus;
 import com.senars.events.Events;
+import com.senars.optimizer.EffortModelOptimizer;
 import com.senars.optimizer.SchemaOptimizer;
 import com.senars.systems.Governor;
 import com.senars.systems.Grounding;
@@ -32,6 +34,8 @@ public class CognitiveCycle {
     private final Grounding grounding;
     private final ActionFeedbackQueue feedbackQueue;
     private final SchemaOptimizer schemaOptimizer;
+    private final EffortModelOptimizer effortOptimizer;
+    private final EffortTracker effortTracker;
     private final EventBus eventBus;
     private final List<String> focusHistory = new ArrayList<>();
     private long cycleCount = 0;
@@ -47,6 +51,8 @@ public class CognitiveCycle {
             Grounding grounding,
             ActionFeedbackQueue feedbackQueue,
             SchemaOptimizer schemaOptimizer,
+            EffortModelOptimizer effortOptimizer,
+            EffortTracker effortTracker,
             EventBus eventBus
     ) {
         this.perception = Objects.requireNonNull(perception);
@@ -58,6 +64,8 @@ public class CognitiveCycle {
         this.grounding = Objects.requireNonNull(grounding);
         this.feedbackQueue = Objects.requireNonNull(feedbackQueue);
         this.schemaOptimizer = Objects.requireNonNull(schemaOptimizer);
+        this.effortOptimizer = Objects.requireNonNull(effortOptimizer);
+        this.effortTracker = Objects.requireNonNull(effortTracker);
         this.eventBus = Objects.requireNonNull(eventBus);
     }
 
@@ -67,7 +75,7 @@ public class CognitiveCycle {
     public void step() {
         try {
             cycleCount++;
-            runOptimizer();
+            runOptimizers();
             processActionFeedback();
             runPerception();
 
@@ -187,13 +195,22 @@ public class CognitiveCycle {
         }
     }
 
-    private void runOptimizer() {
+    private void runOptimizers() {
         if (cycleCount % OPTIMIZER_RUN_INTERVAL == 0) {
-            LOGGER.info("Cognitive cycle {} reached. Running schema optimizer.", cycleCount);
-            List<Thought> optimizationGoals = schemaOptimizer.run();
-            if (!optimizationGoals.isEmpty()) {
-                LOGGER.info("Schema optimizer generated {} new goal(s).", optimizationGoals.size());
-                optimizationGoals.forEach(this::handleNewThought);
+            LOGGER.info("Cognitive cycle {} reached. Running optimizers.", cycleCount);
+
+            // Run Schema Optimizer
+            List<Thought> schemaGoals = schemaOptimizer.run();
+            if (!schemaGoals.isEmpty()) {
+                LOGGER.info("Schema optimizer generated {} new goal(s).", schemaGoals.size());
+                schemaGoals.forEach(this::handleNewThought);
+            }
+
+            // Run Effort Model Optimizer
+            List<Thought> effortGoals = effortOptimizer.run(effortTracker);
+            if (!effortGoals.isEmpty()) {
+                LOGGER.info("Effort model optimizer generated {} new goal(s).", effortGoals.size());
+                effortGoals.forEach(this::handleNewThought);
             }
         }
     }

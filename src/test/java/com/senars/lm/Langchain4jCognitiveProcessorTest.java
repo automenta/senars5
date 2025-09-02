@@ -59,6 +59,8 @@ class Langchain4jCognitiveProcessorTest {
     private Thought mockSchemaThought;
     @Mock
     private com.senars.core.ThoughtState mockThoughtState;
+    @Mock
+    private com.senars.events.EventBus eventBus;
 
 
     private Cognition cognitiveProcessor;
@@ -71,7 +73,8 @@ class Langchain4jCognitiveProcessorTest {
                 mockPromptBuilder,
                 mockOutputParser,
                 mockExplain,
-                mockToolKit
+                mockToolKit,
+                eventBus
         );
     }
 

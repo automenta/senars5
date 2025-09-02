@@ -29,6 +29,8 @@ class Langchain4JCognitionIntegrationTest {
     private StructuredOutputParser outputParser;
     @Mock
     private ToolKit toolKit;
+    @Mock
+    private com.senars.events.EventBus eventBus;
 
     private Langchain4JCognition cognition;
 
@@ -39,7 +41,7 @@ class Langchain4JCognitionIntegrationTest {
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
-        cognition = new Langchain4JCognition(chatModel, memory, promptBuilder, outputParser, explain, toolKit);
+        cognition = new Langchain4JCognition(chatModel, memory, promptBuilder, outputParser, explain, toolKit, eventBus);
     }
 
     @Test

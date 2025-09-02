@@ -28,6 +28,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import com.senars.events.EventBus;
 
 public class LLMPlanningIntegrationTest {
 
@@ -59,7 +60,8 @@ public class LLMPlanningIntegrationTest {
                 new PromptBuilder(),
                 new StructuredOutputParser(),
                 explain,
-                toolKit
+                toolKit,
+                new EventBus()
         );
     }
 

@@ -3,12 +3,16 @@ package com.senars.lm;
 import com.google.gson.Gson;
 import com.senars.core.Genesis;
 import com.senars.core.Thought;
+import com.senars.effort.LinearTextEffortModel;
 import com.senars.core.ThoughtOrigin;
 import com.senars.core.ThoughtType;
 import com.senars.core.ThoughtContent;
 import com.senars.core.ThoughtMeta;
 import com.senars.core.ThoughtState;
 import com.senars.cycle.Cognition;
+import com.senars.events.EventBus;
+import com.senars.events.Events;
+import com.senars.optimizer.EffortModelOptimizer;
 import com.senars.optimizer.SchemaOptimizer;
 import com.senars.systems.Memory;
 import com.senars.systems.ScoredThought;
@@ -48,6 +52,7 @@ public class Langchain4JCognition implements Cognition {
     private final StructuredOutputParser outputParser;
     private final Explain explain;
     private final ToolKit toolKit;
+    private final EventBus eventBus;
     private final Gson gson = new Gson();
     private Thought lastActionPlan = null;
 
@@ -58,9 +63,9 @@ public class Langchain4JCognition implements Cognition {
      * @param memory        The memory nexus for retrieving context and schemas.
      * @param promptBuilder The builder responsible for creating prompts.
      * @param outputParser  The parser for interpreting LLM responses.
-     * @param sessions      The session manager, used for context like the last action.
      * @param explain       The explanation engine.
      * @param toolKit       The toolkit containing available tools.
+     * @param eventBus      The event bus for publishing events.
      */
     public Langchain4JCognition(
             ChatLanguageModel chat,
@@ -68,7 +73,8 @@ public class Langchain4JCognition implements Cognition {
             PromptBuilder promptBuilder,
             StructuredOutputParser outputParser,
             Explain explain,
-            ToolKit toolKit
+            ToolKit toolKit,
+            EventBus eventBus
     ) {
         this.chatModel = requireNonNull(chat, "chatModel cannot be null");
         this.memory = requireNonNull(memory, "memory cannot be null");
@@ -76,50 +82,65 @@ public class Langchain4JCognition implements Cognition {
         this.outputParser = requireNonNull(outputParser, "outputParser cannot be null");
         this.explain = requireNonNull(explain, "explain cannot be null");
         this.toolKit = requireNonNull(toolKit, "toolKit cannot be null");
+        this.eventBus = requireNonNull(eventBus, "eventBus cannot be null");
     }
 
     @Override
     public List<Thought> process(Thought focusThought) {
-        LOGGER.info("Processing thought: {} of type {}", focusThought.id(), focusThought.metadata().type());
+        eventBus.publish(new Events.CognitionStartEvent(focusThought));
+        try {
+            LOGGER.info("Processing thought: {} of type {}", focusThought.id(), focusThought.metadata().type());
 
-        if (focusThought.metadata().type() == ThoughtType.GOAL && SchemaOptimizer.REWRITE_SCHEMA_SYMBOLIC.equals(focusThought.content().symbolic())) {
-            LOGGER.info("Detected schema rewrite goal. Delegating to self-optimization handler.");
-            return handleSchemaRewriteGoal(focusThought);
+            if (focusThought.metadata().type() == ThoughtType.GOAL && SchemaOptimizer.REWRITE_SCHEMA_SYMBOLIC.equals(focusThought.content().symbolic())) {
+                LOGGER.info("Detected schema rewrite goal. Delegating to self-optimization handler.");
+                return handleSchemaRewriteGoal(focusThought);
+            }
+
+            if (focusThought.metadata().type() == ThoughtType.GOAL && EffortModelOptimizer.REWRITE_EFFORT_MODEL_SYMBOLIC.equals(focusThought.content().symbolic())) {
+                LOGGER.info("Detected effort model rewrite goal. Delegating to self-optimization handler.");
+                return handleEffortModelRewriteGoal(focusThought);
+            }
+
+            if (focusThought.metadata().type() == ThoughtType.EXPLAIN) {
+                return handleExplanationRequest(focusThought);
+            }
+
+            // Step 1: Context Assembly
+            List<Thought> context = assembleContext(focusThought);
+
+            // Step 2: Schema Selection
+            Thought schema = findRelevantSchema(focusThought);
+            if (schema != null) {
+                LOGGER.info("Found relevant schema: {}", schema.id());
+            } else {
+                LOGGER.info("No relevant schema found. Using fallback prompt.");
+            }
+
+            // Handle special, non-LLM schemas
+            if (schema != null && GENERATE_EMBEDDING_SCHEMA_SYMBOL.equals(schema.content().symbolic())) {
+                LOGGER.info("Bypassing LLM for internal embedding generation schema.");
+                return createGenerateEmbeddingActionPlan(focusThought, schema);
+            }
+
+            // Step 3: Prompt Generation
+            List<ToolSpecification> toolSpecifications = toolKit.getToolSpecifications();
+            String prompt = promptBuilder.build(schema, focusThought, context, toolSpecifications);
+            LOGGER.debug("Generated prompt: {}", prompt);
+
+            // Step 4: LLM Call
+            Response<AiMessage> response = chatModel.generate(UserMessage.from(prompt));
+            String responseText = response.content().text();
+            LOGGER.debug("Received response: {}", responseText);
+
+            // Step 5: Output Parsing and Thought Generation
+            return parseResponse(responseText, focusThought, schema);
+        } catch (Exception e) {
+            LOGGER.error("Error during cognitive processing for thought: {}", focusThought.id(), e);
+            eventBus.publish(new Events.CognitionErrorEvent(focusThought, e));
+            return Collections.emptyList(); // Return empty list to signify failure
+        } finally {
+            eventBus.publish(new Events.CognitionEndEvent(focusThought));
         }
-
-        if (focusThought.metadata().type() == ThoughtType.EXPLAIN) {
-            return handleExplanationRequest(focusThought);
-        }
-
-        // Step 1: Context Assembly
-        List<Thought> context = assembleContext(focusThought);
-
-        // Step 2: Schema Selection
-        Thought schema = findRelevantSchema(focusThought);
-        if (schema != null) {
-            LOGGER.info("Found relevant schema: {}", schema.id());
-        } else {
-            LOGGER.info("No relevant schema found. Using fallback prompt.");
-        }
-
-        // Handle special, non-LLM schemas
-        if (schema != null && GENERATE_EMBEDDING_SCHEMA_SYMBOL.equals(schema.content().symbolic())) {
-            LOGGER.info("Bypassing LLM for internal embedding generation schema.");
-            return createGenerateEmbeddingActionPlan(focusThought, schema);
-        }
-
-        // Step 3: Prompt Generation
-        List<ToolSpecification> toolSpecifications = toolKit.getToolSpecifications();
-        String prompt = promptBuilder.build(schema, focusThought, context, toolSpecifications);
-        LOGGER.debug("Generated prompt: {}", prompt);
-
-        // Step 4: LLM Call
-        Response<AiMessage> response = chatModel.generate(UserMessage.from(prompt));
-        String responseText = response.content().text();
-        LOGGER.debug("Received response: {}", responseText);
-
-        // Step 5: Output Parsing and Thought Generation
-        return parseResponse(responseText, focusThought, schema);
     }
 
     private List<Thought> createGenerateEmbeddingActionPlan(Thought focusThought, Thought schema) {
@@ -393,5 +414,51 @@ public class Langchain4JCognition implements Cognition {
         // In a full implementation, we might want to "deprecate" the old schema here.
         // For now, the new schema will simply be available and hopefully retrieved more often.
         return List.of(newSchema);
+    }
+
+    private List<Thought> handleEffortModelRewriteGoal(Thought rewriteGoal) {
+        String metaPrompt = promptBuilder.buildEffortModelRewritePrompt(rewriteGoal.content().text());
+
+        Response<AiMessage> response = chatModel.generate(UserMessage.from(metaPrompt));
+        String responseText = response.content().text().trim();
+
+        try {
+            String[] parts = responseText.split(",");
+            if (parts.length != 2) {
+                throw new IllegalArgumentException("Response must be two comma-separated numbers.");
+            }
+            double coefficient = Double.parseDouble(parts[0].trim());
+            double intercept = Double.parseDouble(parts[1].trim());
+
+            LinearTextEffortModel newModel = new LinearTextEffortModel(coefficient, intercept);
+
+            Thought newSchema = new Thought(
+                    UUID.randomUUID().toString(),
+                    new ThoughtContent(
+                            "An AI-generated schema for predicting computational effort based on text length.",
+                            EffortModelOptimizer.REWRITE_EFFORT_MODEL_SYMBOLIC,
+                            null,
+                            null,
+                            newModel, // The new, improved model
+                            null,
+                            null
+                    ),
+                    new ThoughtState(0.85, 1.0, 1.0), // High clarity
+                    new ThoughtMeta(
+                            ThoughtType.SCHEMA,
+                            ThoughtOrigin.LLM_INFERENCE,
+                            List.of(rewriteGoal.id()),
+                            Instant.now()
+                    )
+            );
+            LOGGER.info("Generated new, optimized effort model schema {} with parameters: coef={}, intercept={}",
+                    newSchema.id(), coefficient, intercept);
+
+            return List.of(newSchema);
+
+        } catch (Exception e) {
+            LOGGER.error("Failed to parse new effort model parameters from LLM response: '{}'", responseText, e);
+            return List.of(createSimpleReport("Failed to create a new effort model. Reason: " + e.getMessage(), rewriteGoal.id()));
+        }
     }
 }
