@@ -77,6 +77,8 @@ public class Main {
         List<Thought> reasoningSchemas = Genesis.loadSchemasFromFile("reasoning_schemas.json", embeddingModel);
         List<Thought> parsingSchemas = Genesis.loadSchemasFromFile("parsing-schema.json", embeddingModel);
         List<Thought> embeddingSchemas = Genesis.loadSchemasFromFile("embedding-generation-schema.json", embeddingModel);
+        Thought logicalActionSchema = Genesis.createLogicalActionSchema(embeddingModel);
+        Thought failureRecoverySchema = Genesis.createFailureRecoverySchema(embeddingModel);
 
 
         genesisDrives.forEach(memory::saveThought);
@@ -85,7 +87,9 @@ public class Main {
         reasoningSchemas.forEach(memory::saveThought);
         parsingSchemas.forEach(memory::saveThought);
         embeddingSchemas.forEach(memory::saveThought);
-        LOGGER.info("Loaded {} Genesis Drives, {} Beliefs, and {} Schemas into Memory Nexus.", genesisDrives.size(), genesisBeliefs.size(), genesisSchemas.size() + reasoningSchemas.size() + parsingSchemas.size() + embeddingSchemas.size());
+        memory.saveThought(logicalActionSchema);
+        memory.saveThought(failureRecoverySchema);
+        LOGGER.info("Loaded {} Genesis Drives, {} Beliefs, and {} Schemas into Memory Nexus.", genesisDrives.size(), genesisBeliefs.size(), genesisSchemas.size() + reasoningSchemas.size() + parsingSchemas.size() + embeddingSchemas.size() + 2);
 
 
         // 4. Cognitive Cycle Components
@@ -94,7 +98,8 @@ public class Main {
                 new WebTools(),
                 new FileSystemTools(),
                 new CodeExecutionTool(),
-                new EmbeddingGenerationTool(memory, embeddingModel)
+                new EmbeddingGenerationTool(memory, embeddingModel),
+                new LogicalInferenceTool(memory)
         );
         Action action = new ToolUsingAction(toolKit);
 
@@ -144,7 +149,6 @@ public class Main {
         Sessions sessions = new Sessions();
         Explain explain = new Explain(memory);
 
-        Inference inference = new Inference(memory);
         Cognition cognitiveProcessor = new Langchain4JCognition(
                 chatModel,
                 memory,
@@ -152,7 +156,6 @@ public class Main {
                 outputParser,
                 sessions,
                 explain,
-                inference,
                 toolKit
         );
 

@@ -7,9 +7,10 @@ import com.senars.lm.ToolKit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import dev.langchain4j.agent.tool.ToolExecutionRequest;
+
 /**
  * An action system that executes tool calls defined in an ACTION.
- * NOTE: This is a temporary stub implementation to get the system to compile.
  */
 public class ToolUsingAction implements Action {
 
@@ -36,14 +37,30 @@ public class ToolUsingAction implements Action {
         }
 
         String toolRequestJson = actionPlan.content().symbolic();
-        LOGGER.info("Received tool request: {}", toolRequestJson);
+        ToolExecutionRequest toolRequest = toolKit.parse(toolRequestJson);
 
-        // TODO: This is a stub. A proper implementation needs to be created.
-        String observation = "Tool execution is not yet implemented.";
+        if (toolRequest == null) {
+            LOGGER.error("Failed to parse tool request from symbolic content: {}", toolRequestJson);
+            return new Feedback(
+                    ActionStatus.FAILURE,
+                    "parser",
+                    "Could not parse tool request JSON.",
+                    System.currentTimeMillis() - startTime,
+                    actionPlan
+            );
+        }
+
+        String observation = toolKit.execute(toolRequest);
         long executionTime = System.currentTimeMillis() - startTime;
+
+        // Simple heuristic: if the observation starts with "Error:", treat it as a failure.
+        ActionStatus status = observation.startsWith("Error:") ? ActionStatus.FAILURE : ActionStatus.SUCCESS;
+
+        LOGGER.info("Tool {} execution finished with status {} in {}ms. Observation: {}", toolRequest.name(), status, executionTime, observation);
+
         return new Feedback(
-                ActionStatus.SUCCESS,
-                "stub.tool",
+                status,
+                toolRequest.name(),
                 observation,
                 executionTime,
                 actionPlan

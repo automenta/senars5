@@ -20,6 +20,8 @@ import java.util.List;
  */
 public class Genesis {
 
+    public static final String LOGICAL_ACTION_SCHEMA_SYMBOL = "senars:schema:logical-action-v1";
+    public static final String FAILURE_RECOVERY_SCHEMA_SYMBOL = "senars:schema:failure-recovery-v1";
     private static final Logger LOGGER = LoggerFactory.getLogger(Genesis.class);
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper()
             .registerModule(new JavaTimeModule());
@@ -168,6 +170,68 @@ public class Genesis {
                 ),
                 new ThoughtMeta(
                         ThoughtType.GOAL,
+                        ThoughtOrigin.SYSTEM,
+                        List.of(),
+                        Instant.now()
+                )
+        );
+    }
+
+    /**
+     * Creates the schema for formulating and executing logical queries.
+     *
+     * @param embeddingModel The model to generate the embedding.
+     * @return A Thought object representing the logical action schema.
+     */
+    public static Thought createLogicalActionSchema(EmbeddingModel embeddingModel) {
+        String text = "The user's goal can be answered using formal logic. Formulate a precise Prolog query to answer the goal and create a plan to execute it with the `logical_inference.executeQuery` tool.";
+        List<Double> embedding = new ArrayList<>();
+        for (float f : embeddingModel.embed(text).content().vector()) {
+            embedding.add((double) f);
+        }
+
+        return new Thought(
+                "schema-logical-action-1",
+                new ThoughtContent(
+                        text,
+                        LOGICAL_ACTION_SCHEMA_SYMBOL,
+                        embedding,
+                        null, null, null, null
+                ),
+                new ThoughtState(1.0, 1.0, 1.0),
+                new ThoughtMeta(
+                        ThoughtType.SCHEMA,
+                        ThoughtOrigin.SYSTEM,
+                        List.of(),
+                        Instant.now()
+                )
+        );
+    }
+
+    /**
+     * Creates the schema for recovering from a failed tool execution.
+     *
+     * @param embeddingModel The model to generate the embedding.
+     * @return A Thought object representing the failure recovery schema.
+     */
+    public static Thought createFailureRecoverySchema(EmbeddingModel embeddingModel) {
+        String text = "A tool execution has failed. The current focus describes the tool and the error. Analyze this failure and formulate a new plan to achieve the original objective. Consider using alternative tools or methods. If the failure was due to missing information, create a plan to find that information.";
+        List<Double> embedding = new ArrayList<>();
+        for (float f : embeddingModel.embed(text).content().vector()) {
+            embedding.add((double) f);
+        }
+
+        return new Thought(
+                "schema-failure-recovery-1",
+                new ThoughtContent(
+                        text,
+                        FAILURE_RECOVERY_SCHEMA_SYMBOL,
+                        embedding,
+                        null, null, null, null
+                ),
+                new ThoughtState(1.0, 1.0, 1.0),
+                new ThoughtMeta(
+                        ThoughtType.SCHEMA,
                         ThoughtOrigin.SYSTEM,
                         List.of(),
                         Instant.now()
