@@ -180,44 +180,64 @@ public class MapDBGraphStore implements GraphDB {
     public Set<Thought> getCausallyConnectedThoughts(String thoughtId, int maxDepth) {
         Set<Thought> connectedThoughts = new HashSet<>();
         Set<String> visited = new HashSet<>();
-        Queue<String> queue = new LinkedList<>();
+        Queue<BfsNode> queue = new LinkedList<>();
         
         // Add the starting thought
-        queue.add(thoughtId);
+        queue.add(new BfsNode(thoughtId, 0, BfsDirection.BOTH));
         visited.add(thoughtId);
         
         // BFS traversal for both directions up to maxDepth
-        int currentDepth = 0;
-        while (!queue.isEmpty() && currentDepth <= maxDepth) {
-            int levelSize = queue.size();
-            for (int i = 0; i < levelSize; i++) {
-                String currentId = queue.poll();
-                getThoughtById(currentId).ifPresent(connectedThoughts::add);
-                
+        while (!queue.isEmpty()) {
+            BfsNode currentNode = queue.poll();
+            
+            // Skip if we've exceeded max depth
+            if (currentNode.depth() > maxDepth) {
+                continue;
+            }
+            
+            getThoughtById(currentNode.thoughtId()).ifPresent(connectedThoughts::add);
+            
+            // Traverse in the specified direction
+            if (currentNode.direction() == BfsDirection.FORWARD || currentNode.direction() == BfsDirection.BOTH) {
                 // Add outgoing links (forward direction)
-                Set<CausalLink> outgoingLinks = getCausalLinksFrom(currentId);
+                Set<CausalLink> outgoingLinks = getCausalLinksFrom(currentNode.thoughtId());
                 for (CausalLink link : outgoingLinks) {
                     String targetId = link.targetThoughtId();
                     if (!visited.contains(targetId)) {
                         visited.add(targetId);
-                        queue.add(targetId);
+                        queue.add(new BfsNode(targetId, currentNode.depth() + 1, BfsDirection.FORWARD));
                     }
                 }
-                
+            }
+            
+            if (currentNode.direction() == BfsDirection.BACKWARD || currentNode.direction() == BfsDirection.BOTH) {
                 // Add incoming links (backward direction)
-                Set<CausalLink> incomingLinks = getCausalLinksTo(currentId);
+                Set<CausalLink> incomingLinks = getCausalLinksTo(currentNode.thoughtId());
                 for (CausalLink link : incomingLinks) {
                     String sourceId = link.sourceThoughtId();
                     if (!visited.contains(sourceId)) {
                         visited.add(sourceId);
-                        queue.add(sourceId);
+                        queue.add(new BfsNode(sourceId, currentNode.depth() + 1, BfsDirection.BACKWARD));
                     }
                 }
             }
-            currentDepth++;
         }
         
         return connectedThoughts;
+    }
+    
+    /**
+     * Helper class for BFS traversal
+     */
+    private record BfsNode(String thoughtId, int depth, BfsDirection direction) {}
+    
+    /**
+     * Direction for BFS traversal
+     */
+    private enum BfsDirection {
+        FORWARD,
+        BACKWARD,
+        BOTH
     }
 
     @Override
@@ -255,20 +275,58 @@ public class MapDBGraphStore implements GraphDB {
 
     @Override
     public double calculateCausalLeverage(String thoughtId) {
-        // Simple implementation: count the number of downstream thoughts that would be affected
-        // by a change to this thought, weighted by their salience
+        // Enhanced implementation: calculate the number of downstream thoughts that would be affected
+        // by a change to this thought, weighted by their salience and adjusted for distance
         Set<Thought> downstreamThoughts = performCounterfactualAnalysis(thoughtId);
         double leverage = 0.0;
+        
+        // Also consider the depth of each thought in the causal chain
+        Map<String, Integer> depths = calculateCausalDepths(thoughtId);
         
         for (Thought thought : downstreamThoughts) {
             // Skip the original thought
             if (!thought.id().equals(thoughtId)) {
-                // Weight by salience - more salient thoughts contribute more to leverage
-                leverage += thought.state().salience();
+                // Weight by salience and inverse depth (closer thoughts have more leverage)
+                int depth = depths.getOrDefault(thought.id(), 1);
+                double depthWeight = 1.0 / depth; // Closer thoughts have higher weight
+                leverage += thought.state().salience() * depthWeight;
             }
         }
         
         return leverage;
+    }
+    
+    /**
+     * Calculate the depth of each causally connected thought from the given thought
+     */
+    private Map<String, Integer> calculateCausalDepths(String thoughtId) {
+        Map<String, Integer> depths = new HashMap<>();
+        Set<String> visited = new HashSet<>();
+        Queue<BfsNode> queue = new LinkedList<>();
+        
+        // Add the starting thought with depth 0
+        queue.add(new BfsNode(thoughtId, 0, BfsDirection.FORWARD));
+        depths.put(thoughtId, 0);
+        visited.add(thoughtId);
+        
+        // BFS traversal forward only to calculate depths
+        while (!queue.isEmpty()) {
+            BfsNode currentNode = queue.poll();
+            
+            // Add outgoing links (forward direction)
+            Set<CausalLink> outgoingLinks = getCausalLinksFrom(currentNode.thoughtId());
+            for (CausalLink link : outgoingLinks) {
+                String targetId = link.targetThoughtId();
+                if (!visited.contains(targetId)) {
+                    visited.add(targetId);
+                    int newDepth = currentNode.depth() + 1;
+                    depths.put(targetId, newDepth);
+                    queue.add(new BfsNode(targetId, newDepth, BfsDirection.FORWARD));
+                }
+            }
+        }
+        
+        return depths;
     }
 
     @Override

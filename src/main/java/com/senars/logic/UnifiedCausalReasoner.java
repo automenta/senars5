@@ -5,6 +5,7 @@ import com.senars.core.Thought;
 import com.senars.systems.Memory;
 
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 
 /**
  * The Unified Causal Reasoner (UCR) is the core engine that performs both forward planning
@@ -34,6 +35,18 @@ public interface UnifiedCausalReasoner {
     List<Thought> simulate(Thought startingThought, ReasoningOptions options);
 
     /**
+     * Performs a simulation of the forward reasoning process asynchronously without actually executing actions.
+     * This is used for predictive grounding to identify potential failures before they happen.
+     *
+     * @param startingThought The thought to simulate reasoning from
+     * @param options         Additional options for the simulation process
+     * @return A CompletableFuture that will contain the list of thoughts representing the simulation result
+     */
+    default CompletableFuture<List<Thought>> simulateAsync(Thought startingThought, ReasoningOptions options) {
+        return CompletableFuture.supplyAsync(() -> simulate(startingThought, options));
+    }
+
+    /**
      * Processes feedback from executed actions to perform credit/blame assignment.
      * This is the backward pass of the UCR that replaces the Grounding System.
      *
@@ -42,15 +55,36 @@ public interface UnifiedCausalReasoner {
     void processFeedback(Feedback feedback);
 
     /**
+     * Performs causal reasoning asynchronously in either forward or backward direction.
+     * This method is designed for parallel execution of multiple reasoning requests.
+     *
+     * @param startingThought The thought to start reasoning from
+     * @param direction       The direction of reasoning ("forward" or "backward")
+     * @param options         Additional options for the reasoning process
+     * @return A CompletableFuture that will contain the list of new thoughts generated
+     */
+    default CompletableFuture<List<Thought>> reasonAsync(Thought startingThought, String direction, ReasoningOptions options) {
+        return CompletableFuture.supplyAsync(() -> reason(startingThought, direction, options));
+    }
+
+    /**
      * Options for the reasoning process.
      */
     class ReasoningOptions {
         private final boolean simulate;
         private final int maxDepth;
+        private final String constraints;
+        private final boolean estimateOnly;
 
-        public ReasoningOptions(boolean simulate, int maxDepth) {
+        public ReasoningOptions(boolean simulate, int maxDepth, String constraints, boolean estimateOnly) {
             this.simulate = simulate;
             this.maxDepth = maxDepth;
+            this.constraints = constraints;
+            this.estimateOnly = estimateOnly;
+        }
+
+        public ReasoningOptions(boolean simulate, int maxDepth) {
+            this(simulate, maxDepth, null, false);
         }
 
         public boolean isSimulate() {
@@ -61,12 +95,32 @@ public interface UnifiedCausalReasoner {
             return maxDepth;
         }
 
+        public String getConstraints() {
+            return constraints;
+        }
+
+        public boolean isEstimateOnly() {
+            return estimateOnly;
+        }
+
         public static ReasoningOptions defaults() {
             return new ReasoningOptions(false, 5);
         }
 
         public static ReasoningOptions simulation() {
             return new ReasoningOptions(true, 5);
+        }
+
+        public static ReasoningOptions estimation() {
+            return new ReasoningOptions(false, 3, null, true);
+        }
+
+        public static ReasoningOptions withConstraints(String constraints) {
+            return new ReasoningOptions(false, 5, constraints, false);
+        }
+
+        public static ReasoningOptions safetyCheck() {
+            return new ReasoningOptions(true, 3, "safety", false);
         }
     }
 }

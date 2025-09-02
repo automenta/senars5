@@ -148,29 +148,12 @@ public class InMemoryMemory implements Memory {
 
     @Override
     public Set<Thought> getCausallyConnectedThoughts(String thoughtId, int maxDepth) {
-        // Simple implementation that gets directly connected thoughts
-        Set<Thought> connected = new HashSet<>();
-        
-        // Get forward connections
-        Set<CausalLink> forwardLinks = getCausalLinksFrom(thoughtId);
-        for (CausalLink link : forwardLinks) {
-            getThoughtById(link.targetThoughtId()).ifPresent(connected::add);
-        }
-        
-        // Get backward connections
-        Set<CausalLink> backwardLinks = getCausalLinksTo(thoughtId);
-        for (CausalLink link : backwardLinks) {
-            getThoughtById(link.sourceThoughtId()).ifPresent(connected::add);
-        }
-        
-        return connected;
+        return graphDB.getCausallyConnectedThoughts(thoughtId, maxDepth);
     }
 
     @Override
     public double calculateCausalLeverage(String thoughtId) {
-        // Simple implementation that returns a fixed value
-        // In a real implementation, this would calculate the actual causal leverage
-        return 0.5;
+        return graphDB.calculateCausalLeverage(thoughtId);
     }
 
     @Override
