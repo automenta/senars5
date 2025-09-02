@@ -32,6 +32,7 @@ import com.senars.systems.immemory.InMemoryMemory;
 import com.senars.systems.perception.FilePerceptionChannel;
 import com.senars.systems.rules.PreventDeprecatedSchemaUseRule;
 import com.senars.tools.*;
+import com.senars.ui.ConsolePrinter;
 import dev.langchain4j.model.chat.ChatLanguageModel;
 import dev.langchain4j.model.embedding.AllMiniLmL6V2EmbeddingModel;
 import dev.langchain4j.model.embedding.EmbeddingModel;
@@ -204,10 +205,10 @@ public class SystemFactory {
         // Create the Autonomous Capability Expansion
         this.capabilityExpansion = new AutonomousCapabilityExpansion(memory, ucr, eventBus, chatModel, explanationService, healthMonitor);
 
-        this.cognitiveCycle = new CognitiveCycle(
+        CognitiveCycleServices services = new CognitiveCycleServices(
                 perception,
                 attention,
-                ucr, // Use UCR instead of cognitiveProcessor
+                ucr,
                 action,
                 memory,
                 governance,
@@ -218,8 +219,10 @@ public class SystemFactory {
                 eventBus,
                 metaCognitiveService,
                 mdrService,
-                goalOrientedPlanner
+                goalOrientedPlanner,
+                new ConsolePrinter()
         );
+        this.cognitiveCycle = new CognitiveCycle(services);
 
         // 9. Event Bus Subscriptions
         PromptBuilder promptBuilder = new PromptBuilder();

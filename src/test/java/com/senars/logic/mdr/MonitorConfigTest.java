@@ -1,10 +1,14 @@
 package com.senars.logic.mdr;
 
+import com.senars.core.ActionStatus;
+import com.senars.core.Feedback;
+import com.senars.core.Thought;
 import com.senars.systems.Memory;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 class MotiveRefinementMonitorConfigTest {
 
@@ -46,8 +50,15 @@ class MemoryCurationMonitorConfigTest {
         // Arrange
         Memory memory = mock(Memory.class);
         MemoryCurationMonitorConfig monitor = new MemoryCurationMonitorConfig(memory);
+        Feedback feedback = mock(Feedback.class);
+        Thought thought = mock(Thought.class);
+        when(feedback.output()).thenReturn(thought);
+        when(feedback.status()).thenReturn(ActionStatus.FAILURE);
+        when(thought.toString()).thenReturn("context retrieval failure");
+
 
         // Act & Assert
         assertFalse(monitor.isContextRetrievalFailure(null));
+        assertTrue(monitor.isContextRetrievalFailure(feedback));
     }
 }

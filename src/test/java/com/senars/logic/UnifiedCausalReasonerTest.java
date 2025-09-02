@@ -6,8 +6,9 @@ import com.senars.db.DatabaseManager;
 import com.senars.events.EventBus;
 import com.senars.systems.Memory;
 import com.senars.systems.immemory.InMemoryMemory;
+import dev.langchain4j.data.message.AiMessage;
 import dev.langchain4j.model.chat.ChatLanguageModel;
-import dev.langchain4j.model.chat.mock.ChatModelMock;
+import dev.langchain4j.model.output.Response;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.MockitoAnnotations;
@@ -25,11 +26,25 @@ class UnifiedCausalReasonerTest {
     private EventBus eventBus;
     private ChatLanguageModel chatModel;
 
+    // A simple mock implementation of ChatLanguageModel for testing purposes.
+    static class MockChatModel implements ChatLanguageModel {
+        private final String response;
+
+        public MockChatModel(String response) {
+            this.response = response;
+        }
+
+        @Override
+        public Response<AiMessage> generate(List<dev.langchain4j.data.message.ChatMessage> messages) {
+            return new Response<>(new AiMessage(response));
+        }
+    }
+
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
         eventBus = new EventBus();
-        chatModel = ChatModelMock.thatAlwaysResponds("[]"); // Default mock response
+        chatModel = new MockChatModel("[]"); // Default mock response
         DatabaseManager dbManager = new DatabaseManager(); // In-memory DB for testing
         memory = new InMemoryMemory(AppConfig.getInstance(), dbManager);
         ucr = new UnifiedCausalReasonerImpl(memory, eventBus, chatModel);

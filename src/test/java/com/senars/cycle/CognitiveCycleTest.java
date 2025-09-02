@@ -14,6 +14,7 @@ import com.senars.optimizer.SchemaOptimizer;
 import com.senars.salience.SalienceCalculator;
 import com.senars.systems.Governor;
 import com.senars.systems.Memory;
+import com.senars.ui.ConsolePrinter;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -57,6 +58,8 @@ class CognitiveCycleTest {
     private MDRService mdrService;
     @Mock
     private GoalOrientedPlanner goalOrientedPlanner;
+    @Mock
+    private ConsolePrinter consolePrinter;
 
     private Attention attentionFunnel;
     private CognitiveCycle cognitiveCycle;
@@ -70,10 +73,10 @@ class CognitiveCycleTest {
         var salienceCalculator = new SalienceCalculator(effortPredictor, memory);
         attentionFunnel = new SalienceAttention(salienceCalculator, motiveHierarchy, eventBus, ucr);
 
-        cognitiveCycle = new CognitiveCycle(
+        CognitiveCycleServices services = new CognitiveCycleServices(
                 perceptionSystem,
                 attentionFunnel,
-                ucr, // Use UCR instead of cognitiveProcessor
+                ucr,
                 actionSystem,
                 memory,
                 governor,
@@ -84,8 +87,10 @@ class CognitiveCycleTest {
                 eventBus,
                 metaCognitiveService,
                 mdrService,
-                goalOrientedPlanner
+                goalOrientedPlanner,
+                consolePrinter
         );
+        cognitiveCycle = new CognitiveCycle(services);
     }
 
     private Thought createTestThought(ThoughtType type, double activation) {

@@ -12,6 +12,7 @@ import com.senars.optimizer.EffortModelOptimizer;
 import com.senars.optimizer.SchemaOptimizer;
 import com.senars.systems.Governor;
 import com.senars.systems.Memory;
+import com.senars.ui.ConsolePrinter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -42,40 +43,27 @@ public class CognitiveCycle {
     private final MetaCognitiveService metaCognitiveService;
     private final MDRService mdrService;
     private final GoalOrientedPlanner goalOrientedPlanner;
+    private final ConsolePrinter consolePrinter;
     private final List<Thought> focusHistory = new ArrayList<>();
     private long cycleCount = 0;
 
 
-    public CognitiveCycle(
-            Perception perception,
-            Attention attention,
-            UnifiedCausalReasoner ucr, // Changed from Cognition to UnifiedCausalReasoner
-            Action action,
-            Memory memory,
-            Governor governor,
-            ActionFeedbackQueue feedbackQueue,
-            SchemaOptimizer schemaOptimizer,
-            EffortModelOptimizer effortOptimizer,
-            EffortTracker effortTracker,
-            EventBus eventBus,
-            MetaCognitiveService metaCognitiveService,
-            MDRService mdrService,
-            GoalOrientedPlanner goalOrientedPlanner
-    ) {
-        this.perception = Objects.requireNonNull(perception);
-        this.attention = Objects.requireNonNull(attention);
-        this.ucr = Objects.requireNonNull(ucr);
-        this.action = Objects.requireNonNull(action);
-        this.memory = Objects.requireNonNull(memory);
-        this.governor = Objects.requireNonNull(governor);
-        this.feedbackQueue = Objects.requireNonNull(feedbackQueue);
-        this.schemaOptimizer = Objects.requireNonNull(schemaOptimizer);
-        this.effortOptimizer = Objects.requireNonNull(effortOptimizer);
-        this.effortTracker = Objects.requireNonNull(effortTracker);
-        this.eventBus = Objects.requireNonNull(eventBus);
-        this.metaCognitiveService = Objects.requireNonNull(metaCognitiveService);
-        this.mdrService = Objects.requireNonNull(mdrService);
-        this.goalOrientedPlanner = Objects.requireNonNull(goalOrientedPlanner);
+    public CognitiveCycle(CognitiveCycleServices services) {
+        this.perception = Objects.requireNonNull(services.perception());
+        this.attention = Objects.requireNonNull(services.attention());
+        this.ucr = Objects.requireNonNull(services.ucr());
+        this.action = Objects.requireNonNull(services.action());
+        this.memory = Objects.requireNonNull(services.memory());
+        this.governor = Objects.requireNonNull(services.governor());
+        this.feedbackQueue = Objects.requireNonNull(services.feedbackQueue());
+        this.schemaOptimizer = Objects.requireNonNull(services.schemaOptimizer());
+        this.effortOptimizer = Objects.requireNonNull(services.effortOptimizer());
+        this.effortTracker = Objects.requireNonNull(services.effortTracker());
+        this.eventBus = Objects.requireNonNull(services.eventBus());
+        this.metaCognitiveService = Objects.requireNonNull(services.metaCognitiveService());
+        this.mdrService = Objects.requireNonNull(services.mdrService());
+        this.goalOrientedPlanner = Objects.requireNonNull(services.goalOrientedPlanner());
+        this.consolePrinter = Objects.requireNonNull(services.consolePrinter());
     }
 
     /**
@@ -85,33 +73,41 @@ public class CognitiveCycle {
     public void step() throws ShutdownException {
         try {
             cycleCount++;
-            runOptimizers();
-            processActionFeedback();
-            runPerception();
+            runPreCycleTasks();
 
-            Optional<Thought> focusThoughtOpt = attention.selectFocusThought();
-
-            if (focusThoughtOpt.isEmpty()) {
-                LOGGER.debug("No focus thought. System is idle. Engaging Goal Oriented Planner.");
-                goalOrientedPlanner.generateNextTask().ifPresent(this::handleNewThought);
-                return; // End cycle step after proactive planning
-            }
-
-            Thought focusThought = detectAndHandleCognitiveLoop(focusThoughtOpt.get())
-                    .orElse(focusThoughtOpt.get());
-
-            LOGGER.trace("Focusing on thought: {} - {}", focusThought.metadata().type(), focusThought.id());
-
-            // Use the UCR for forward reasoning instead of the Cognitive Processor
-            ucr.reason(focusThought, "forward", UnifiedCausalReasoner.ReasoningOptions.defaults())
-                    .forEach(this::handleNewThought);
-
+            attention.selectFocusThought()
+                    .ifPresentOrElse(
+                            this::processFocusThought,
+                            this::handleIdleState
+                    );
         } catch (ShutdownException e) {
             throw e; // Propagate shutdown exception to the main loop
         } catch (Exception e) {
             LOGGER.error("An unexpected error occurred during the cognitive cycle. Creating a meta-goal to analyze it.", e);
             handleSystemError(e);
         }
+    }
+
+    private void runPreCycleTasks() throws ShutdownException {
+        runOptimizers();
+        processActionFeedback();
+        runPerception();
+    }
+
+    private void processFocusThought(Thought thought) {
+        Thought focusThought = detectAndHandleCognitiveLoop(thought)
+                .orElse(thought);
+
+        LOGGER.trace("Focusing on thought: {} - {}", focusThought.metadata().type(), focusThought.id());
+
+        // Use the UCR for forward reasoning instead of the Cognitive Processor
+        ucr.reason(focusThought, "forward", UnifiedCausalReasoner.ReasoningOptions.defaults())
+                .forEach(this::handleNewThought);
+    }
+
+    private void handleIdleState() {
+        LOGGER.debug("No focus thought. System is idle. Engaging Goal Oriented Planner.");
+        goalOrientedPlanner.generateNextTask().ifPresent(this::handleNewThought);
     }
 
     private void handleSystemError(Exception e) {
@@ -144,7 +140,7 @@ public class CognitiveCycle {
             if (type == ThoughtType.REPORT) {
                 isCausalExplanationReport(thought).ifPresent(isExplanation -> {
                     if (isExplanation) {
-                        printExplanation(thought);
+                        consolePrinter.printExplanation(thought);
                     }
                 });
             }
@@ -164,7 +160,13 @@ public class CognitiveCycle {
             if (hasPotentialIssues) {
                 LOGGER.warn("Predictive grounding simulation detected potential issues with action plan: {}", thought.id());
                 // Create a replan goal to address the potential issues
-                createReplanGoalForSimulation(thought, simulations);
+                StringBuilder issuesText = new StringBuilder("due to potential issues detected in simulation: ");
+                for (Thought simulation : simulations) {
+                    if (simulation.state().clarity() < 0.7) {
+                        issuesText.append(simulation.content().text()).append(" ");
+                    }
+                }
+                createReplanGoal(thought, issuesText.toString().trim());
                 return;
             }
 
@@ -174,7 +176,7 @@ public class CognitiveCycle {
                 String reason = vetoReason.get();
                 LOGGER.warn("ACTION vetoed: {}", reason);
                 eventBus.publish(new Events.ActionPlanVetoedEvent(thought, reason));
-                createReplanGoal(thought, reason);
+                createReplanGoal(thought, "due to safety violation: " + reason);
             } else {
                 LOGGER.info("ACTION approved. Executing...");
                 eventBus.publish(new Events.ActionPlanApprovedEvent(thought));
@@ -185,33 +187,6 @@ public class CognitiveCycle {
         } catch (Exception e) {
             LOGGER.error("Error during action plan review or execution for thought: {}", thought.id(), e);
         }
-    }
-
-    private void createReplanGoalForSimulation(Thought problematicPlan, List<Thought> simulations) {
-        StringBuilder issuesText = new StringBuilder();
-        for (Thought simulation : simulations) {
-            if (simulation.state().clarity() < 0.7) {
-                issuesText.append(simulation.content().text()).append("\n");
-            }
-        }
-
-        String newId = UUID.randomUUID().toString();
-        Thought replanGoal = new Thought(
-                newId,
-                new ThoughtContent(
-                        "Reformulate plan " + problematicPlan.id() + " due to potential issues detected in simulation: " + issuesText,
-                        null, null, null, null, null, null
-                ),
-                new ThoughtState(1.0, 100.0, 1.0), // High clarity, salience, and activation
-                new ThoughtMeta(
-                        ThoughtType.GOAL,
-                        ThoughtOrigin.SYSTEM,
-                        List.of(problematicPlan.id()),
-                        Instant.now()
-                )
-        );
-        LOGGER.info("Created replan goal for simulation issues: {}", replanGoal.id());
-        handleNewThought(replanGoal); // Use handleNewThought to ensure it's saved and added to attention
     }
 
     private void processActionFeedback() {
@@ -235,48 +210,23 @@ public class CognitiveCycle {
                 .map(originatingThought -> originatingThought.metadata().type() == ThoughtType.EXPLAIN);
     }
 
-    private void printExplanation(Thought report) {
-        String border = "=======================================================================";
-        String header = "🤖 S E N A R S :   E X P L A N A T I O N";
-        System.out.println();
-        System.out.println(border);
-        System.out.println(header);
-        System.out.println(border);
-        System.out.println();
-        // Simple word wrap for the explanation text
-        String[] words = report.content().text().split(" ");
-        StringBuilder line = new StringBuilder();
-        for (String word : words) {
-            if (line.length() + word.length() + 1 > border.length()) {
-                System.out.println(line);
-                line = new StringBuilder();
-            }
-            line.append(word).append(" ");
-        }
-        System.out.println(line); // Print the last line
-        System.out.println();
-        System.out.println(border);
-        System.out.println();
-        System.out.print("> "); // Re-print the prompt
-    }
-
-    private void createReplanGoal(Thought vetoedPlan, String reason) {
+    private void createReplanGoal(Thought problematicPlan, String reason) {
         String newId = UUID.randomUUID().toString();
         Thought replanGoal = new Thought(
                 newId,
                 new ThoughtContent(
-                        "Reformulate plan " + vetoedPlan.id() + " due to safety violation: " + reason,
+                        "Reformulate plan " + problematicPlan.id() + " " + reason,
                         null, null, null, null, null, null
                 ),
                 new ThoughtState(1.0, 100.0, 1.0), // High clarity, salience, and activation
                 new ThoughtMeta(
                         ThoughtType.GOAL,
                         ThoughtOrigin.SYSTEM,
-                        List.of(vetoedPlan.id()),
+                        List.of(problematicPlan.id()),
                         Instant.now()
                 )
         );
-        LOGGER.info("Created replan goal: {}", replanGoal.id());
+        LOGGER.info("Created replan goal for plan {}: {}", problematicPlan.id(), reason);
         handleNewThought(replanGoal); // Use handleNewThought to ensure it's saved and added to attention
     }
 
