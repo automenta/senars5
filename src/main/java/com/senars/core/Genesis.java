@@ -9,6 +9,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -90,6 +91,25 @@ public class Genesis {
      */
     public static List<Thought> loadSchemasFromFile(String resourcePath, EmbeddingModel embeddingModel) {
         return loadKnowledgeFromFile(resourcePath, embeddingModel); // Re-use the same logic
+    }
+
+    /**
+     * Loads the constitutional principles from the 'constitution.txt' resource file.
+     *
+     * @return The content of the constitution file as a String.
+     */
+    public static String loadConstitution() {
+        String resourcePath = "constitution.txt";
+        try (InputStream inputStream = Genesis.class.getClassLoader().getResourceAsStream(resourcePath)) {
+            if (inputStream == null) {
+                LOGGER.error("Genesis resource file not found: {}", resourcePath);
+                throw new IllegalStateException("Constitution file not found at " + resourcePath);
+            }
+            return new String(inputStream.readAllBytes(), StandardCharsets.UTF_8);
+        } catch (Exception e) {
+            LOGGER.error("Failed to load constitution from {}", resourcePath, e);
+            throw new IllegalStateException("Failed to load constitution from " + resourcePath, e);
+        }
     }
 
 

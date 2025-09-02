@@ -30,7 +30,7 @@ public class CompositePerception implements Perception {
      * @return A single list containing all thoughts perceived from all channels in this cycle.
      */
     @Override
-    public List<Thought> perceive() {
+    public List<Thought> perceive() throws ShutdownException {
         List<Thought> allPerceivedThoughts = new ArrayList<>();
         for (PerceptionChannel channel : channels) {
             try {
@@ -38,9 +38,11 @@ public class CompositePerception implements Perception {
                 if (perceivedThoughts != null && !perceivedThoughts.isEmpty()) {
                     allPerceivedThoughts.addAll(perceivedThoughts);
                 }
+            } catch (ShutdownException e) {
+                // Re-throw the shutdown exception to signal the main loop to terminate
+                throw e;
             } catch (Exception e) {
-                // Log the exception but continue processing other channels
-                // In a real system, you'd use a proper logger.
+                // Log other exceptions but continue processing other channels
                 System.err.println("Error perceiving from channel " + channel.getClass().getSimpleName() + ": " + e.getMessage());
             }
         }

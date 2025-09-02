@@ -89,7 +89,7 @@ class CognitiveCycleTest {
     }
 
     @Test
-    void step_processesMostSalientThought() {
+    void step_processesMostSalientThought() throws ShutdownException {
         Thought lowSalienceThought = createTestThought(ThoughtType.BELIEF, 0.1); // Low activation
         Thought highSalienceThought = createTestThought(ThoughtType.BELIEF, 1.0); // High activation
         Thought newThought = createTestThought(ThoughtType.REPORT, 0.5);
@@ -109,7 +109,7 @@ class CognitiveCycleTest {
     }
 
     @Test
-    void step_handlesActionPlanApprovalAndExecution() {
+    void step_handlesActionPlanApprovalAndExecution() throws ShutdownException {
         Thought goal = createTestThought(ThoughtType.GOAL, 1.0);
         Thought actionPlan = createTestThought(ThoughtType.ACTION, 0.9);
 
@@ -129,7 +129,7 @@ class CognitiveCycleTest {
     }
 
     @Test
-    void step_handlesActionPlanVetoAndCreatesReplanGoal() {
+    void step_handlesActionPlanVetoAndCreatesReplanGoal() throws ShutdownException {
         Thought goal = createTestThought(ThoughtType.GOAL, 1.0);
         Thought actionPlan = createTestThought(ThoughtType.ACTION, 0.9);
         String vetoReason = "This is unsafe!";
@@ -149,7 +149,7 @@ class CognitiveCycleTest {
     }
 
     @Test
-    void step_perceivesAndProcessesThoughtInSameCycle() {
+    void step_perceivesAndProcessesThoughtInSameCycle() throws ShutdownException {
         Thought perceivedThought = createTestThought(ThoughtType.BELIEF, 0.8);
 
         // On the FIRST call, perceive a thought. On subsequent calls, perceive nothing.
@@ -167,7 +167,7 @@ class CognitiveCycleTest {
     }
 
     @Test
-    void step_handlesFeedbackReportAndCallsGroundingSystem() {
+    void step_handlesFeedbackReportAndCallsGroundingSystem() throws ShutdownException {
         Thought actionPlan = new Thought(
                 "action-1",
                 new ThoughtContent("Do something", null, null, null, null, null, null),

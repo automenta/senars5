@@ -70,9 +70,10 @@ public class CognitiveCycle {
     }
 
     /**
-     * Executes a single step of the cognitive cycle with robust error handling.
+     * Executes a single step of the cognitive cycle.
+     * @throws ShutdownException if a shutdown is commanded through a perception channel.
      */
-    public void step() {
+    public void step() throws ShutdownException {
         try {
             cycleCount++;
             runOptimizers();
@@ -90,12 +91,14 @@ public class CognitiveCycle {
 
             LOGGER.info("Focusing on thought: {} - {}", focusThought.metadata().type(), focusThought.id());
 
-
             List<Thought> newThoughts = cognition.process(focusThought);
             newThoughts.forEach(this::handleNewThought);
 
+        } catch (ShutdownException e) {
+            throw e; // Propagate shutdown exception to the main loop
         } catch (Exception e) {
             LOGGER.error("An unexpected error occurred during the cognitive cycle.", e);
+            // In a more robust system, this might trigger a meta-cognitive goal to analyze the failure.
         }
     }
 
@@ -187,7 +190,7 @@ public class CognitiveCycle {
         handleNewThought(replanGoal); // Use handleNewThought to ensure it's saved and added to attention
     }
 
-    private void runPerception() {
+    private void runPerception() throws ShutdownException {
         List<Thought> perceivedThoughts = perception.perceive();
         if (!perceivedThoughts.isEmpty()) {
             LOGGER.info("Perceived {} new thoughts from external sources.", perceivedThoughts.size());

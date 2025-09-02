@@ -2,6 +2,7 @@ package com.senars.systems.immemory;
 
 import com.senars.core.*;
 import com.senars.cycle.PerceptionChannel;
+import com.senars.cycle.ShutdownException;
 import dev.langchain4j.data.embedding.Embedding;
 import dev.langchain4j.model.embedding.EmbeddingModel;
 import org.slf4j.Logger;
@@ -28,7 +29,7 @@ public class ConsolePerception implements PerceptionChannel {
     }
 
     @Override
-    public List<Thought> perceive() {
+    public List<Thought> perceive() throws ShutdownException {
         List<Thought> newThoughts = new ArrayList<>();
 
         // Poll for console input (non-blocking)
@@ -63,16 +64,16 @@ public class ConsolePerception implements PerceptionChannel {
         return newThoughts;
     }
 
-    private boolean handleSpecialCommands(String input) {
+    private boolean handleSpecialCommands(String input) throws ShutdownException {
         String command = input.toLowerCase();
-        return switch (command) {
-            case "shutdown", "exit" -> throw new ShutdownException();
-            case "help" -> {
-                printHelp();
-                yield true;
-            }
-            default -> false;
-        };
+        if (command.equals("shutdown") || command.equals("exit")) {
+            throw new ShutdownException("Shutdown command received from console.");
+        }
+        if (command.equals("help")) {
+            printHelp();
+            return true;
+        }
+        return false;
     }
 
     private void printHelp() {

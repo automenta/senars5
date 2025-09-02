@@ -15,6 +15,7 @@ public interface PerceptionChannel {
      * Perceives new information from the specific channel and translates it into a list of Thoughts.
      *
      * @return A list of new Thought objects. The list can be empty if no new information is perceived.
+     * @throws ShutdownException if a shutdown command is detected from the perception source.
      */
-    List<Thought> perceive();
+    List<Thought> perceive() throws ShutdownException;
 }
