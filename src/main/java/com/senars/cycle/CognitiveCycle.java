@@ -4,6 +4,8 @@ import com.senars.core.*;
 import com.senars.effort.EffortTracker;
 import com.senars.events.EventBus;
 import com.senars.events.Events;
+import com.senars.logic.GoalOrientedPlanner;
+import com.senars.logic.MetaCognitiveService;
 import com.senars.logic.UnifiedCausalReasoner;
 import com.senars.optimizer.EffortModelOptimizer;
 import com.senars.optimizer.SchemaOptimizer;
@@ -38,7 +40,9 @@ public class CognitiveCycle {
     private final EffortModelOptimizer effortOptimizer;
     private final EffortTracker effortTracker;
     private final EventBus eventBus;
-    private final List<String> focusHistory = new ArrayList<>();
+    private final MetaCognitiveService metaCognitiveService;
+    private final GoalOrientedPlanner goalOrientedPlanner;
+    private final List<Thought> focusHistory = new ArrayList<>();
     private long cycleCount = 0;
 
 
@@ -53,7 +57,9 @@ public class CognitiveCycle {
             SchemaOptimizer schemaOptimizer,
             EffortModelOptimizer effortOptimizer,
             EffortTracker effortTracker,
-            EventBus eventBus
+            EventBus eventBus,
+            MetaCognitiveService metaCognitiveService,
+            GoalOrientedPlanner goalOrientedPlanner
     ) {
         this.perception = Objects.requireNonNull(perception);
         this.attention = Objects.requireNonNull(attention);
@@ -66,6 +72,8 @@ public class CognitiveCycle {
         this.effortOptimizer = Objects.requireNonNull(effortOptimizer);
         this.effortTracker = Objects.requireNonNull(effortTracker);
         this.eventBus = Objects.requireNonNull(eventBus);
+        this.metaCognitiveService = Objects.requireNonNull(metaCognitiveService);
+        this.goalOrientedPlanner = Objects.requireNonNull(goalOrientedPlanner);
     }
 
     /**
@@ -80,9 +88,11 @@ public class CognitiveCycle {
             runPerception();
 
             Optional<Thought> focusThoughtOpt = attention.selectFocusThought();
+
             if (focusThoughtOpt.isEmpty()) {
-                LOGGER.debug("No focus thought. System is idle.");
-                return;
+                LOGGER.debug("No focus thought. System is idle. Engaging Goal Oriented Planner.");
+                goalOrientedPlanner.generateNextTask().ifPresent(this::handleNewThought);
+                return; // End cycle step after proactive planning
             }
 
             Thought focusThought = detectAndHandleCognitiveLoop(focusThoughtOpt.get())
@@ -103,26 +113,11 @@ public class CognitiveCycle {
     }
 
     private void handleSystemError(Exception e) {
-        StringWriter sw = new StringWriter();
-        e.printStackTrace(new PrintWriter(sw));
-        String stackTrace = sw.toString();
-
-        String errorDetails = String.format("Error: %s\nStackTrace (first 500 chars):\n%s", e.getMessage(), stackTrace.substring(0, Math.min(500, stackTrace.length())));
-
-        String goalText = "A critical system error occurred. Analyze the following error details and formulate a recovery plan. " + errorDetails;
-
-        Thought errorGoal = new Thought(
-                UUID.randomUUID().toString(),
-                new ThoughtContent(goalText, "system_error_analysis", null, null, null, null, null),
-                new ThoughtState(1.0, 999.0, 1.0), // Max salience to ensure it's handled next
-                new ThoughtMeta(
-                        ThoughtType.GOAL,
-                        ThoughtOrigin.SYSTEM,
-                        Collections.emptyList(),
-                        Instant.now()
-                )
-        );
-        handleNewThought(errorGoal);
+        // Delegate error analysis to the MetaCognitiveService
+        Thought recoveryGoal = metaCognitiveService.analyzeSystemError(e).join();
+        if (recoveryGoal != null) {
+            handleNewThought(recoveryGoal);
+        }
     }
 
     private void handleNewThought(Thought thought) {
@@ -321,7 +316,7 @@ public class CognitiveCycle {
 
     private Optional<Thought> detectAndHandleCognitiveLoop(Thought currentFocus) {
         // Add current thought to history and maintain window size
-        focusHistory.add(currentFocus.id());
+        focusHistory.add(currentFocus);
         if (focusHistory.size() > FOCUS_HISTORY_WINDOW) {
             focusHistory.removeFirst();
         }
@@ -331,40 +326,22 @@ public class CognitiveCycle {
         }
 
         // Heuristic: Count unique thoughts in the history window
-        long uniqueThoughts = focusHistory.stream().distinct().count();
-        double repetitionRate = 1.0 - ((double) uniqueThoughts / FOCUS_HISTORY_WINDOW);
+        long uniqueThoughtIds = focusHistory.stream().map(Thought::id).distinct().count();
+        double repetitionRate = 1.0 - ((double) uniqueThoughtIds / FOCUS_HISTORY_WINDOW);
 
         if (repetitionRate > FOCUS_HISTORY_REPETITION_THRESHOLD) {
             LOGGER.warn("Cognitive loop/stall detected! Repetition rate: {}%. Intervening.", String.format("%.0f", repetitionRate * 100));
 
-            // Create a meta-cognition goal to break the loop
-            Thought metaGoal = createMetaCognitionGoal(focusHistory);
-            handleNewThought(metaGoal); // Save and add to attention
-            LOGGER.info("Overriding focus to meta-cognition goal {}", metaGoal.id());
-            return Optional.of(metaGoal); // Override the current focus thought
+            // Delegate loop analysis to the MetaCognitiveService
+            Thought metaGoal = metaCognitiveService.analyzeCognitiveStall(new ArrayList<>(focusHistory)).join();
+
+            if (metaGoal != null) {
+                handleNewThought(metaGoal); // Save and add to attention
+                LOGGER.info("Overriding focus to meta-cognition goal {}", metaGoal.id());
+                return Optional.of(metaGoal); // Override the current focus thought
+            }
         }
 
         return Optional.empty();
-    }
-
-    private Thought createMetaCognitionGoal(List<String> focusHistory) {
-        String history = String.join(", ", focusHistory);
-        String goalText = String.format(
-                "The system seems to be in a cognitive loop or stall. Analyze the recent focus history and formulate a new plan to break the loop. History: [%s]",
-                history
-        );
-
-        ThoughtContent content = new ThoughtContent(goalText, "system_unstuck", null, null, null, null, null);
-        ThoughtMeta meta = new ThoughtMeta(
-                ThoughtType.GOAL,
-                ThoughtOrigin.SYSTEM,
-                Collections.emptyList(), // This is a root-level intervention
-                Instant.now()
-        );
-
-        return new Thought(UUID.randomUUID().toString(), content,
-            // Extremely high salience to ensure it's the absolute next focus
-            new ThoughtState(1.0, 999.0, 1.0),
-        meta);
     }
 }

@@ -13,8 +13,12 @@ import com.senars.events.LoggingEventSubscriber;
 import com.senars.explain.CausalExplanationGenerator;
 import com.senars.explain.Explain;
 import com.senars.explain.ExplanationGenerator;
+import com.senars.lm.PromptBuilder;
 import com.senars.lm.ToolKit;
 import com.senars.logic.LogicEngine;
+import com.senars.logic.MetaCognitiveService;
+import com.senars.logic.GoalOrientedPlanner;
+import com.senars.systems.GoalGraph;
 import com.senars.logic.UCRFactory;
 import com.senars.logic.UnifiedCausalReasoner;
 import com.senars.motive.MotiveHierarchy;
@@ -177,6 +181,10 @@ public class SystemFactory {
 
         // 7. The Cognitive Cycle itself
         ActionFeedbackQueue feedbackQueue = new ActionFeedbackQueue();
+        MetaCognitiveService metaCognitiveService = new MetaCognitiveService(chatModel);
+        GoalGraph goalGraph = new GoalGraph(dbManager);
+        GoalOrientedPlanner goalOrientedPlanner = new GoalOrientedPlanner(goalGraph, ucr);
+
         this.cognitiveCycle = new CognitiveCycle(
                 perception,
                 attention,
@@ -188,10 +196,13 @@ public class SystemFactory {
                 schemaOptimizer,
                 effortOptimizer,
                 effortTracker,
-                eventBus
+                eventBus,
+                metaCognitiveService,
+                goalOrientedPlanner
         );
 
         // 8. Event Bus Subscriptions
+        PromptBuilder promptBuilder = new PromptBuilder();
         ExplanationGenerator explanationGenerator = new ExplanationGenerator(eventBus);
         CausalExplanationGenerator causalExplanationGenerator = new CausalExplanationGenerator(eventBus, memory, ucr);
         eventBus.subscribe(Events.NewThoughtCreatedEvent.class, cognitiveCycle::onNewThoughtCreated);

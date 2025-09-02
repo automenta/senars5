@@ -4,6 +4,8 @@ import com.senars.core.*;
 import com.senars.effort.EffortPredictor;
 import com.senars.effort.EffortTracker;
 import com.senars.events.EventBus;
+import com.senars.logic.GoalOrientedPlanner;
+import com.senars.logic.MetaCognitiveService;
 import com.senars.logic.UnifiedCausalReasoner;
 import com.senars.motive.MotiveHierarchy;
 import com.senars.optimizer.EffortModelOptimizer;
@@ -48,6 +50,10 @@ class CognitiveCycleTest {
     private EffortTracker effortTracker;
     @Mock
     private ActionFeedbackQueue feedbackQueue;
+    @Mock
+    private MetaCognitiveService metaCognitiveService;
+    @Mock
+    private GoalOrientedPlanner goalOrientedPlanner;
 
     private Attention attentionFunnel;
     private CognitiveCycle cognitiveCycle;
@@ -72,7 +78,9 @@ class CognitiveCycleTest {
                 schemaOptimizer,
                 effortOptimizer,
                 effortTracker,
-                eventBus
+                eventBus,
+                metaCognitiveService,
+                goalOrientedPlanner
         );
     }
 
@@ -180,5 +188,24 @@ class CognitiveCycleTest {
         // Ensure feedback is not added to the attention funnel
         // We can check if the funnel is empty or check its size before and after.
         // For this test, we can assume if ucr was called, it wasn't funneled.
+    }
+
+    @Test
+    void step_callsGoalPlannerWhenIdle() throws ShutdownException {
+        // Arrange
+        Thought proactiveTask = createTestThought(ThoughtType.ACTION, 0.9);
+        // Ensure the attention funnel is empty
+        when(goalOrientedPlanner.generateNextTask()).thenReturn(Optional.of(proactiveTask));
+
+        // Act
+        cognitiveCycle.step();
+
+        // Assert
+        // Verify that the planner was called because the system was idle
+        verify(goalOrientedPlanner).generateNextTask();
+        // Verify that the new proactive task was saved to memory and added to the attention funnel
+        verify(memory).saveThought(proactiveTask);
+        // You could also assert that the attention funnel now contains the proactive task,
+        // but verifying the saveThought is a strong indicator.
     }
 }

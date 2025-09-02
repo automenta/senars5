@@ -7,5 +7,7 @@ public enum ThoughtOrigin {
     USER,
     SYSTEM,
     UCR_FORWARD,
-    UCR_BACKWARD
+    UCR_BACKWARD,
+    META_COGNITION,
+    SYSTEM_PLANNER
 }

@@ -309,7 +309,7 @@ public class UnifiedCausalReasonerImpl implements UnifiedCausalReasoner {
                 focusThought.content().text()
         );
 
-        String response = chatModel.generate(UserMessage.from(prompt));
+        String response = chatModel.generate(UserMessage.from(prompt)).content().text();
 
         List<Thought> actionThoughts = new ArrayList<>();
         try {
