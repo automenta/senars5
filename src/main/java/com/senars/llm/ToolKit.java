@@ -1,6 +1,8 @@
 package com.senars.llm;
 
 import com.google.gson.Gson;
+import com.senars.tools.CodeExecutionTool;
+import com.senars.tools.FileSystemTools;
 import com.senars.tools.SearchTools;
 import com.senars.tools.WebTools;
 import dev.langchain4j.agent.tool.ToolExecutionRequest;
@@ -22,7 +24,12 @@ public class ToolKit {
     private final Gson gson = new Gson();
 
     public ToolKit() {
-        this.tools = Arrays.asList(new SearchTools(), new WebTools());
+        this.tools = Arrays.asList(
+                new SearchTools(),
+                new WebTools(),
+                new FileSystemTools(),
+                new CodeExecutionTool()
+        );
     }
 
     /**

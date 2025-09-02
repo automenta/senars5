@@ -1,7 +1,6 @@
 package com.senars.systems.immemory;
 
 import com.senars.core.*;
-import com.senars.cycle.ActionFeedbackQueue;
 import com.senars.cycle.Perception;
 import dev.langchain4j.data.embedding.Embedding;
 import dev.langchain4j.model.embedding.EmbeddingModel;
@@ -17,7 +16,7 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
- * An implementation of the IPerceptionSystem that reads user input from the console.
+ * An implementation of the Perception system that reads user input from the console.
  * It parses the input to create different types of Thoughts and generates embeddings for them.
  */
 public class ConsolePerception implements Perception {
@@ -29,19 +28,14 @@ public class ConsolePerception implements Perception {
     public ConsolePerception(EmbeddingModel embeddingModel) {
         this.embeddingModel = embeddingModel;
         this.scanner = new Scanner(System.in);
+        System.out.print("> "); // Initial prompt
     }
 
     @Override
-    public List<Thought> perceive(ActionFeedbackQueue feedbackQueue) {
+    public List<Thought> perceive() {
         List<Thought> newThoughts = new ArrayList<>();
 
-        // 1. Poll for action feedback
-        Thought feedbackThought = feedbackQueue.poll();
-        if (feedbackThought != null) {
-            newThoughts.add(feedbackThought);
-        }
-
-        // 2. Poll for console input (non-blocking)
+        // Poll for console input (non-blocking)
         try {
             if (System.in.available() > 0 && scanner.hasNextLine()) {
                 String input = scanner.nextLine().trim();
@@ -57,8 +51,6 @@ public class ConsolePerception implements Perception {
                     newThoughts.add(createBelief(input.substring(7).trim()));
                 } else if (input.toLowerCase().startsWith("question:")) {
                     newThoughts.add(createQuestion(input.substring(9).trim()));
-                } else if (input.toLowerCase().startsWith("feedback:")) {
-                    newThoughts.add(createFeedbackReport(input.substring(9).trim()));
                 } else if (input.toLowerCase().startsWith("why")) {
                     newThoughts.add(createExplanationRequest(input));
                 } else if (!input.isEmpty()) {
@@ -93,7 +85,6 @@ public class ConsolePerception implements Perception {
         System.out.println("  goal: <your goal>       - Create a new goal for the system.");
         System.out.println("  belief: <a fact>        - Add a new belief to the system's memory.");
         System.out.println("  question: <your query>  - Ask a question.");
-        System.out.println("  feedback: <0.0-1.0>     - Provide a score for the last action's outcome.");
         System.out.println("\nIf you don't provide a prefix, the input will be treated as a belief.");
         System.out.println("\nSpecial Commands:");
         System.out.println("  why                     - Explain the reasoning for the last action.");
@@ -145,27 +136,5 @@ public class ConsolePerception implements Perception {
         ThoughtMeta metadata = new ThoughtMeta(type, ThoughtOrigin.USER, Collections.emptyList(), java.time.Instant.now());
         ThoughtState state = new ThoughtState(0.9, 1.0, 1.0); // High clarity/salience for user input
         return new Thought(UUID.randomUUID().toString(), content, state, metadata);
-    }
-
-    private Thought createFeedbackReport(String feedbackInput) {
-        try {
-            double score = Double.parseDouble(feedbackInput);
-            score = Math.max(0.0, Math.min(1.0, score)); // Clamp score to [0, 1]
-
-            Feedback feedback = new Feedback(score, "User console feedback.");
-            ThoughtContent content = new ThoughtContent(
-                    "User feedback report. Score: " + score,
-                    null, null, null, null, feedback, null);
-
-            // Note: The trace for this feedback will need to be added by the component that manages the session,
-            // as the perception system itself doesn't know which action this feedback is for.
-            ThoughtMeta metadata = new ThoughtMeta(ThoughtType.REPORT, ThoughtOrigin.USER, Collections.emptyList(), java.time.Instant.now());
-            ThoughtState state = new ThoughtState(1.0, 1.0, 1.0); // Feedback is always high clarity
-            return new Thought(UUID.randomUUID().toString(), content, state, metadata);
-        } catch (NumberFormatException e) {
-            LOGGER.error("Invalid feedback score format: '{}'. Must be a number.", feedbackInput);
-            // Return a special error thought or null/empty
-            return createBelief("Error: Could not parse feedback score '" + feedbackInput + "'");
-        }
     }
 }

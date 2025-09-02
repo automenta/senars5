@@ -1,121 +1,124 @@
 package com.senars.optimizer;
 
 import com.senars.core.*;
+import com.senars.events.Events;
 import com.senars.systems.Memory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.senars.events.EventBus;
-import com.senars.events.Events;
-
 import java.time.Instant;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 /**
- * Analyzes the performance of schemas and generates goals to optimize them.
+ * Analyzes the performance of schemas and generates goals to optimize them based on execution time.
  */
 public class SchemaOptimizer {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(SchemaOptimizer.class);
-    private static final int MIN_USES_THRESHOLD = 10;
-    private static final double FAULTY_CLARITY_THRESHOLD = 0.5;
+    private static final int MIN_SAMPLES_THRESHOLD = 5;
+    private static final long EXECUTION_TIME_THRESHOLD_MS = 2000;
     public static final String REWRITE_SCHEMA_SYMBOLIC = "senars:rewrite_schema";
-    private final EventBus eventBus;
 
-    public SchemaOptimizer(EventBus eventBus) {
-        this.eventBus = eventBus;
+    private final Memory memory;
+    private final Map<String, List<Long>> schemaPerformanceData = new ConcurrentHashMap<>();
+
+    public SchemaOptimizer(Memory memory) {
+        this.memory = memory;
     }
 
-
     /**
-     * A helper record to store performance metrics for a single schema.
+     * Event handler for when an action has been successfully executed.
+     * Collects performance data for the schema that led to the action.
+     * @param event The event containing the feedback from the action.
      */
-    private record SchemaPerformance(String schemaId, int uses, double totalClarity) {
-        public double getAverageClarity() {
-            return uses > 0 ? totalClarity / uses : 0;
+    public void onActionExecuted(Events.ActionExecutedEvent event) {
+        Feedback feedback = event.feedback();
+        if (feedback.status() != ActionStatus.SUCCESS) {
+            return;
         }
+
+        Thought actionPlan = feedback.actionPlan();
+        if (actionPlan == null || actionPlan.metadata() == null || actionPlan.metadata().trace() == null) {
+            return;
+        }
+
+        // Find the schema ID in the trace and log the performance
+        actionPlan.metadata().trace().stream()
+                .map(memory::getThoughtById)
+                .filter(Optional::isPresent)
+                .map(Optional::get)
+                .filter(thought -> thought.metadata().type() == ThoughtType.SCHEMA)
+                .findFirst()
+                .ifPresent(schema -> {
+                    LOGGER.debug("Logging execution time for schema {}: {}ms", schema.id(), feedback.executionTimeMs());
+                    schemaPerformanceData.computeIfAbsent(schema.id(), k -> new ArrayList<>())
+                            .add(feedback.executionTimeMs());
+                });
     }
 
     /**
-     * Runs the schema optimization process.
-     *
-     * @param memory The memory to analyze.
+     * Runs the schema optimization process based on collected performance data.
+     * This method is intended to be called periodically by the CognitiveCycle.
      * @return A list of new GOAL thoughts for schemas that need optimization.
      */
-    public List<Thought> run(Memory memory) {
-        LOGGER.info("Running schema optimizer...");
-        List<Thought> allThoughts = memory.getAllThoughts();
-        Map<String, SchemaPerformance> performanceMap = analyze(allThoughts);
-
+    public List<Thought> run() {
+        LOGGER.debug("Running schema optimizer on collected performance data...");
         List<Thought> optimizationGoals = new ArrayList<>();
-        for (SchemaPerformance performance : performanceMap.values()) {
-            if (performance.uses() >= MIN_USES_THRESHOLD && performance.getAverageClarity() < FAULTY_CLARITY_THRESHOLD) {
-                LOGGER.warn("Schema {} is underperforming with average clarity of {} after {} uses. Generating optimization goal.",
-                        performance.schemaId(), String.format("%.2f", performance.getAverageClarity()), performance.uses());
 
-                memory.getThoughtById(performance.schemaId()).ifPresent(schemaThought -> {
-                    Thought goal = createOptimizationGoal(schemaThought, performance.getAverageClarity());
+        for (Map.Entry<String, List<Long>> entry : schemaPerformanceData.entrySet()) {
+            String schemaId = entry.getKey();
+            List<Long> times = entry.getValue();
+
+            if (times.size() < MIN_SAMPLES_THRESHOLD) {
+                continue;
+            }
+
+            OptionalDouble averageTimeOpt = times.stream().mapToLong(Long::longValue).average();
+            if (averageTimeOpt.isEmpty()) {
+                continue;
+            }
+            double averageTime = averageTimeOpt.getAsDouble();
+
+            if (averageTime > EXECUTION_TIME_THRESHOLD_MS) {
+                LOGGER.warn("Schema {} is underperforming with average execution time of {}ms after {} uses. Generating optimization goal.",
+                        schemaId, String.format("%.2f", averageTime), times.size());
+
+                memory.getThoughtById(schemaId).ifPresent(schemaThought -> {
+                    Thought goal = createOptimizationGoal(schemaThought, averageTime);
                     optimizationGoals.add(goal);
-                    eventBus.publish(new Events.SchemaOptimizationGoalCreatedEvent(goal));
                 });
             }
+        }
+
+        if (!optimizationGoals.isEmpty()) {
+            schemaPerformanceData.clear();
         }
         return optimizationGoals;
     }
 
-    private Map<String, SchemaPerformance> analyze(List<Thought> allThoughts) {
-        Map<String, SchemaPerformance> performanceMap = new HashMap<>();
-        // Initialize map with all schemas
-        for (Thought thought : allThoughts) {
-            if (thought.metadata().type() == ThoughtType.SCHEMA) {
-                performanceMap.put(thought.id(), new SchemaPerformance(thought.id(), 0, 0.0));
-            }
-        }
 
-        // Aggregate performance data from belief and report thoughts
-        for (Thought thought : allThoughts) {
-            if ((thought.metadata().type() == ThoughtType.BELIEF || thought.metadata().type() == ThoughtType.REPORT)
-                    && thought.metadata().trace() != null) {
-                for (String parentId : thought.metadata().trace()) {
-                    // We are interested in the schema that was used to generate this thought.
-                    // This requires a more robust way to identify the schema in the trace.
-                    // For now, we assume any schema in the trace is a contributor.
-                    if (performanceMap.containsKey(parentId)) {
-                        SchemaPerformance current = performanceMap.get(parentId);
-                        SchemaPerformance updated = new SchemaPerformance(
-                                parentId,
-                                current.uses() + 1,
-                                current.totalClarity() + thought.state().clarity()
-                        );
-                        performanceMap.put(parentId, updated);
-                    }
-                }
-            }
-        }
-        return performanceMap;
-    }
-
-    private Thought createOptimizationGoal(Thought faultySchema, double avgClarity) {
-        String goalText = "The schema '" + faultySchema.content().text() + "' is performing poorly. " +
-                "Its average output clarity is " + String.format("%.2f", avgClarity) + ". " +
-                "Analyze its procedural content (prompt) and generate a new, improved version of the schema.";
+    private Thought createOptimizationGoal(Thought inefficientSchema, double avgTime) {
+        String goalText = String.format(
+                "The schema '%s' is inefficient. Its average execution time is %.0f ms. Analyze its procedural content (prompt) and generate a new, more efficient version.",
+                inefficientSchema.content().text(),
+                avgTime
+        );
 
         ThoughtContent content = new ThoughtContent(
                 goalText,
-                REWRITE_SCHEMA_SYMBOLIC, // Symbolic marker for the cognition engine
-                null, // embedding
-                null, // perceptual
-                faultySchema.content().procedural(), // Pass the faulty procedural content for context
-                null, // feedback
-                null  // rules
+                REWRITE_SCHEMA_SYMBOLIC,
+                null, null,
+                inefficientSchema.content().procedural(),
+                null, null
         );
         ThoughtMeta meta = new ThoughtMeta(
                 ThoughtType.GOAL,
                 ThoughtOrigin.SYSTEM,
-                List.of(faultySchema.id()), // Trace back to the faulty schema
+                List.of(inefficientSchema.id()),
                 Instant.now()
         );
-        // High salience to ensure it gets processed soon
         ThoughtState state = new ThoughtState(1.0, 100.0, 1.0);
 
         return new Thought(UUID.randomUUID().toString(), content, state, meta);

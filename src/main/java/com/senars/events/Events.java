@@ -1,5 +1,6 @@
 package com.senars.events;
 
+import com.senars.core.Feedback;
 import com.senars.core.Thought;
 
 /**
@@ -14,6 +15,7 @@ public final class Events {
     public record NewThoughtCreatedEvent(Thought thought) implements Event {}
     public record FocusThoughtSelectedEvent(Thought thought) implements Event {}
     public record ActionPlanApprovedEvent(Thought actionPlan) implements Event {}
+    public record ActionExecutedEvent(Feedback feedback) implements Event {}
     public record ActionPlanVetoedEvent(Thought actionPlan, String reason) implements Event {}
     public record ClarityUpdatedEvent(String thoughtId, double oldClarity, double newClarity) implements Event {}
     public record SchemaOptimizationGoalCreatedEvent(Thought goal) implements Event {}

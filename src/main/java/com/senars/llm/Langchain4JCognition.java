@@ -121,10 +121,10 @@ public class Langchain4JCognition implements Cognition {
         LOGGER.debug("Received response: {}", responseText);
 
         // Step 5: Output Parsing and Thought Generation
-        return parseResponse(responseText, focusThought);
+        return parseResponse(responseText, focusThought, schema);
     }
 
-    private List<Thought> parseResponse(String responseText, Thought focusThought) {
+    private List<Thought> parseResponse(String responseText, Thought focusThought, Thought schema) {
         // Attempt to parse as a tool execution request first
         ToolExecutionRequest toolRequest = toolKit.parse(responseText);
         if (toolRequest != null) {
@@ -134,10 +134,16 @@ public class Langchain4JCognition implements Cognition {
                     gson.toJson(toolRequest), // Store the full request as symbolic content
                     null, null, null, null, null
             );
+            List<String> trace = new ArrayList<>();
+            trace.add(focusThought.id());
+            if (schema != null) {
+                trace.add(schema.id());
+            }
+
             ThoughtMeta meta = new ThoughtMeta(
                     ThoughtType.ACTION_PLAN,
                     ThoughtOrigin.LLM_INFERENCE,
-                    List.of(focusThought.id()), // Trace back to the thought that triggered this plan
+                    trace, // Trace back to the focus thought AND the schema used
                     Instant.now()
             );
             ThoughtState state = new ThoughtState(1.0, 1.0, 1.0);

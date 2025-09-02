@@ -36,5 +36,24 @@
       "trace": [],
       "timestamp": "2025-09-01T12:00:00Z"
     }
+  },
+  {
+    "id": "schema-metacognition-stall-001",
+    "content": {
+      "text": "A schema for analyzing the current cognitive state when stalled or in a loop and formulating a new plan.",
+      "symbolic": "senars:schema:metacognition:stall_recovery",
+      "procedural": "You are a meta-cognitive supervisor. The system seems to be stuck in a reasoning loop, cycling through the same thoughts without making progress on its primary goal. Your task is to analyze the current top-level goal and the recent thoughts, and then propose a completely different strategy or a way to break the deadlock. The provided context contains the active goal and a list of recently focused-on thoughts. Formulate a new, high-level GOAL that represents a different approach to solving the problem. The goal should be concise and actionable. Respond with ONLY the new goal text, and nothing else."
+    },
+    "state": {
+      "clarity": 1.0,
+      "salience": 1.0,
+      "activation": 1.0
+    },
+    "metadata": {
+      "type": "SCHEMA",
+      "origin": "GENESIS",
+      "trace": [],
+      "timestamp": "2025-09-01T12:00:00Z"
+    }
   }
 ]

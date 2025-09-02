@@ -8,6 +8,7 @@ import com.senars.cycle.*;
 import com.senars.effort.EffortPredictor;
 import com.senars.db.DatabaseManager;
 import com.senars.events.EventBus;
+import com.senars.events.Events;
 import com.senars.events.LoggingEventSubscriber;
 import com.senars.llm.Langchain4JCognition;
 import com.senars.llm.PromptBuilder;
@@ -65,7 +66,7 @@ public class Main {
         );
         Governor governance = new InMemoryGovernor(rules);
         Grounding grounding = new InMemoryGrounding(memory, eventBus);
-        SchemaOptimizer schemaOptimizer = new SchemaOptimizer(eventBus);
+        SchemaOptimizer schemaOptimizer = new SchemaOptimizer(memory);
 
         // 3. Genesis & Bootstrapping
         LOGGER.info("Executing Genesis Protocol...");
@@ -152,6 +153,10 @@ public class Main {
                 schemaOptimizer,
                 eventBus
         );
+
+        // Subscribe the cognitive cycle to events it needs to handle directly
+        eventBus.subscribe(Events.NewThoughtCreatedEvent.class, cognitiveCycle::onNewThoughtCreated);
+        eventBus.subscribe(Events.ActionExecutedEvent.class, schemaOptimizer::onActionExecuted);
 
         LOGGER.info("SeNARS Cognitive System Initialized. Starting cognitive cycle.");
 

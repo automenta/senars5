@@ -37,6 +37,9 @@ public class CognitiveCycle {
     private final EventBus eventBus;
     private long cycleCount = 0;
     private static final long OPTIMIZER_RUN_INTERVAL = 50;
+    private static final int FOCUS_HISTORY_WINDOW = 10;
+    private static final double FOCUS_HISTORY_REPETITION_THRESHOLD = 0.3; // If 30% of recent thoughts are the same, we might be looping
+    private final List<String> focusHistory = new ArrayList<>();
 
 
     public CognitiveCycle(
@@ -77,21 +80,17 @@ public class CognitiveCycle {
                 runSchemaOptimizer();
             }
 
-            // 2. Perception Stage
-            List<Thought> perceivedThoughts = perception.perceive(feedbackQueue);
+            // 2. Grounding Stage: Process feedback from previous actions
+            processActionFeedback();
+
+            // 3. Perception Stage
+            List<Thought> perceivedThoughts = perception.perceive();
             if (!perceivedThoughts.isEmpty()) {
-                LOGGER.info("Perceived {} new thoughts.", perceivedThoughts.size());
-                for (Thought thought : perceivedThoughts) {
-                    // Check if the thought is a feedback report
-                    if (thought.metadata().type() == ThoughtType.REPORT && thought.content().feedback() != null) {
-                        processFeedbackReport(thought);
-                    } else {
-                        attention.addCandidate(thought);
-                    }
-                }
+                LOGGER.info("Perceived {} new thoughts from external sources.", perceivedThoughts.size());
+                perceivedThoughts.forEach(this::handleNewThought);
             }
 
-            // 2. Prioritization Stage
+            // 4. Prioritization Stage
             Optional<Thought> focusThoughtOpt = attention.selectFocusThought();
 
             if (focusThoughtOpt.isEmpty()) {
@@ -100,9 +99,13 @@ public class CognitiveCycle {
             }
 
             Thought focusThought = focusThoughtOpt.get();
-            LOGGER.info("Focusing on thought: {}", focusThought.id());
+            LOGGER.info("Focusing on thought: {} - {}", focusThought.metadata().type(), focusThought.id());
 
-            // 3. Processing Stage
+            // 5. Meta-Cognition Stage: Check for loops and intervene if necessary
+            focusThought = detectAndHandleCognitiveLoop(focusThought).orElse(focusThought);
+
+
+            // 6. Processing Stage
             List<Thought> newThoughts = cognition.process(focusThought);
 
             for (Thought newThought : newThoughts) {
@@ -146,11 +149,19 @@ public class CognitiveCycle {
             } else {
                 LOGGER.info("ACTION_PLAN approved. Executing...");
                 eventBus.publish(new Events.ActionPlanApprovedEvent(thought));
-                sessions.setLastActionPlan(thought); // Track the action being executed
-                action.executePlan(thought, feedbackQueue);
+                Feedback feedback = action.executePlan(thought);
+                feedbackQueue.add(feedback);
+                eventBus.publish(new Events.ActionExecutedEvent(feedback)); // Publish for optimizer
             }
         } catch (Exception e) {
             LOGGER.error("Error during action plan review or execution for thought: {}", thought.id(), e);
+        }
+    }
+
+    private void processActionFeedback() {
+        Feedback feedback = feedbackQueue.poll();
+        if (feedback != null) {
+            grounding.processFeedback(feedback);
         }
     }
 
@@ -192,48 +203,69 @@ public class CognitiveCycle {
                 )
         );
         LOGGER.info("Created replan goal: {}", replanGoal.id());
-        memory.saveThought(replanGoal);
-        attention.addCandidate(replanGoal);
-    }
-
-    private void processFeedbackReport(Thought feedbackReport) {
-        Optional<Thought> lastActionOpt = sessions.getLastActionPlan();
-        if (lastActionOpt.isEmpty()) {
-            LOGGER.warn("Received feedback report {} but there is no last action plan in the session to attribute it to. Ignoring.", feedbackReport.id());
-            return;
-        }
-
-        Thought lastAction = lastActionOpt.get();
-        LOGGER.info("Attributing feedback report {} to last action plan {}", feedbackReport.id(), lastAction.id());
-
-        // Create a new, enriched feedback report with the trace from the action it's for.
-        var feedbackMeta = feedbackReport.metadata();
-        Thought enrichedReport = new Thought(
-                feedbackReport.id(),
-                feedbackReport.content(),
-                feedbackReport.state(),
-                new ThoughtMeta(
-                        feedbackMeta.type(),
-                        feedbackMeta.origin(),
-                        lastAction.metadata().trace(), // The crucial link!
-                        feedbackMeta.timestamp()
-                )
-        );
-
-        grounding.processFeedback(enrichedReport);
-        memory.saveThought(enrichedReport); // Save the enriched report for provenance
-        sessions.clearLastActionPlan(); // Clear the session to prevent re-attributing feedback
+        handleNewThought(replanGoal); // Use handleNewThought to ensure it's saved and added to attention
     }
 
     private void runSchemaOptimizer() {
         LOGGER.info("Cognitive cycle {} reached. Running schema optimizer.", cycleCount);
-        List<Thought> optimizationGoals = schemaOptimizer.run(memory);
+        List<Thought> optimizationGoals = schemaOptimizer.run();
         if (!optimizationGoals.isEmpty()) {
             LOGGER.info("Schema optimizer generated {} new goal(s).", optimizationGoals.size());
             for (Thought goal : optimizationGoals) {
-                memory.saveThought(goal); // Save the goal to memory
-                attention.addCandidate(goal); // Add it to the attention funnel
+                handleNewThought(goal);
             }
         }
+    }
+
+    /**
+     * Handles NewThoughtCreatedEvent from the event bus.
+     * This is used for thoughts created outside the main cognition flow, e.g., by the Grounding system.
+     * @param event The event containing the new thought.
+     */
+    public void onNewThoughtCreated(Events.NewThoughtCreatedEvent event) {
+        LOGGER.debug("Received NewThoughtCreatedEvent for thought {}", event.thought().id());
+        handleNewThought(event.thought());
+    }
+
+    private Optional<Thought> detectAndHandleCognitiveLoop(Thought currentFocus) {
+        // Add current thought to history and maintain window size
+        focusHistory.add(currentFocus.id());
+        if (focusHistory.size() > FOCUS_HISTORY_WINDOW) {
+            focusHistory.remove(0);
+        }
+
+        if (focusHistory.size() < FOCUS_HISTORY_WINDOW) {
+            return Optional.empty(); // Not enough history to detect a loop
+        }
+
+        // Heuristic: Count unique thoughts in the history window
+        long uniqueThoughts = focusHistory.stream().distinct().count();
+        double repetitionRate = 1.0 - ((double) uniqueThoughts / FOCUS_HISTORY_WINDOW);
+
+        if (repetitionRate > FOCUS_HISTORY_REPETITION_THRESHOLD) {
+            LOGGER.warn("Cognitive loop/stall detected! Repetition rate: {}%. Intervening.", String.format("%.0f", repetitionRate * 100));
+
+            // Create a meta-cognition goal to break the loop
+            Thought metaGoal = createMetaCognitionGoal();
+            handleNewThought(metaGoal); // Save and add to attention
+            LOGGER.info("Overriding focus to meta-cognition goal {}", metaGoal.id());
+            return Optional.of(metaGoal); // Override the current focus thought
+        }
+
+        return Optional.empty();
+    }
+
+    private Thought createMetaCognitionGoal() {
+        String goalText = "A schema for analyzing the current cognitive state when stalled or in a loop and formulating a new plan.";
+        ThoughtContent content = new ThoughtContent(goalText, null, null, null, null, null, null);
+        ThoughtMeta meta = new ThoughtMeta(
+                ThoughtType.GOAL,
+                ThoughtOrigin.SYSTEM,
+                Collections.emptyList(), // This is a root-level intervention
+                Instant.now()
+        );
+        // Extremely high salience to ensure it's the absolute next focus
+        ThoughtState state = new ThoughtState(1.0, 999.0, 1.0);
+        return new Thought(UUID.randomUUID().toString(), content, state, meta);
     }
 }

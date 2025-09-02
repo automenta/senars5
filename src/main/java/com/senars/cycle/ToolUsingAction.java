@@ -1,82 +1,83 @@
 package com.senars.cycle;
 
-import com.google.gson.Gson;
-import com.google.gson.reflect.TypeToken;
-import com.senars.core.*;
+import com.senars.core.ActionStatus;
+import com.senars.core.Feedback;
+import com.senars.core.Thought;
 import com.senars.llm.ToolKit;
-import com.senars.tools.SearchTools;
-import com.senars.tools.WebTools;
 import dev.langchain4j.agent.tool.ToolExecutionRequest;
+import dev.langchain4j.agent.tool.ToolExecutor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.lang.reflect.Type;
-import java.time.Instant;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
-
 /**
- * An action system that executes tool calls defined in an ACTION_PLAN.
+ * An action system that executes tool calls defined in an ACTION_PLAN
+ * using a generic ToolExecutor.
  */
 public class ToolUsingAction implements Action {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ToolUsingAction.class);
-    private final SearchTools searchTools;
-    private final WebTools webTools;
-    private final Gson gson = new Gson();
+    private final ToolKit toolKit;
+    private final ToolExecutor toolExecutor;
 
     public ToolUsingAction(ToolKit toolKit) {
-        // This is a simplified dispatcher. A more robust solution might use a map of tool names to objects.
-        this.searchTools = (SearchTools) toolKit.getTools().stream().filter(t -> t instanceof SearchTools).findFirst().orElseThrow();
-        this.webTools = (WebTools) toolKit.getTools().stream().filter(t -> t instanceof WebTools).findFirst().orElseThrow();
+        this.toolKit = toolKit;
+        this.toolExecutor = new ToolExecutor(toolKit.getTools());
     }
 
     @Override
-    public void executePlan(Thought actionPlan, ActionFeedbackQueue feedbackQueue) {
+    public Feedback executePlan(Thought actionPlan) {
+        long startTime = System.currentTimeMillis();
+
         if (actionPlan.content().symbolic() == null || actionPlan.content().symbolic().isBlank()) {
             LOGGER.warn("Attempted to execute a tool-using action plan with no symbolic content. ID: {}", actionPlan.id());
-            return;
+            return new Feedback(
+                    ActionStatus.FAILURE,
+                    "unknown",
+                    "Action plan has no symbolic content.",
+                    System.currentTimeMillis() - startTime,
+                    actionPlan
+            );
+        }
+
+        String toolRequestJson = actionPlan.content().symbolic();
+        ToolExecutionRequest toolExecutionRequest = toolKit.parse(toolRequestJson);
+
+        if (toolExecutionRequest == null) {
+            String errorMsg = "Could not parse tool request from symbolic content: " + toolRequestJson;
+            LOGGER.error(errorMsg);
+            return new Feedback(
+                    ActionStatus.FAILURE,
+                    "unknown",
+                    errorMsg,
+                    System.currentTimeMillis() - startTime,
+                    actionPlan
+            );
         }
 
         try {
-            // Manual parsing and dispatching, as a stub for a more robust ToolExecutor
-            Type type = new TypeToken<Map<String, Object>>(){}.getType();
-            Map<String, Object> toolRequestMap = gson.fromJson(actionPlan.content().symbolic(), type);
+            String observation = toolExecutor.execute(toolExecutionRequest);
+            long executionTime = System.currentTimeMillis() - startTime;
+            LOGGER.info("Tool '{}' executed successfully in {}ms. Observation: {}", toolExecutionRequest.name(), executionTime, observation);
 
-            String toolName = (String) toolRequestMap.get("name");
-            Map<String, Object> arguments = (Map<String, Object>) toolRequestMap.get("arguments");
-            String observation;
-
-            if ("search".equals(toolName)) {
-                String query = (String) arguments.get("query");
-                observation = searchTools.search(query);
-            } else if ("read".equals(toolName)) {
-                String url = (String) arguments.get("url");
-                observation = webTools.read(url);
-            } else {
-                throw new UnsupportedOperationException("Tool not found: " + toolName);
-            }
-
-            LOGGER.info("Tool {} executed successfully. Observation: {}", toolName, observation);
-            feedbackQueue.add(createReport(observation, actionPlan.id()));
-
+            return new Feedback(
+                    ActionStatus.SUCCESS,
+                    toolExecutionRequest.name(),
+                    observation,
+                    executionTime,
+                    actionPlan
+            );
         } catch (Exception e) {
+            long executionTime = System.currentTimeMillis() - startTime;
+            String errorMsg = "Error executing tool '" + toolExecutionRequest.name() + "': " + e.getMessage();
             LOGGER.error("Failed to execute tool request for action plan: {}", actionPlan.id(), e);
-            String errorMessage = "Error executing tool: " + e.getMessage();
-            feedbackQueue.add(createReport(errorMessage, actionPlan.id()));
-        }
-    }
 
-    private Thought createReport(String text, String originatingPlanId) {
-        ThoughtContent content = new ThoughtContent(text, null, null, null, null, null, null);
-        ThoughtMeta meta = new ThoughtMeta(
-                ThoughtType.REPORT,
-                ThoughtOrigin.SYSTEM, // The system's action created this report
-                List.of(originatingPlanId),
-                Instant.now()
-        );
-        ThoughtState state = new ThoughtState(1.0, 1.0, 1.0); // Reports are high clarity
-        return new Thought(UUID.randomUUID().toString(), content, state, meta);
+            return new Feedback(
+                    ActionStatus.FAILURE,
+                    toolExecutionRequest.name(),
+                    errorMsg,
+                    executionTime,
+                    actionPlan
+            );
+        }
     }
 }

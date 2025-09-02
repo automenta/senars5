@@ -1,5 +1,6 @@
 package com.senars.cycle;
 
+import com.senars.core.Feedback;
 import com.senars.core.Thought;
 
 /**
@@ -13,10 +14,11 @@ public interface Action {
      * plan has been approved by the Governance Layer. The execution may
      * result in effects on the external environment (e.g., API calls,
      * robotic commands, sending messages). The results of the action
-     * should be placed into the feedback queue as new REPORT thoughts.
+     * are returned in a structured Feedback object for the Grounding system
+     * to process.
      *
      * @param actionPlan The approved ACTION_PLAN Thought to execute.
-     * @param feedbackQueue The queue to place the resulting REPORT thought into.
+     * @return A Feedback object containing the outcome of the action.
      */
-    void executePlan(Thought actionPlan, ActionFeedbackQueue feedbackQueue);
+    Feedback executePlan(Thought actionPlan);
 }

@@ -1,8 +1,6 @@
 package com.senars.systems.immemory;
 
-import com.senars.core.Feedback;
-import com.senars.core.Thought;
-import com.senars.core.ThoughtState;
+import com.senars.core.*;
 import com.senars.events.EventBus;
 import com.senars.events.Events;
 import com.senars.systems.Grounding;
@@ -10,50 +8,34 @@ import com.senars.systems.Memory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Objects;
+import java.util.UUID;
 
 /**
- * An in-memory implementation of the IGroundingSystem.
- * It processes feedback reports to adjust the clarity of thoughts in the
- * Memory Nexus, reinforcing or correcting the system's knowledge based on
- * action outcomes.
+ * An in-memory implementation of the Grounding system.
+ * It processes feedback from actions to adjust the clarity of thoughts in the
+ * Memory Nexus, reinforcing or correcting the system's knowledge and creating
+ * new goals to handle failures.
  */
 public class InMemoryGrounding implements Grounding {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(InMemoryGrounding.class);
     private static final double DEFAULT_REINFORCEMENT_FACTOR = 0.1; // Learn moderately from success
-    private static final double DEFAULT_BLAME_FACTOR = 0.2;       // Learn aggressively from failure
+    private static final double DEFAULT_BLAME_FACTOR = 0.3;       // Learn aggressively from failure
+    private static final double DECAY_FACTOR = 0.9; // How much less to blame/reward thoughts further up the trace
 
     private final Memory memory;
     private final EventBus eventBus;
     private final double reinforcementFactor;
     private final double blameFactor;
-    private final double decayFactor = 0.9; // How much less to blame/reward thoughts further up the trace
 
-    /**
-     * Default constructor using default learning factors.
-     * @param memory The memory system to update.
-     */
+
     public InMemoryGrounding(Memory memory, EventBus eventBus) {
         this(memory, eventBus, DEFAULT_REINFORCEMENT_FACTOR, DEFAULT_BLAME_FACTOR);
     }
 
-    /**
-     * Constructor for symmetric learning.
-     * @param memory The memory system to update.
-     * @param clarityAdjustmentFactor The factor to use for both reinforcement and blame.
-     */
-    public InMemoryGrounding(Memory memory, EventBus eventBus, double clarityAdjustmentFactor) {
-        this(memory, eventBus, clarityAdjustmentFactor, clarityAdjustmentFactor);
-    }
-
-    /**
-     * Full constructor for asymmetric learning.
-     * @param memory The memory system to update.
-     * @param reinforcementFactor The factor for adjusting clarity on success (feedback > 0.5).
-     * @param blameFactor The factor for adjusting clarity on failure (feedback < 0.5).
-     */
     public InMemoryGrounding(Memory memory, EventBus eventBus, double reinforcementFactor, double blameFactor) {
         this.memory = Objects.requireNonNull(memory);
         this.eventBus = Objects.requireNonNull(eventBus);
@@ -63,40 +45,44 @@ public class InMemoryGrounding implements Grounding {
 
 
     @Override
-    public void processFeedback(Thought feedbackReport) {
-        if (feedbackReport == null || feedbackReport.content() == null || feedbackReport.content().feedback() == null) {
-            LOGGER.warn("Received feedback report with no feedback content. Ignoring.");
+    public void processFeedback(Feedback feedback) {
+        if (feedback == null || feedback.actionPlan() == null) {
+            LOGGER.warn("Received feedback with no action plan. Ignoring.");
             return;
         }
 
-        Feedback feedback = feedbackReport.content().feedback();
-        List<String> traceIds = feedbackReport.metadata().trace();
+        Thought actionPlan = feedback.actionPlan();
+        List<String> traceIds = actionPlan.metadata().trace();
 
         if (traceIds == null || traceIds.isEmpty()) {
-            LOGGER.info("Feedback report {} has no trace. No thoughts to adjust.", feedbackReport.id());
+            LOGGER.info("Feedback for action {} has no trace. No thoughts to adjust.", actionPlan.id());
             return;
         }
 
-        // Asymmetric adjustment: apply different factors for success and failure.
-        double initialAdjustment;
-        if (feedback.success() >= 0.5) {
-            // Scale the success range [0.5, 1.0] to [0, 1] and apply reinforcement factor
-            initialAdjustment = (feedback.success() - 0.5) * 2 * this.reinforcementFactor;
-        } else {
-            // Scale the failure range [0.0, 0.5) to [-1, 0) and apply blame factor
-            initialAdjustment = (feedback.success() - 0.5) * 2 * this.blameFactor;
+        double initialAdjustment = switch (feedback.status()) {
+            case SUCCESS -> this.reinforcementFactor;
+            case FAILURE -> -this.blameFactor;
+        };
+
+        LOGGER.info("Processing feedback for action {}. Status: {}. Adjusting clarity for {} thoughts with initial factor {}.",
+                actionPlan.id(), feedback.status(), traceIds.size(), String.format("%.4f", initialAdjustment));
+
+        // Adjust clarity of thoughts in the provenance trace
+        adjustClarityInTrace(traceIds, initialAdjustment);
+
+        // If the action failed, create a new goal to investigate
+        if (feedback.status() == ActionStatus.FAILURE) {
+            createAndPublishFailureGoal(feedback);
         }
+    }
 
-
-        LOGGER.info("Processing feedback for report {}. Adjusting clarity for {} thoughts with initial adjustment {} and decay {}.",
-                feedbackReport.id(), traceIds.size(), String.format("%.4f", initialAdjustment), decayFactor);
-
+    private void adjustClarityInTrace(List<String> traceIds, double initialAdjustment) {
         int traceSize = traceIds.size();
         for (int i = 0; i < traceSize; i++) {
             String thoughtId = traceIds.get(i);
             // The last thought in the trace is the most recent, so it gets the highest adjustment.
             int distanceFromEnd = traceSize - 1 - i;
-            double decayedAdjustment = initialAdjustment * Math.pow(decayFactor, distanceFromEnd);
+            double decayedAdjustment = initialAdjustment * Math.pow(DECAY_FACTOR, distanceFromEnd);
 
             memory.getThoughtById(thoughtId).ifPresent(thoughtToUpdate -> {
                 double currentClarity = thoughtToUpdate.state().clarity();
@@ -116,5 +102,25 @@ public class InMemoryGrounding implements Grounding {
                 }
             });
         }
+    }
+
+    private void createAndPublishFailureGoal(Feedback feedback) {
+        String goalText = String.format("Investigate and resolve failure of tool '%s'. Error: %s",
+                feedback.toolName(), feedback.output());
+
+        ThoughtContent content = new ThoughtContent(goalText, null, null, null, null, null, null);
+
+        // This goal should trace back to the failed action plan
+        List<String> trace = List.of(feedback.actionPlan().id());
+        ThoughtMeta meta = new ThoughtMeta(ThoughtType.GOAL, ThoughtOrigin.SYSTEM, trace, Instant.now());
+
+        // Give it high salience to ensure it is picked up quickly
+        ThoughtState state = new ThoughtState(1.0, 100.0, 1.0);
+
+        Thought failureGoal = new Thought(UUID.randomUUID().toString(), content, state, meta);
+        LOGGER.info("Generated new failure-driven goal: {}", failureGoal.id());
+
+        // Publish the new goal to the event bus so the cognitive cycle can add it to the attention funnel
+        eventBus.publish(new Events.NewThoughtCreatedEvent(failureGoal));
     }
 }
