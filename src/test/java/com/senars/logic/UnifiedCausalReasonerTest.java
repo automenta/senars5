@@ -5,7 +5,7 @@ import com.senars.core.*;
 import com.senars.db.DatabaseManager;
 import com.senars.events.EventBus;
 import com.senars.systems.Memory;
-import com.senars.systems.immemory.InMemoryMemory;
+import com.senars.systems.memory.DefaultMemory;
 import dev.langchain4j.data.message.AiMessage;
 import dev.langchain4j.model.chat.ChatLanguageModel;
 import dev.langchain4j.model.output.Response;
@@ -50,7 +50,7 @@ class UnifiedCausalReasonerTest {
         eventBus = new EventBus();
         chatModel = new MockChatModel("[]"); // Default mock response
         DatabaseManager dbManager = new DatabaseManager(tempDir.resolve("test.db"));
-        memory = new InMemoryMemory(AppConfig.getInstance(), dbManager);
+        memory = new DefaultMemory(dbManager);
         ucr = new UnifiedCausalReasonerImpl(memory, eventBus, chatModel);
     }
 

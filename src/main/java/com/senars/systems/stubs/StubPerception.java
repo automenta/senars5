@@ -1,4 +1,4 @@
-package com.senars.systems.immemory;
+package com.senars.systems.stubs;
 
 import com.senars.core.Thought;
 import com.senars.cycle.Perception;

@@ -1,4 +1,4 @@
-package com.senars.systems.immemory;
+package com.senars.systems.memory;
 
 import com.senars.config.AppConfig;
 import com.senars.core.*;
@@ -15,16 +15,15 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.mock;
 
-class InMemoryMemoryTest {
+class DefaultMemoryTest {
 
     private Memory memory;
 
     @BeforeEach
     void setUp() {
-        AppConfig mockConfig = mock(AppConfig.class);
         // Use a real DatabaseManager with an in-memory DB for this test
         DatabaseManager dbManager = new DatabaseManager(null); // Passing null for in-memory
-        memory = new InMemoryMemory(mockConfig, dbManager);
+        memory = new DefaultMemory(dbManager);
     }
 
     private Thought createTestThoughtWithEmbedding(String id, String text, List<Double> embedding, List<String> parentIds) {

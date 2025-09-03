@@ -7,7 +7,7 @@ import com.senars.config.AppConfig;
 import com.senars.core.Thought;
 import com.senars.db.DatabaseManager;
 import com.senars.systems.Memory;
-import com.senars.systems.immemory.InMemoryMemory;
+import com.senars.systems.memory.DefaultMemory;
 import dev.langchain4j.model.chat.ChatLanguageModel;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -34,7 +34,7 @@ public class LLMPlanningIntegrationTest {
     void setUp() throws IOException {
         Path dbFile = tempDir.resolve("test-planning.db");
         dbManager = new DatabaseManager(dbFile);
-        memory = new InMemoryMemory(AppConfig.getInstance(), dbManager);
+        memory = new DefaultMemory(dbManager);
         chatModel = mock(ChatLanguageModel.class);
         ToolKit toolKit = mock(ToolKit.class);
 

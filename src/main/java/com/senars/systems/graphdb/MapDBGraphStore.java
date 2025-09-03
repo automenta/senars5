@@ -56,7 +56,6 @@ public class MapDBGraphStore implements GraphDB {
             }
         }
 
-        dbManager.commit(); // Commit the transaction
     }
 
     @Override
@@ -133,7 +132,6 @@ public class MapDBGraphStore implements GraphDB {
                 causalLinks.put(entry.getKey(), updatedLinks);
             }
         }
-        dbManager.commit();
     }
 
     @Override
@@ -158,7 +156,6 @@ public class MapDBGraphStore implements GraphDB {
     public void addCausalLink(CausalLink link) {
         // Add the link to the source thought's outgoing links
         causalLinks.computeIfAbsent(link.sourceThoughtId(), k -> new HashSet<>()).add(link);
-        dbManager.commit();
     }
 
     @Override
@@ -172,7 +169,6 @@ public class MapDBGraphStore implements GraphDB {
             } else {
                 causalLinks.put(link.sourceThoughtId(), links);
             }
-            dbManager.commit();
         }
     }
 

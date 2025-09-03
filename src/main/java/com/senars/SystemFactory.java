@@ -4,10 +4,13 @@ import com.senars.attention.Attention;
 import com.senars.attention.AttentionService;
 import com.senars.attention.SalienceCalculator;
 import com.senars.config.AppConfig;
-import com.senars.core.Genesis;
-import com.senars.core.Thought;
+import com.senars.core.*;
 import com.senars.cycle.Action;
 import com.senars.cycle.ActionFeedbackQueue;
+import com.senars.effort.LinearTextEffortModel;
+
+import java.util.Collections;
+import java.util.UUID;
 import com.senars.cycle.CognitiveCycle;
 import com.senars.cycle.Inference;
 import com.senars.cycle.CognitiveCycleServices;
@@ -35,9 +38,9 @@ import com.senars.motive.MotiveHierarchy;
 import com.senars.optimizer.EffortModelOptimizer;
 import com.senars.optimizer.SchemaOptimizer;
 import com.senars.systems.GoalGraph;
+import com.senars.io.ConsolePerception;
 import com.senars.systems.Memory;
-import com.senars.systems.immemory.ConsolePerception;
-import com.senars.systems.immemory.InMemoryMemory;
+import com.senars.systems.memory.DefaultMemory;
 import com.senars.systems.perception.FilePerceptionChannel;
 import com.senars.systems.rules.PreventDeprecatedSchemaUseRule;
 import com.senars.tools.*;
@@ -100,7 +103,7 @@ public class SystemFactory {
         // 2. Foundational Systems
         DatabaseManager dbManager = new DatabaseManager(dbPath);
 
-        this.memory = new InMemoryMemory(config, dbManager);
+        this.memory = new DefaultMemory(dbManager);
         this.logicEngine = new LogicEngine();
 
         // Create the Unified Causal Reasoner (replaces Grounding system)
@@ -124,6 +127,36 @@ public class SystemFactory {
 
         // 3. Genesis & Bootstrapping
         LOGGER.info("Executing Genesis Protocol...");
+        if (memory.getAllThoughts().isEmpty()) {
+            LOGGER.info("Memory is empty. Seeding default schemas...");
+            ThoughtContent content = new ThoughtContent(
+                    "Default effort prediction model based on text length.",
+                    EffortPredictor.EFFORT_MODEL_SCHEMA_NAME,
+                    null,
+                    null,
+                    new LinearTextEffortModel(0.01, 1.0), // The procedural content is the model object itself
+                    null,
+                    null
+            );
+
+            ThoughtMeta metadata = new ThoughtMeta(
+                    ThoughtType.SCHEMA,
+                    ThoughtOrigin.SYSTEM,
+                    Collections.emptyList(),
+                    java.time.Instant.now()
+            );
+
+            ThoughtState state = new ThoughtState(1.0, 1.0, 1.0);
+
+            Thought schemaThought = new Thought(
+                    UUID.nameUUIDFromBytes(EffortPredictor.EFFORT_MODEL_SCHEMA_NAME.getBytes()).toString(),
+                    content,
+                    state,
+                    metadata
+            );
+            memory.saveThought(schemaThought);
+            LOGGER.info("Default effort model schema seeded.");
+        }
         List<Thought> genesisDrives = Genesis.createGenesisDrives(embeddingModel);
         List<Thought> genesisBeliefs = Genesis.loadKnowledgeFromFile("genesis_knowledge.json", embeddingModel);
         List<Thought> genesisSchemas = Genesis.loadSchemasFromFile("genesis_schemas.json", embeddingModel);

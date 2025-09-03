@@ -1,4 +1,4 @@
-package com.senars.systems.immemory;
+package com.senars.systems.memory;
 
 import com.senars.config.AppConfig;
 import com.senars.core.*;
@@ -20,48 +20,16 @@ import java.util.stream.Collectors;
  * A persistent implementation of the Memory facade.
  * This class orchestrates a MapDB-backed graph database and vector store.
  */
-public class InMemoryMemory implements Memory {
+public class DefaultMemory implements Memory {
 
     private final GraphDB graphDB;
     private final VectorStore vectorStore;
     private final DatabaseManager dbManager;
 
-    public InMemoryMemory(AppConfig config, DatabaseManager dbManager) {
+    public DefaultMemory(DatabaseManager dbManager) {
         this.dbManager = dbManager;
         this.graphDB = new MapDBGraphStore(dbManager);
         this.vectorStore = new DefaultVectorStore(dbManager);
-
-        load();
-    }
-
-    private void seedDefaultSchemas() {
-        ThoughtContent content = new ThoughtContent(
-                "Default effort prediction model based on text length.",
-                EffortPredictor.EFFORT_MODEL_SCHEMA_NAME,
-                null,
-                null,
-                new LinearTextEffortModel(0.01, 1.0), // The procedural content is the model object itself
-                null,
-                null
-        );
-
-        ThoughtMeta metadata = new ThoughtMeta(
-                ThoughtType.SCHEMA,
-                ThoughtOrigin.SYSTEM,
-                Collections.emptyList(),
-                java.time.Instant.now()
-        );
-
-        ThoughtState state = new ThoughtState(1.0, 1.0, 1.0);
-
-        Thought schemaThought = new Thought(
-                UUID.nameUUIDFromBytes(EffortPredictor.EFFORT_MODEL_SCHEMA_NAME.getBytes()).toString(),
-                content,
-                state,
-                metadata
-        );
-
-        graphDB.saveThought(schemaThought);
     }
 
     @Override
@@ -89,12 +57,7 @@ public class InMemoryMemory implements Memory {
             return Collections.emptyList();
         }
         List<ScoredId> similarIds = vectorStore.findSimilar(embedding, topK);
-        return similarIds.stream()
-                .map(scoredId -> getThoughtById(scoredId.id())
-                        .map(thought -> new ScoredThought(thought, scoredId.score())))
-                .filter(Optional::isPresent)
-                .map(Optional::get)
-                .collect(Collectors.toList());
+        return toScoredThoughts(similarIds);
     }
 
     @Override
@@ -106,13 +69,18 @@ public class InMemoryMemory implements Memory {
         int candidatesToFetch = topK * 5;
         List<ScoredId> similarIds = vectorStore.findSimilar(embedding, candidatesToFetch);
 
-        return similarIds.stream()
+        return toScoredThoughts(similarIds).stream()
+                .filter(scoredThought -> scoredThought.thought().metadata().type() == type)
+                .limit(topK)
+                .collect(Collectors.toList());
+    }
+
+    private List<ScoredThought> toScoredThoughts(List<ScoredId> scoredIds) {
+        return scoredIds.stream()
                 .map(scoredId -> getThoughtById(scoredId.id())
                         .map(thought -> new ScoredThought(thought, scoredId.score())))
                 .filter(Optional::isPresent)
                 .map(Optional::get)
-                .filter(scoredThought -> scoredThought.thought().metadata().type() == type)
-                .limit(topK)
                 .collect(Collectors.toList());
     }
 
@@ -159,9 +127,5 @@ public class InMemoryMemory implements Memory {
     @Override
     public void load() {
         // Data is loaded from MapDB on initialization of the stores.
-        // We just need to check if we need to seed the DB.
-        if (graphDB.getAllThoughts().isEmpty()) {
-            seedDefaultSchemas();
-        }
     }
 }

@@ -17,20 +17,20 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import com.senars.systems.memory.DefaultMemory;
+
 class PersistenceTest {
 
     @TempDir
     Path tempDir;
     DatabaseManager dbManager;
-    GraphDB graphDB;
-    VectorStore vectorStore;
+    Memory memory;
 
     @BeforeEach
     void setUp() {
         Path dbFile = tempDir.resolve("test.db");
         dbManager = new DatabaseManager(dbFile);
-        graphDB = new MapDBGraphStore(dbManager);
-        vectorStore = new DefaultVectorStore(dbManager);
+        memory = new DefaultMemory(dbManager);
     }
 
     @AfterEach
@@ -47,26 +47,26 @@ class PersistenceTest {
                 new ThoughtState(1.0, 1.0, 1.0),
                 new ThoughtMeta(ThoughtType.BELIEF, ThoughtOrigin.USER, List.of(), Instant.now())
         );
-        graphDB.saveThought(thought1);
-        vectorStore.add(thought1);
+        memory.saveThought(thought1);
 
-        // 2. Close the database to ensure data is flushed to disk
+        // 2. Persist and close the database to ensure data is flushed to disk
+        memory.persist();
         dbManager.close();
 
-        // 3. Re-open the database and stores
+        // 3. Re-open the database and memory
         Path dbFile = tempDir.resolve("test.db");
         dbManager = new DatabaseManager(dbFile);
-        graphDB = new MapDBGraphStore(dbManager);
-        vectorStore = new DefaultVectorStore(dbManager);
+        memory = new DefaultMemory(dbManager);
+
 
         // 4. Verify the thought is still there
-        Optional<Thought> retrievedThought = graphDB.getThoughtById("thought1");
+        Optional<Thought> retrievedThought = memory.getThoughtById("thought1");
         assertTrue(retrievedThought.isPresent(), "Thought should be present after reloading DB");
         assertEquals("Test content", retrievedThought.get().content().text());
 
         // 5. Verify the vector is still there
-        List<ScoredId> similarIds = vectorStore.findSimilar(List.of(0.1, 0.2), 1);
-        assertFalse(similarIds.isEmpty(), "Vector search should find the thought");
-        assertEquals("thought1", similarIds.getFirst().id());
+        List<ScoredThought> similarThoughts = memory.retrieveSimilar(List.of(0.1, 0.2), 1);
+        assertFalse(similarThoughts.isEmpty(), "Vector search should find the thought");
+        assertEquals("thought1", similarThoughts.getFirst().thought().id());
     }
 }

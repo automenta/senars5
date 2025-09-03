@@ -39,7 +39,6 @@ public class MapDBEmbeddingStore implements EmbeddingStore<TextSegment> {
     @Override
     public void add(String id, Embedding embedding) {
         embeddings.put(id, embedding.vector());
-        dbManager.commit();
     }
 
     @Override
@@ -55,7 +54,6 @@ public class MapDBEmbeddingStore implements EmbeddingStore<TextSegment> {
         for (int i = 0; i < d; i++) {
             embeddings.put(ids.get(i), list.get(i).vector());
         }
-        dbManager.commit();
         return ids;
     }
 
@@ -93,12 +91,10 @@ public class MapDBEmbeddingStore implements EmbeddingStore<TextSegment> {
 
     public void clear() {
         embeddings.clear();
-        dbManager.commit();
     }
 
     public void remove(String id) {
         embeddings.remove(id);
-        dbManager.commit();
     }
 
     private double cosineSimilarity(float[] v1, float[] v2) {
